@@ -63,7 +63,7 @@
 				"intersystems.servers": {
 					"type": "object",
 					"description": "InterSystems® servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it.",
-					"markdownDescription": "[InterSystems](https://www.intersystems.com)® servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names cannot contain `@`, `:`, `/`, `?` or `#` characters.",
+					"markdownDescription": "[InterSystems](https://www.intersystems.com)® servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
 					"scope": "resource",
 					"default": {
 						"IRIS": {
@@ -93,7 +93,7 @@
 						"/default": "IRIS"
 					},
 					"patternProperties": {
-						"^[^@:/?#]+$": {
+						"^[A-Za-z0-9-._~]+$": {
 							"type": "object",
 							"description": "A server definition, with properties that specify how to connect to it.",
 							"properties": {
