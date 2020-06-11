@@ -19,7 +19,7 @@ For example:
 				"scheme": "http"
 			},
 			"comment": "Shared development server"
-        },
-        "/default": "myLocal"
+		},
+		"/default": "myLocal"
 	}
 ```
