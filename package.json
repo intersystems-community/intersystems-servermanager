@@ -1,7 +1,7 @@
 {
 	"name": "servermanager",
 	"displayName": "InterSystems® Server Manager",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"preview": true,
 	"publisher": "intersystems",
 	"description": "Helper extension for defining connections to InterSystems servers.",
