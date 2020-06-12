@@ -67,27 +67,27 @@
 					"default": {
 						"IRIS": {
 							"webServer": {
+								"scheme": "http",
 								"host": "127.0.0.1",
-								"port": 52773,
-								"scheme": "http"
+								"port": 52773
 							},
-							"comment": "Connection to default local InterSystems IRIS™ installation. Delete if unwanted."
+							"description": "Connection to default local InterSystems IRIS™ installation. Delete if unwanted."
 						},
 						"CACHE": {
 							"webServer": {
+								"scheme": "http",
 								"host": "127.0.0.1",
-								"port": 57772,
-								"scheme": "http"
+								"port": 57772
 							},
-							"comment": "Connection to default local InterSystems Caché® installation. Delete if unwanted."
+							"description": "Connection to default local InterSystems Caché® installation. Delete if unwanted."
 						},
 						"ENSEMBLE": {
 							"webServer": {
+								"scheme": "http",
 								"host": "127.0.0.1",
-								"port": 57772,
-								"scheme": "http"
+								"port": 57772
 							},
-							"comment": "Connection to default local InterSystems Ensemble® installation. Delete if unwanted."
+							"description": "Connection to default local InterSystems Ensemble® installation. Delete if unwanted."
 						},
 						"/default": "IRIS"
 					},
@@ -100,6 +100,12 @@
 									"type": "object",
 									"description": "Web server publishing an InterSystems® server's web services.",
 									"properties": {
+										"scheme": {
+											"type": "string",
+											"description": "Protocol used for connections.",
+											"enum": ["http", "https"],
+											"default": "http"
+										},
 										"host": {
 											"type": "string",
 											"description": "Hostname or IP address of the web server. Often the same as the InterSystems® server host.",
@@ -123,25 +129,13 @@
 											"maximum": 65535,
 											"default": 52773
 										},
-										"instanceName": {
+										"pathPrefix": {
 											"type": "string",
-											"description": "Optional prefix for the path to the resource. Only needed when one web server publishes services of multiple InterSystems® servers.",
-											"default": ""
-										},
-										"scheme": {
-											"type": "string",
-											"description": "Protocol used for connections.",
-											"anyOf": [
-												{
-													"string": "http"
-												},
-												{
-													"string": "https"
-												}
-											],
-											"default": "http"
+											"description": "Optional prefix for the path to the resource. Only needed when one web server publishes services on behalf of multiple InterSystems® servers."
 										}
-									}
+									},
+									"required": ["host", "port"],
+									"additionalProperties": false
 								},
 								"username": {
 									"type": "string",
@@ -151,11 +145,13 @@
 									"type": "string",
 									"description": "Password of username. If not set here it must be provided when connecting."
 								},
-								"comment": {
+								"description": {
 									"type": "string",
-									"description": "Optional comment about the server."
+									"description": "Optional description of the server."
 								}
-							}
+							},
+							"required": ["webServer"],
+							"additionalProperties": false
 						}
 					},
 					"properties": {
