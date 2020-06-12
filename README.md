@@ -1,24 +1,26 @@
 # InterSystems® Server Manager
-A VS Code helper extension that contributes settings to define connections to InterSystems servers.
+A VS Code helper extension that contributes settings which define connections to InterSystems servers.
 
 For example:
 ```json
 	"intersystems.servers": {
 		"myLocal": {
 			"webServer": {
+				"scheme": "http",
 				"host": "127.0.0.1",
-				"port": 52773,
-				"scheme": "http"
+				"port": 52773
 			},
-			"comment": "My local IRIS instance"
+			"description": "My local IRIS instance"
 		},
 		"dev": {
 			"webServer": {
-				"host": "devhost.myorg",
-				"port": 52773,
-				"scheme": "http"
+				"scheme": "https",
+				"host": "webhost.local",
+				"port": 443,
+				"pathPrefix": "iris/dev"
 			},
-			"comment": "Shared development server"
+			"username": "alice",
+			"description": "Development server serviced by central web host over HTTPS"
 		},
 		"/default": "myLocal"
 	}
