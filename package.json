@@ -11,6 +11,8 @@
 	},
 	"license": "MIT",
 	"keywords": [
+		"intersystems",
+		"objectscript",
 		"multi-root ready"
 	],
 	"engines": {

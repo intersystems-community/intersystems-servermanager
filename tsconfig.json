@@ -2,17 +2,16 @@
 	"compilerOptions": {
 		"module": "commonjs",
 		"target": "es2016",
-
 		"noImplicitAny": false,
 		"removeComments": false,
 		"noUnusedLocals": true,
 		"noImplicitThis": true,
 		"inlineSourceMap": false,
 		"sourceMap": true,
-		"outDir": "../out",
+		"outDir": "out",
 		"preserveConstEnums": true,
 		"strictNullChecks": true,
 		"noUnusedParameters": false
 	},
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", ".vscode-test"]
 }
