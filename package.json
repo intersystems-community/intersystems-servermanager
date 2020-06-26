@@ -1,9 +1,9 @@
 {
 	"name": "servermanager",
 	"displayName": "InterSystems® Server Manager",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"preview": true,
-	"publisher": "intersystems",
+	"publisher": "intersystems-community",
 	"description": "Helper extension for defining connections to InterSystems servers.",
 	"repository": {
 		"type": "git",
