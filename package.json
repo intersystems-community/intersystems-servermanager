@@ -11,6 +11,8 @@
 	},
 	"license": "MIT",
 	"keywords": [
+		"intersystems",
+		"objectscript",
 		"multi-root ready"
 	],
 	"engines": {
@@ -103,7 +105,10 @@
 										"scheme": {
 											"type": "string",
 											"description": "Protocol used for connections.",
-											"enum": ["http", "https"],
+											"enum": [
+												"http",
+												"https"
+											],
 											"default": "http"
 										},
 										"host": {
@@ -134,7 +139,10 @@
 											"description": "Optional prefix for the path to the resource. Only needed when one web server publishes services on behalf of multiple InterSystems® servers."
 										}
 									},
-									"required": ["host", "port"],
+									"required": [
+										"host",
+										"port"
+									],
 									"additionalProperties": false
 								},
 								"username": {
@@ -150,7 +158,9 @@
 									"description": "Optional description of the server."
 								}
 							},
-							"required": ["webServer"],
+							"required": [
+								"webServer"
+							],
 							"additionalProperties": false
 						}
 					},
@@ -158,7 +168,7 @@
 						"/default": {
 							"type": "string",
 							"description": "Name of the default server."
-						}	
+						}
 					},
 					"additionalProperties": false
 				}

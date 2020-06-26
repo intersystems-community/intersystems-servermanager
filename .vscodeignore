@@ -1,2 +1,10 @@
+.github/**
+.vscode/**
+.vscode-test/**
+out/test/**
 **/*.ts
+**/*.map
+.gitignore
 **/tsconfig.json
+**/tslint.json
+**/.eslintrc.json
