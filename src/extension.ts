@@ -1,4 +1,5 @@
 'use strict';
+export const extensionId = "intersystems.servermanager";
 
 import * as vscode from 'vscode';
 
