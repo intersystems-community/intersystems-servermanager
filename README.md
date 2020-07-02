@@ -4,7 +4,7 @@ A VS Code helper extension that contributes settings which define connections to
 For example:
 ```json
 	"intersystems.servers": {
-		"myLocal": {
+		"my-local": {
 			"webServer": {
 				"scheme": "http",
 				"host": "127.0.0.1",
@@ -22,6 +22,24 @@ For example:
 			"username": "alice",
 			"description": "Development server serviced by central web host over HTTPS"
 		},
-		"/default": "myLocal"
+		"/default": "my-local"
 	}
+```
+
+An extension XYZ needing to connect to InterSystems servers defines this extension as a dependency in its `package.json`
+
+```json
+  "extensionDependencies": [
+    "intersystems-community.servermanager"
+  ],
+```
+
+This helps users add server definitions to their [user or workspace settings](https://code.visualstudio.com/docs/getstarted/settings).
+
+Extension XYZ then gets the `intersystems.servers` object and uses it as needed, for example:
+
+```ts
+const allServers = vscode.workspace.getConfiguration('intersystems').get('servers');
+const mine = allServers['my-server'];
+const webHost = mine.webServer.host;
 ```
