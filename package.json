@@ -11,6 +11,8 @@
 	},
 	"license": "MIT",
 	"keywords": [
+		"intersystems",
+		"objectscript",
 		"multi-root ready"
 	],
 	"engines": {
@@ -65,7 +67,7 @@
 					"markdownDescription": "[InterSystems](https://www.intersystems.com)® servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
 					"scope": "resource",
 					"default": {
-						"IRIS": {
+						"iris": {
 							"webServer": {
 								"scheme": "http",
 								"host": "127.0.0.1",
@@ -73,7 +75,7 @@
 							},
 							"description": "Connection to default local InterSystems IRIS™ installation. Delete if unwanted."
 						},
-						"CACHE": {
+						"cache": {
 							"webServer": {
 								"scheme": "http",
 								"host": "127.0.0.1",
@@ -81,7 +83,7 @@
 							},
 							"description": "Connection to default local InterSystems Caché® installation. Delete if unwanted."
 						},
-						"ENSEMBLE": {
+						"ensemble": {
 							"webServer": {
 								"scheme": "http",
 								"host": "127.0.0.1",
@@ -89,10 +91,10 @@
 							},
 							"description": "Connection to default local InterSystems Ensemble® installation. Delete if unwanted."
 						},
-						"/default": "IRIS"
+						"/default": "iris"
 					},
 					"patternProperties": {
-						"^[A-Za-z0-9-._~]+$": {
+						"^[a-z0-9-._~]+$": {
 							"type": "object",
 							"description": "A server definition, with properties that specify how to connect to it.",
 							"properties": {
@@ -103,7 +105,10 @@
 										"scheme": {
 											"type": "string",
 											"description": "Protocol used for connections.",
-											"enum": ["http", "https"],
+											"enum": [
+												"http",
+												"https"
+											],
 											"default": "http"
 										},
 										"host": {
@@ -134,7 +139,10 @@
 											"description": "Optional prefix for the path to the resource. Only needed when one web server publishes services on behalf of multiple InterSystems® servers."
 										}
 									},
-									"required": ["host", "port"],
+									"required": [
+										"host",
+										"port"
+									],
 									"additionalProperties": false
 								},
 								"username": {
@@ -150,7 +158,9 @@
 									"description": "Optional description of the server."
 								}
 							},
-							"required": ["webServer"],
+							"required": [
+								"webServer"
+							],
 							"additionalProperties": false
 						}
 					},
@@ -158,7 +168,7 @@
 						"/default": {
 							"type": "string",
 							"description": "Name of the default server."
-						}	
+						}
 					},
 					"additionalProperties": false
 				}
