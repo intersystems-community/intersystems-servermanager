@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
-import { ServerSpec } from '../extension';
 import { getServerNames } from './getServerNames';
-import { getServerSpec } from './getServerSpec';
 
-export async function pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}, flushCredentialCache: boolean = false): Promise<ServerSpec | undefined> {
+export async function pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {
     const names = getServerNames(scope);
 
     let qpItems: vscode.QuickPickItem[] = [];
@@ -16,14 +14,6 @@ export async function pickServer(scope?: vscode.ConfigurationScope, options: vsc
         qpItems.push({label: element.name, description: element.description, detail: options?.matchOnDetail ? element.detail : undefined});
     });
     return await vscode.window.showQuickPick(qpItems, options).then(item => {
-        if (item) {
-            const name = item.label;
-            return getServerSpec(name, scope, flushCredentialCache).then(connSpec => {
-                if (connSpec) {
-                    connSpec.name = name;
-                }
-                return connSpec;
-            });
-        }
-    })
+        return item ? item.label : undefined;
+    });
 }

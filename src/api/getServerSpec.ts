@@ -7,7 +7,7 @@ interface CredentialSet {
     password: string
 }
 
-let credentialCache = new Map<string, CredentialSet>();
+export let credentialCache = new Map<string, CredentialSet>();
 
 export async function getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false): Promise<ServerSpec | undefined> {
     if (flushCredentialCache) {
@@ -21,7 +21,6 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
     }
 
     server.name = name;
-    server.storePassword = server.storePassword ?? true;
     server.description = server.description || '';
     server.webServer.scheme = server.webServer.scheme || 'http';
     server.webServer.pathPrefix = server.webServer.pathPrefix || '';
@@ -51,7 +50,7 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
     if (server.username && !server.password) {
         if (credentialCache[name] && credentialCache[name].username === server.username) {
             server.password = credentialCache[name];
-        } else if (server.storePassword) {
+        } else {
             const keychain = new Keychain(name);
             const password = await keychain.getPassword().then(result => {
                 if (typeof result === 'string') {

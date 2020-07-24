@@ -6,6 +6,7 @@ import { testPickServer, testPickServerWithoutCachedCredentials as testPickServe
 import { pickServer } from './api/pickServer';
 import { getServerNames } from './api/getServerNames';
 import { getServerSpec } from './api/getServerSpec';
+import { storePassword, clearPassword } from './commands/managePasswords';
 
 export interface ServerName {
     name: string,
@@ -25,7 +26,6 @@ export interface ServerSpec {
     webServer: WebServerSpec,
     username: string,
     password: string,
-    storePassword: boolean,
     description: string
 }
 
@@ -33,6 +33,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 
 	// Register the commands
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.storePassword`, () => {
+            storePassword();
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.clearPassword`, () => {
+            clearPassword();
+        })
+    );
+
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.testPickServer`, () => {
             testPickServer();
@@ -50,16 +61,16 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     let api = {
-        async pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}, flushCredentialCache: boolean = false): Promise<ServerSpec | undefined> {
-            return await pickServer(scope, options, flushCredentialCache);
+        async pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {
+            return await pickServer(scope, options);
 
         },
         getServerNames(scope?: vscode.ConfigurationScope): ServerName[] {
             return getServerNames(scope);
         },
 
-        async getServerSpec(name: string, scope?: vscode.ConfigurationScope): Promise<ServerSpec | undefined> {
-            return await getServerSpec(name, scope);
+        async getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false): Promise<ServerSpec | undefined> {
+            return await getServerSpec(name, scope, flushCredentialCache);
         }
 
     };

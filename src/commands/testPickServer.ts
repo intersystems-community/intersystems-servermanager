@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { extensionId } from '../extension';
+import { extensionId, ServerSpec } from '../extension';
 
 export async function testPickServer() {
     await commonTestPickServer();
@@ -25,8 +25,11 @@ async function commonTestPickServer(options?: vscode.QuickPickOptions, flushCred
     }
     const myApi = serverManagerExtension.exports;
 
-    const connSpec = await myApi.pickServer(undefined, options, flushCredentialCache);
-    if (connSpec) {
-        vscode.window.showInformationMessage(`Picked server '${connSpec.name}' at ${connSpec.webServer.scheme}://${connSpec.webServer.host}:${connSpec.webServer.port}/${connSpec.webServer.pathPrefix} ${!connSpec.username ? 'with unauthenticated access' : 'as user ' + connSpec.username }.`, 'OK');
+    const name: string = await myApi.pickServer(undefined, options);
+    if (name) {
+        const connSpec: ServerSpec = await myApi.getServerSpec(name, undefined, flushCredentialCache);
+        if (connSpec) {
+            vscode.window.showInformationMessage(`Picked server '${connSpec.name}' at ${connSpec.webServer.scheme}://${connSpec.webServer.host}:${connSpec.webServer.port}/${connSpec.webServer.pathPrefix} ${!connSpec.username ? 'with unauthenticated access' : 'as user ' + connSpec.username }.`, 'OK');
+        }
     }
 }
