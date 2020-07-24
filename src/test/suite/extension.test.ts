@@ -8,7 +8,7 @@ import { extensionId } from "../../extension";
 
 suite("Extension Test Suite", () => {
   suiteSetup(async function () {
-    // make sure git is activated
+    // make sure extension is activated
     const ext = extensions.getExtension(extensionId);
     await ext?.activate();
   });
