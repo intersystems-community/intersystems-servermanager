@@ -3,8 +3,9 @@ import { extensionId } from '../extension';
 import { Keychain } from '../keychain';
 import { credentialCache } from '../api/getServerSpec';
 
-export async function storePassword() {
+export async function storePassword(): Promise<string> {
     const name = await commonPickServer({matchOnDetail: true});
+    let reply = '';
     if (name) {
         await vscode.window
         .showInputBox({
@@ -22,13 +23,15 @@ export async function storePassword() {
                 new Keychain(name).setPassword(password).then(() => {
                     vscode.window.showInformationMessage(`Password for '${name}' stored in keychain.`);
                 });
+                reply = name;
             }
         })
-     
     }
+    return reply;
 }
 
-export async function clearPassword() {
+export async function clearPassword(): Promise<string> {
+    let reply = '';
     const name = await commonPickServer({matchOnDetail: true});
     if (name) {
         credentialCache[name] = undefined;
@@ -37,10 +40,12 @@ export async function clearPassword() {
             vscode.window.showWarningMessage(`No password for '${name}' found in keychain.`);          
         } else if (await keychain.deletePassword()) {
             vscode.window.showInformationMessage(`Password for '${name}' removed from keychain.`);
+            reply = name;
         } else {
             vscode.window.showWarningMessage(`Failed to remove password for '${name}' from keychain.`);
         }
     }
+    return reply;
 }
 
 async function commonPickServer(options?: vscode.QuickPickOptions): Promise<string | undefined> {
