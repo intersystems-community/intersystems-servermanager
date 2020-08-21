@@ -2,7 +2,6 @@
 export const extensionId = 'intersystems-community.servermanager';
 
 import * as vscode from 'vscode';
-import { testPickServer, testPickServerWithoutCachedCredentials as testPickServerFlushingCachedCredentials, testPickServerDetailed } from './commands/testPickServer';
 import { pickServer } from './api/pickServer';
 import { getServerNames } from './api/getServerNames';
 import { getServerSpec } from './api/getServerSpec';
@@ -31,32 +30,27 @@ export interface ServerSpec {
 
 export function activate(context: vscode.ExtensionContext) {
 
+    const _onDidChangePassword = new vscode.EventEmitter<string>();
 
-	// Register the commands
+    // Register the commands
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.storePassword`, () => {
-            storePassword();
+            storePassword()
+                .then((name) => {
+                    if (name && name.length > 0) {
+                        _onDidChangePassword.fire(name);
+                    }
+                });
         })
     );
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.clearPassword`, () => {
-            clearPassword();
-        })
-    );
-
-	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.testPickServer`, () => {
-            testPickServer();
-        })
-    );
-	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.testPickServerFlushingCachedCredentials`, () => {
-            testPickServerFlushingCachedCredentials();
-        })
-    );
-	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.testPickServerDetailed`, () => {
-            testPickServerDetailed();
+            clearPassword()
+            .then((name) => {
+                if (name && name.length > 0) {
+                    _onDidChangePassword.fire(name);
+                }
+            });
         })
     );
 
@@ -71,6 +65,10 @@ export function activate(context: vscode.ExtensionContext) {
 
         async getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false): Promise<ServerSpec | undefined> {
             return await getServerSpec(name, scope, flushCredentialCache);
+        },
+
+        onDidChangePassword(): vscode.Event<string> {
+            return _onDidChangePassword.event;
         }
 
     };

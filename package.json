@@ -58,9 +58,6 @@
   },
   "main": "./out/extension",
   "activationEvents": [
-    "onCommand:intersystems-community.servermanager.testPickServer",
-    "onCommand:intersystems-community.servermanager.testPickServerFlushingCachedCredentials",
-    "onCommand:intersystems-community.servermanager.testPickServerDetailed",
     "onCommand:intersystems-community.servermanager.storePassword",
     "onCommand:intersystems-community.servermanager.clearPassword"
   ],
@@ -192,21 +189,6 @@
         "command": "intersystems-community.servermanager.clearPassword",
         "category": "InterSystems Server Manager",
         "title": "Clear Password from Keychain"
-      },
-      {
-        "command": "intersystems-community.servermanager.testPickServer",
-        "category": "InterSystems Server Manager",
-        "title": "Test Server Selection"
-      },
-      {
-        "command": "intersystems-community.servermanager.testPickServerFlushingCachedCredentials",
-        "category": "InterSystems Server Manager",
-        "title": "Test Server Selection (flush cached credentials)"
-      },
-      {
-        "command": "intersystems-community.servermanager.testPickServerDetailed",
-        "category": "InterSystems Server Manager",
-        "title": "Test Server Selection with Details"
       }
     ]
   }

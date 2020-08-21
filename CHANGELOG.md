@@ -1,3 +1,7 @@
+## 0.0.5 (21-Aug-2020)
+* Add onDidChangePassword to API.
+* Remove test commands, which are now provided by our `intersystems-community.vscode-extension-api-tester` extension.
+
 ## 0.0.4 (24-Jul-2020)
 * Support storing passwords in local keychain.
 * Add API that other extensions can use.
