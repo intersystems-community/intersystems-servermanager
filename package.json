@@ -45,11 +45,12 @@
   },
   "devDependencies": {
     "@types/glob": "^7.1.1",
+    "@types/keytar": "^4.4.2",
     "@types/mocha": "^5.2.6",
     "@types/node": "^8.10.60",
-    "@types/keytar": "^4.4.2",
     "glob": "^7.1.6",
     "mocha": "^7.1.2",
+    "ovsx": "latest",
     "ts-loader": "^6.2.2",
     "tslint": "^5.20.1",
     "typescript": "^3.8.3",
