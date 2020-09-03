@@ -2,7 +2,7 @@
 
 This is a VS Code helper extension that helps configure connections to [InterSystems](https://www.intersystems.com/) servers in VS Code extensions such as the [ObjectScript Extension for VS Code](https://github.com/intersystems-community/vscode-objectscript).
 
-It also enables the secure storage of passwords using the underlying operating system's native key store.
+It also enables the secure storage of passwords using the underlying operating system's native keystore.
 
 ## Configuring connections
 
@@ -40,10 +40,10 @@ This extension adds the command `InterSystems Server Manager: Store Password in 
 
 **Usage:**
 
-1. Bring up the command palette by typing CTRL-Shift-P (Mac: Command-Shift-P)
-2. Start typing "Server Manager" to locate the `InterSystems Server Manager: Store Password in Keychain` command
-3. Pick a server
-4. Enter your password
+1. Bring up the [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette) by typing Ctrl+Shift+P (Cmd+Shift+P on Mac) or F1.
+2. Start typing "Server Manager" to locate the `InterSystems Server Manager: Store Password in Keychain` command.
+3. Pick a server.
+4. Enter your password.
 
 You will no longer need to supply a password when connecting to the server you selected.
 
@@ -53,9 +53,9 @@ The command `InterSystems Server Manager: Clear Password from Keychain` removes 
 
 **Usage:**
 
-1. Bring up the command palette by typing CTRL-Shift-P (Mac: Command-Shift-P)
-2. Start typing "Server Manager" to locate the `InterSystems Server Manager: Clear Password from Keychain` command
-3. Pick a server
+1. Bring up the [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette) by typing Ctrl+Shift+P (Cmd+Shift+P on Mac) or F1.
+2. Start typing "Server Manager" to locate the `InterSystems Server Manager: Clear Password from Keychain` command.
+3. Pick a server.
 
 ## For Developers: Use By Other Extensions
 
