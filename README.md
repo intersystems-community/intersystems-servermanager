@@ -1,7 +1,15 @@
 # InterSystems® Server Manager
-This is a VS Code helper extension that contributes settings which define connections to [InterSystems](https://www.intersystems.com/) servers.
+
+This is a VS Code helper extension that helps configure connections to [InterSystems](https://www.intersystems.com/) servers in VS Code extensions such as the [ObjectScript Extension for VS Code](https://github.com/intersystems-community/vscode-objectscript).
+
+It also enables the secure storage of passwords using the underlying operating system's native key store.
+
+## Configuring connections
+
+Add server definitions to [user or workspace settings](https://code.visualstudio.com/docs/getstarted/settings) by editing JSON files.
 
 For example:
+
 ```json
 "intersystems.servers": {
 	"dev": {
@@ -26,13 +34,30 @@ For example:
 }
 ```
 
-This extension helps users add server definitions to their [user or workspace settings](https://code.visualstudio.com/docs/getstarted/settings) by editing JSON files.
+## Storing passwords securely
 
-It adds the command `InterSystems Server Manager: Store Password in Keychain` to the Command Palette, which offers a quickpick of defined servers, then prompts for a password to store. This facility should be used instead of the plaintext `password` property of a server's definition, which has been deprecated.
+This extension adds the command `InterSystems Server Manager: Store Password in Keychain` to the Command Palette, which offers a quickpick of defined servers, then prompts for a password to store. This facility should be used instead of the plaintext `password` property of a server's definition, which has been deprecated.
 
-A command `InterSystems Server Manager: Clear Password from Keychain` removes a stored password.
+**Usage:**
 
-## Use By Other Extensions
+1. Bring up the command palette by typing CTRL-Shift-P (Mac: Command-Shift-P)
+2. Start typing "Server Manager" to locate the `InterSystems Server Manager: Store Password in Keychain` command
+3. Pick a server
+4. Enter your password
+
+You will no longer need to supply a password when connecting to the server you selected.
+
+## Removing a stored password
+
+The command `InterSystems Server Manager: Clear Password from Keychain` removes a stored password.
+
+**Usage:**
+
+1. Bring up the command palette by typing CTRL-Shift-P (Mac: Command-Shift-P)
+2. Start typing "Server Manager" to locate the `InterSystems Server Manager: Clear Password from Keychain` command
+3. Pick a server
+
+## For Developers: Use By Other Extensions
 
 An extension XYZ needing to connect to InterSystems servers can define this extension as a dependency in its `package.json`
 
