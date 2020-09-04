@@ -1,3 +1,7 @@
+## 0.0.6 (04-Sep-2020)
+* New icon.
+* Upgrade vulnerable dependency.
+
 ## 0.0.5 (21-Aug-2020)
 * Add onDidChangePassword to API.
 * Remove test commands, which are now provided by our `intersystems-community.vscode-extension-api-tester` extension.
