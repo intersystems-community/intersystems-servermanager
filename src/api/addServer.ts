@@ -1,9 +1,12 @@
 import * as vscode from "vscode";
+import { JSONServerSpec } from "../extension";
 import { getServerNames } from "./getServerNames";
 
-export async function addServer(scope?: vscode.ConfigurationScope): Promise<string | undefined> {
+export async function addServer(
+  scope?: vscode.ConfigurationScope
+): Promise<string | undefined> {
   const serverNames = getServerNames(scope);
-  const spec = { webServer: { scheme: "", host: "", port: 0 } };
+  const spec: JSONServerSpec = { webServer: { scheme: "", host: "", port: 0 }};
   return await vscode.window
     .showInputBox({
       placeHolder: "Name of new server definition",
@@ -26,11 +29,11 @@ export async function addServer(scope?: vscode.ConfigurationScope): Promise<stri
           const host = await vscode.window.showInputBox({
             placeHolder: "Hostname or IP address of web server",
             validateInput: (value) => {
-              return value.length ? undefined : "Required";
+              return value.trim().length ? undefined : "Required";
             },
           });
           if (host) {
-            spec.webServer.host = host;
+            spec.webServer.host = host.trim();
             const portString = await vscode.window.showInputBox({
               placeHolder: "Port of web server",
               validateInput: (value) => {
@@ -45,28 +48,43 @@ export async function addServer(scope?: vscode.ConfigurationScope): Promise<stri
             });
             if (portString) {
               spec.webServer.port = +portString;
-              const scheme = await vscode.window.showQuickPick(
-                ["http", "https"],
-                { placeHolder: "Confirm connection type, then definition will be stored in your User Settings. 'Escape' to cancel.",  }
-              );
-              if (scheme) {
-                spec.webServer.scheme = scheme;
-                try {
-                  const config = vscode.workspace.getConfiguration(
-                    "intersystems",
-                    scope
-                  );
-                  // For simplicity we always add to the user-level (aka Global) settings
-                  const servers: any =
-                    config.inspect("servers")?.globalValue || {};
-                  servers[name] = spec;
-                  await config.update("servers", servers, true);
-                  return name;
-                } catch (error) {
-                  vscode.window.showErrorMessage(
-                    "Failed to store server definition"
-                  );
-                  return undefined;
+              const username = await vscode.window.showInputBox({
+                placeHolder:
+                  "Username",
+                prompt:
+                  "Leave empty to be prompted when connecting."
+              });
+              if (typeof username !== 'undefined') {
+                const usernameTrimmed = username.trim();
+                if (usernameTrimmed !== "") {
+                  spec.username = usernameTrimmed;
+                }
+                const scheme = await vscode.window.showQuickPick(
+                  ["http", "https"],
+                  {
+                    placeHolder:
+                      "Confirm connection type, then definition will be stored in your User Settings. 'Escape' to cancel.",
+                  }
+                );
+                if (scheme) {
+                  spec.webServer.scheme = scheme;
+                  try {
+                    const config = vscode.workspace.getConfiguration(
+                      "intersystems",
+                      scope
+                    );
+                    // For simplicity we always add to the user-level (aka Global) settings
+                    const servers: any =
+                      config.inspect("servers")?.globalValue || {};
+                    servers[name] = spec;
+                    await config.update("servers", servers, true);
+                    return name;
+                  } catch (error) {
+                    vscode.window.showErrorMessage(
+                      "Failed to store server definition"
+                    );
+                    return undefined;
+                  }
                 }
               }
             }

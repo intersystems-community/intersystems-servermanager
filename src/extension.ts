@@ -28,6 +28,13 @@ export interface ServerSpec {
     description?: string
 }
 
+export interface JSONServerSpec {
+    webServer: WebServerSpec,
+    username?: string,
+    password?: string,
+    description?: string
+}
+
 export function activate(context: vscode.ExtensionContext) {
 
     const _onDidChangePassword = new vscode.EventEmitter<string>();
