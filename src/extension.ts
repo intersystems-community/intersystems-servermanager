@@ -14,18 +14,18 @@ export interface ServerName {
 }
 
 export interface WebServerSpec {
-    scheme: string,
+    scheme?: string,
     host: string,
     port: number,
-    pathPrefix: string
+    pathPrefix?: string
 }
 
 export interface ServerSpec {
     name: string,
     webServer: WebServerSpec,
-    username: string,
-    password: string,
-    description: string
+    username?: string,
+    password?: string,
+    description?: string
 }
 
 export function activate(context: vscode.ExtensionContext) {
