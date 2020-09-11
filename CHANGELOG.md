@@ -1,3 +1,6 @@
+## 0.0.7 (11-Sep-2020)
+* Enhance server selector quickpick so new entries can be added User Settings.
+
 ## 0.0.6 (04-Sep-2020)
 * New icon.
 * Upgrade vulnerable dependency.
