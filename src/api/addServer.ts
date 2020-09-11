@@ -47,7 +47,7 @@ export async function addServer(scope?: vscode.ConfigurationScope): Promise<stri
               spec.webServer.port = +portString;
               const scheme = await vscode.window.showQuickPick(
                 ["http", "https"],
-                { placeHolder: "Type of connection" }
+                { placeHolder: "Confirm connection type, then definition will be stored in your User Settings. 'Escape' to cancel.",  }
               );
               if (scheme) {
                 spec.webServer.scheme = scheme;
