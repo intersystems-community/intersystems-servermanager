@@ -1,14 +1,23 @@
 # InterSystems® Server Manager
 
-This is a VS Code helper extension that helps configure connections to [InterSystems](https://www.intersystems.com/) servers in VS Code extensions such as the [ObjectScript Extension for VS Code](https://github.com/intersystems-community/vscode-objectscript).
+This is a VS Code helper extension for defining connections to [InterSystems](https://www.intersystems.com/) servers. These connection definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript).
 
-It also enables the secure storage of passwords using the underlying operating system's native keystore.
+In common with the rest of VS Code, Server Manager stores your connection settings in JSON files. VS Code settings are arranged in a hierarchy that you can learn more about [here](https://code.visualstudio.com/docs/getstarted/settings).
 
-## Configuring connections
+Using Server Manager you can store connection passwords in the native keystore of your workstation's operating system instead of as plaintext in JSON files.
 
-Add server definitions to [user or workspace settings](https://code.visualstudio.com/docs/getstarted/settings) by editing JSON files.
+## Defining a new connection
 
-For example:
+1. Open the VS Code [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette) by typing <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> on macOS) or <kbd>F1</kbd>.
+2. Start typing "Server Manager" to locate `InterSystems Server Manager: Store Password in Keychain`.
+3. Type the '+' character into the quickpick input field. Alternatively click the '+' button on the top right of the quickpick.
+4. Complete the prompts. By the time you reach the password prompt your connection definition has already been saved in **user-level** JSON. If you prefer to enter your password whenever a VS Code extension connects via Server Manager for the first time in a session, press <kbd>Esc</kbd> here.
+
+## Amending and removing definitions
+
+To manage your definitions, [edit the relevant JSON file](https://code.visualstudio.com/docs/getstarted/settings). VS Code offers several routes to these files. One way is to type "json" into the Command Palette.
+
+In this example two connections have been defined:
 
 ```json
 "intersystems.servers": {
@@ -34,18 +43,11 @@ For example:
 }
 ```
 
-## Storing passwords securely
+The JSON editor offers the usual [IntelliSense](https://code.visualstudio.com/docs/editor/intellisense) as you work in this structure.
 
-This extension adds the command `InterSystems Server Manager: Store Password in Keychain` to the Command Palette, which offers a quickpick of defined servers, then prompts for a password to store. This facility should be used instead of the plaintext `password` property of a server's definition, which has been deprecated.
+Notice how you can add a `description` property to each connection. This will be shown alongside its entry in the server quickpick.
 
-**Usage:**
-
-1. Bring up the [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette) by typing Ctrl+Shift+P (Cmd+Shift+P on Mac) or F1.
-2. Start typing "Server Manager" to locate the `InterSystems Server Manager: Store Password in Keychain` command.
-3. Pick a server.
-4. Enter your password.
-
-You will no longer need to supply a password when connecting to the server you selected.
+Servers are displayed in the quickpick in the order they are defined in the JSON file. The exception is that if a server name is set as the value of the `/default` property (see example above) it will be shown first in the list.
 
 ## Removing a stored password
 
@@ -57,7 +59,7 @@ The command `InterSystems Server Manager: Clear Password from Keychain` removes 
 2. Start typing "Server Manager" to locate the `InterSystems Server Manager: Clear Password from Keychain` command.
 3. Pick a server.
 
-## For Developers: Use By Other Extensions
+## For VS Code Extension Developers: Use By Other Extensions
 
 An extension XYZ needing to connect to InterSystems servers can define this extension as a dependency in its `package.json`
 
@@ -106,7 +108,4 @@ To obtain an array of server names:
 ```ts
   const allServerNames = await serverManagerApi.getServerNames();
 ```
-
-Servers are usually listed in the order they are defined. The exception is that if a server name is set as the value of the `/default` property (see example above) it will be shown first in the list.
-
 For details of the API, including result types and available parameters, review the source code of the extension's `activate` method [here](https://github.com/intersystems-community/intersystems-servermanager/blob/master/src/extension.ts).
