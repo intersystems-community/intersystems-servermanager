@@ -22,6 +22,7 @@ export async function addServer(
         }
         return null;
       },
+      ignoreFocusOut: true
     })
     .then(
       async (name): Promise<string | undefined> => {
@@ -31,6 +32,7 @@ export async function addServer(
             validateInput: (value) => {
               return value.trim().length ? undefined : "Required";
             },
+            ignoreFocusOut: true
           });
           if (host) {
             spec.webServer.host = host.trim();
@@ -45,6 +47,7 @@ export async function addServer(
                   ? undefined
                   : "Required, 1-65535";
               },
+              ignoreFocusOut: true
             });
             if (portString) {
               spec.webServer.port = +portString;
@@ -52,8 +55,9 @@ export async function addServer(
                 placeHolder:
                   "Username",
                 prompt:
-                  "Leave empty to be prompted when connecting."
-              });
+                  "Leave empty to be prompted when connecting.",
+                ignoreFocusOut: true
+                });
               if (typeof username !== 'undefined') {
                 const usernameTrimmed = username.trim();
                 if (usernameTrimmed !== "") {
@@ -64,7 +68,8 @@ export async function addServer(
                   {
                     placeHolder:
                       "Confirm connection type, then definition will be stored in your User Settings. 'Escape' to cancel.",
-                  }
+                      ignoreFocusOut: true
+                    }
                 );
                 if (scheme) {
                   spec.webServer.scheme = scheme;
