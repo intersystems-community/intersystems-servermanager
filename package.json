@@ -72,7 +72,7 @@
           "markdownDescription": "[InterSystems](https://www.intersystems.com)® servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
           "scope": "resource",
           "default": {
-            "iris": {
+            "default~iris": {
               "webServer": {
                 "scheme": "http",
                 "host": "127.0.0.1",
@@ -80,7 +80,7 @@
               },
               "description": "Connection to local InterSystems IRIS™ installed with default settings."
             },
-            "cache": {
+            "default~cache": {
               "webServer": {
                 "scheme": "http",
                 "host": "127.0.0.1",
@@ -88,7 +88,7 @@
               },
               "description": "Connection to local InterSystems Caché® installed with default settings."
             },
-            "ensemble": {
+            "default~ensemble": {
               "webServer": {
                 "scheme": "http",
                 "host": "127.0.0.1",
@@ -96,7 +96,7 @@
               },
               "description": "Connection to local InterSystems Ensemble® installed with default settings."
             },
-            "/default": "iris"
+            "/default": "default~iris"
           },
           "patternProperties": {
             "^[a-z0-9-._~]+$": {
