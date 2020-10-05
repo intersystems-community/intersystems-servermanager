@@ -7,16 +7,16 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
     const servers = vscode.workspace.getConfiguration('intersystems', scope).get('servers');
 
     if (typeof servers === 'object' && servers) {
-        const defaultName: string = servers['/default'] || '';
-        if (defaultName.length > 0 && servers[defaultName]) {
+        const myDefault: string = vscode.workspace.getConfiguration('intersystems.servers', scope).inspect('/default')?.defaultValue ? '' : servers['/default'] || '';
+        if (myDefault.length > 0 && servers[myDefault]) {
             names.push({
-                name: defaultName,
-                description: `${servers[defaultName].description || ''} (default)`,
-                detail: serverDetail(servers[defaultName])
+                name: myDefault,
+                description: `${servers[myDefault].description || ''} (default)`,
+                detail: serverDetail(servers[myDefault])
             });
         }
         for (const key in servers) {
-            if (!key.startsWith('/') && key !== defaultName) {
+            if (!key.startsWith('/') && key !== myDefault) {
                 const inspected = vscode.workspace.getConfiguration('intersystems.servers', scope).inspect(key);
 
                 // At least in VS Code 1.49 the defaultValue unexpectedly returns undefined
