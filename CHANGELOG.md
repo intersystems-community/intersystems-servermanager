@@ -1,3 +1,9 @@
+## 0.9.0 (09-Oct-2020)
+* Rename the three built-in server definitions and push them to the bottom of the list.
+* Only promote the `/default` server to the top of the list if explicitly set.
+* Keep quickpick open when focusing elsewhere, for example to copy server details from a document.
+* Prepare version number for 1.0 release.
+
 ## 0.0.7 (11-Sep-2020)
 * Enhance server selector quickpick so new entries can be added User Settings.
 
