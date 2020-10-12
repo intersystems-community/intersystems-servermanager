@@ -1,3 +1,6 @@
+## 0.9.1 (12-Oct-2020)
+* Fix problem that blocked 0.9.0 release.
+
 ## 0.9.0 (09-Oct-2020)
 * Rename the three built-in server definitions and push them to the bottom of the list.
 * Only promote the `/default` server to the top of the list if explicitly set.
