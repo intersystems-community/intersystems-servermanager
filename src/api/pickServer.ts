@@ -23,6 +23,7 @@ export async function pickServer(scope?: vscode.ConfigurationScope, options: vsc
         quickPick.placeholder = options.placeHolder;
         quickPick.matchOnDescription = options.matchOnDescription || true;
         quickPick.matchOnDetail = options.matchOnDetail || false;
+        quickPick.ignoreFocusOut = options.ignoreFocusOut || false;
         quickPick.items = qpItems;
         const btnAdd: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('add'), tooltip: 'Define New Server' }
         quickPick.buttons = [btnAdd];
