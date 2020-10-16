@@ -1,3 +1,7 @@
+## 0.9.2 (16-Oct-2020)
+* Make `pickServer` API respect `ignoreFocusOut` option if passed.
+* Standardize use of '&reg;' symbol in text strings.
+
 ## 0.9.1 (12-Oct-2020)
 * Fix problem that blocked 0.9.0 release.
 
