@@ -1,3 +1,6 @@
+## 1.0.1 (21-Oct-2020)
+* Use transparent background for icon.
+
 ## 1.0.0 (19-Oct-2020)
 * First production release.
 
