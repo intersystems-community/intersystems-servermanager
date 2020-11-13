@@ -140,7 +140,8 @@
                     },
                     "pathPrefix": {
                       "type": "string",
-                      "description": "Optional prefix for the path to the resource. Only needed when one web server publishes services on behalf of multiple InterSystems servers."
+                      "description": "Optional prefix for the path to the resource, for example '/dev' or '/vm/test'. Only needed when one web server publishes services on behalf of multiple InterSystems servers.",
+                      "pattern": "^(\/[^\/]+)*$"
                     }
                   },
                   "required": [
