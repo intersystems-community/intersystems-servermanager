@@ -1,3 +1,7 @@
+## 1.0.2 (13-Nov-2020)
+* Display a notification when a new server is saved.
+* Apply a validation pattern to `pathPrefix`.
+
 ## 1.0.1 (21-Oct-2020)
 * Use transparent background for icon.
 

@@ -26,7 +26,7 @@ In this example two connections have been defined:
 			"scheme": "https",
 			"host": "webhost.local",
 			"port": 443,
-			"pathPrefix": "iris/dev"
+			"pathPrefix": "/iris/dev"
 		},
 		"username": "alice",
 		"description": "Development server serviced by central web host over HTTPS"
