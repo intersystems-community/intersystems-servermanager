@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { credentialCache } from "../api/getServerSpec";
 import { Keychain } from "../keychain";
 
 export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
@@ -8,79 +7,162 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
   const vsWinReg = require("vscode-windows-registry");
   const hkeyLocalMachine = "HKEY_LOCAL_MACHINE";
 
-  cmd.get(
+  const config = vscode.workspace.getConfiguration("intersystems", scope);
+  const serverDefinitions: any = config.get("servers");
+
+  const newServerNames = new Array<string>();
+  const serversMissingUsernames = new Array<string>();
+  const cancellationToken = new vscode.CancellationTokenSource().token;
+  cancellationToken.onCancellationRequested(() => {
+    vscode.window.showInformationMessage("Cancelled server import.");
+  });
+
+  await cmd.get(
     "reg query " +
       hkeyLocalMachine +
       "\\SOFTWARE\\Intersystems\\Cache\\Servers",
-    (err, data, stderr) => {
-      // TODO: error handling
-      const config = vscode.workspace.getConfiguration("intersystems", scope);
-      const serverDefinitions: any = config.get("servers");
-
-      // convert into async loop (this doesn't seem to work)
-      // and prompt user for username (if not in registry) and password
-      data.split("\n").forEach(async (serverName) => {
+    async (err, data, stderr) => {
+      // Prompt user for username (if not in registry) and password
+      data.split("\n").forEach((serverName) => {
         // remove HKEY_LOCAL_MACHINE\ and whitespace from the server name
         const path = serverName.substring(hkeyLocalMachine.length + 1).trim();
 
-        const originalName = serverName.split("\\").pop().trim();
-        // TODO: enforce the rules from package.json on the server name simply enforcing lower case right now
-        const name = originalName.toLowerCase();
+        const originalName: string = serverName.split("\\").pop().trim();
+        // Enforce the rules from package.json on the server name
+        const name = originalName.toLowerCase().replace(/[^A-Za-z1-9-]/g, "~");
         const getProperty = (property: string) =>
           vsWinReg.GetStringRegKey(hkeyLocalMachine, path, property);
 
         if (name !== "" && !config.has("servers." + name)) {
-          // Get the username for this server
-          let username = vsWinReg.GetStringRegKey(
-            "HKEY_CURRENT_USER",
-            "Software\\InterSystems\\Cache\\Servers\\" + originalName
-          );
-          if (username === "") {
-            username = await vscode.window.showInputBox({
-              placeHolder: "username",
-              prompt: "Username for " + name,
-            });
+          newServerNames.push(name);
+          let username: string | undefined;
+          try {
+            username = vsWinReg.GetStringRegKey(
+              "HKEY_CURRENT_USER",
+              "Software\\InterSystems\\Cache\\Servers\\" + originalName,
+              "Server User Name",
+            );
+          } catch (e) {
+            // No-op; will assume the key did not exist (it is valid for it not to).
           }
 
-          // Get the password for this server (TODO: currently duplicated from managePassword.ts)
-          await vscode.window
-          .showInputBox({
-              password: true,
-              placeHolder: 'Password to store in keychain',
-              prompt: `For connection to InterSystems server '${name}'`,
-              validateInput: (value => {
-                  return value.length > 0 ? '' : 'Mandatory field';
-              }),
-              ignoreFocusOut: true,
-          })
-          .then((password) => {
-              if (password) {
-                  credentialCache[name] = undefined;
-                  new Keychain(name).setPassword(password).then(() => {
-                      vscode.window.showInformationMessage(`Password for '${name}' stored in keychain.`);
-                  });
-                  // reply = name;
-              }
-          });
+          if (username === undefined || username === "") {
+            serversMissingUsernames.push(name);
+          }
 
-          // TODO: make sure this works when HTTPS is defined
           const usesHttps = getProperty("HTTPS") === "1";
           serverDefinitions[name] = {
+            description: getProperty("Comment"),
+            username: (username === undefined || username === "" ? undefined : username),
             webServer: {
-              scheme: usesHttps ? "https" : "http",
               host: getProperty("Address"),
               port: parseInt(getProperty("WebServerPort"), 10),
+              scheme: usesHttps ? "https" : "http",
             },
-            username,
-            description: getProperty("Comment"),
           };
         }
       });
+
+      if (serversMissingUsernames.length) {
+        let serverName = serversMissingUsernames[0];
+        let username = await vscode.window.showInputBox({
+          ignoreFocusOut: true,
+          placeHolder: "username",
+          prompt: `Username for server '${serverName}'`,
+          validateInput: ((value) => {
+              return value.length > 0 ? "" : "Mandatory field";
+          }),
+        }, cancellationToken);
+        if (cancellationToken.isCancellationRequested || username === undefined) {
+          return;
+        }
+        if (serversMissingUsernames.length > 1) {
+          const items = [
+            `Use username '${username}' for all servers`,
+            `Enter usernames individually for ${serversMissingUsernames.length - 1} more server(s)`,
+            `Cancel`].map((label) => {
+              return { label };
+            });
+          const result = await vscode.window.showQuickPick(items, {
+            canPickMany: false,
+            ignoreFocusOut: true,
+          }, cancellationToken);
+          if (cancellationToken.isCancellationRequested || result === undefined || result.label === items[2].label) {
+            return;
+          } else if (result.label === items[0].label) {
+            for (serverName of serversMissingUsernames) {
+              serverDefinitions[serverName].username = username;
+            }
+          } else {
+            for (serverName of serversMissingUsernames) {
+              username = await vscode.window.showInputBox({
+                ignoreFocusOut: true,
+                prompt: `Username for server '${serverName}'`,
+                validateInput: ((value) => {
+                    return value.length > 0 ? "" : "Mandatory field";
+                }),
+                value: username,
+              }, cancellationToken);
+              if (cancellationToken.isCancellationRequested || username === undefined) {
+                return;
+              }
+              serverDefinitions[serverName].username = username;
+            }
+          }
+        }
+      }
+
+      let reusePassword;
+      let password;
+      for (const serverName of newServerNames) {
+        if (!reusePassword) {
+          password = await vscode.window.showInputBox({
+            ignoreFocusOut: true,
+            password: true,
+            placeHolder: "Password to store in keychain",
+            prompt: `For connection to InterSystems server '${serverName}'
+              as ${serverDefinitions[serverName].username}`,
+            validateInput: ((value) => {
+                return value.length > 0 ? "" : "Mandatory field";
+            }),
+          }, cancellationToken);
+
+          if (!password) {
+            return;
+          }
+
+          if (cancellationToken.isCancellationRequested) {
+            return;
+          }
+        }
+
+        if (reusePassword === undefined) {
+          const items = [
+            `Use this password for all servers`,
+            `Enter passwords individually for ${newServerNames.length - 1} more server(s)`,
+            `Cancel`].map((label) => {
+              return { label };
+            });
+          const result = await vscode.window.showQuickPick(items, {
+            canPickMany: false,
+            ignoreFocusOut: true,
+          });
+          if (cancellationToken.isCancellationRequested || result === undefined || result.label === items[2].label) {
+            return;
+          }
+          reusePassword = (result.label === items[0].label);
+        }
+
+        await new Keychain(serverName).setPassword(password).then(() => {
+            vscode.window.showInformationMessage(`Password for '${serverName}' stored in keychain.`);
+        });
+      }
+
       config.update(
         `servers`,
         serverDefinitions,
-        vscode.ConfigurationTarget.Global
+        vscode.ConfigurationTarget.Global,
       );
-    }
+    },
   );
 }
