@@ -1,8 +1,7 @@
 {
   "name": "servermanager",
-  "displayName": "InterSystems® Server Manager",
-  "version": "0.0.8-SNAPSHOT",
-  "preview": true,
+  "displayName": "InterSystems Server Manager",
+  "version": "1.0.3-SNAPSHOT",
   "publisher": "intersystems-community",
   "description": "Helper extension for defining connections to InterSystems servers.",
   "repository": {
@@ -67,12 +66,12 @@
   ],
   "contributes": {
     "configuration": {
-      "title": "InterSystems® Server Manager",
+      "title": "InterSystems Server Manager",
       "properties": {
         "intersystems.servers": {
           "type": "object",
-          "description": "InterSystems® servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it.",
-          "markdownDescription": "[InterSystems](https://www.intersystems.com)® servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
+          "description": "InterSystems servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it.",
+          "markdownDescription": "[InterSystems](https://www.intersystems.com) servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
           "scope": "resource",
           "default": {
             "default~iris": {
@@ -89,7 +88,7 @@
                 "host": "127.0.0.1",
                 "port": 57772
               },
-              "description": "Connection to local InterSystems Caché® installed with default settings."
+              "description": "Connection to local InterSystems Caché installed with default settings."
             },
             "default~ensemble": {
               "webServer": {
@@ -97,7 +96,7 @@
                 "host": "127.0.0.1",
                 "port": 57772
               },
-              "description": "Connection to local InterSystems Ensemble® installed with default settings."
+              "description": "Connection to local InterSystems Ensemble installed with default settings."
             },
             "/default": "default~iris"
           },
@@ -108,7 +107,7 @@
               "properties": {
                 "webServer": {
                   "type": "object",
-                  "description": "Web server publishing an InterSystems® server's web services.",
+                  "description": "Web server publishing an InterSystems server's web services.",
                   "properties": {
                     "scheme": {
                       "type": "string",
@@ -121,7 +120,7 @@
                     },
                     "host": {
                       "type": "string",
-                      "description": "Hostname or IP address of the web server. Often the same as the InterSystems® server host.",
+                      "description": "Hostname or IP address of the web server. Often the same as the InterSystems server host.",
                       "anyOf": [
                         {
                           "format": "hostname"
@@ -144,7 +143,8 @@
                     },
                     "pathPrefix": {
                       "type": "string",
-                      "description": "Optional prefix for the path to the resource. Only needed when one web server publishes services on behalf of multiple InterSystems® servers."
+                      "description": "Optional prefix for the path to the resource, for example '/dev' or '/vm/test'. Only needed when one web server publishes services on behalf of multiple InterSystems servers.",
+                      "pattern": "^(/[^/]+)*$"
                     }
                   },
                   "required": [

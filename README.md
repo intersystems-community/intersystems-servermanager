@@ -1,6 +1,6 @@
-# InterSystems® Server Manager
+# InterSystems Server Manager
 
-This is a VS Code helper extension for defining connections to [InterSystems](https://www.intersystems.com/) servers. These connection definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript).
+This is a VS Code helper extension for defining connections to [InterSystems&reg;](https://www.intersystems.com/) servers. These connection definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript).
 
 In common with the rest of VS Code, Server Manager stores your connection settings in JSON files. VS Code settings are arranged in a hierarchy that you can learn more about [here](https://code.visualstudio.com/docs/getstarted/settings).
 
@@ -26,7 +26,7 @@ In this example two connections have been defined:
 			"scheme": "https",
 			"host": "webhost.local",
 			"port": 443,
-			"pathPrefix": "iris/dev"
+			"pathPrefix": "/iris/dev"
 		},
 		"username": "alice",
 		"description": "Development server serviced by central web host over HTTPS"

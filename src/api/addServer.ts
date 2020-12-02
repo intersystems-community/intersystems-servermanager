@@ -67,7 +67,7 @@ export async function addServer(
                   ["http", "https"],
                   {
                     placeHolder:
-                      "Confirm connection type, then definition will be stored in your User Settings. 'Escape' to cancel.",
+                      "Confirm connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.",
                       ignoreFocusOut: true
                     }
                 );
@@ -83,10 +83,11 @@ export async function addServer(
                       config.inspect("servers")?.globalValue || {};
                     servers[name] = spec;
                     await config.update("servers", servers, true);
+                    vscode.window.showInformationMessage(`Server '${name}' stored in user-level settings.`);
                     return name;
                   } catch (error) {
                     vscode.window.showErrorMessage(
-                      "Failed to store server definition"
+                      "Failed to store server '${name}' definition."
                     );
                     return undefined;
                   }

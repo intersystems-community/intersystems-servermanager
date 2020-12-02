@@ -1,3 +1,26 @@
+## 1.0.2 (13-Nov-2020)
+* Display a notification when a new server is saved.
+* Apply a validation pattern to `pathPrefix`.
+
+## 1.0.1 (21-Oct-2020)
+* Use transparent background for icon.
+
+## 1.0.0 (19-Oct-2020)
+* First production release.
+
+## 0.9.2 (16-Oct-2020)
+* Make `pickServer` API respect `ignoreFocusOut` option if passed.
+* Standardize use of '&reg;' symbol in text strings.
+
+## 0.9.1 (12-Oct-2020)
+* Fix problem that blocked 0.9.0 release.
+
+## 0.9.0 (09-Oct-2020)
+* Rename the three built-in server definitions and push them to the bottom of the list.
+* Only promote the `/default` server to the top of the list if explicitly set.
+* Keep quickpick open when focusing elsewhere, for example to copy server details from a document.
+* Prepare version number for 1.0 release.
+
 ## 0.0.7 (11-Sep-2020)
 * Enhance server selector quickpick so new entries can be added User Settings.
 
