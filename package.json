@@ -199,6 +199,14 @@
         "category": "InterSystems Server Manager",
         "title": "Import Servers from Registry"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "intersystems-community.servermanager.importServers",
+          "when": "isWindows"
+        }
+      ]
+    }
   }
 }

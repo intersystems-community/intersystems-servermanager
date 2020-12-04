@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import { Keychain } from "../keychain";
 
 export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
-  // TODO: make sure this command doesn't appear on non-windows OSes
   const cmd = require("node-cmd");
   const vsWinReg = require("vscode-windows-registry");
   const hkeyLocalMachine = "HKEY_LOCAL_MACHINE";
