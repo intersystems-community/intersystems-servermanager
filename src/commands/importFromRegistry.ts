@@ -28,7 +28,7 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
 
         const originalName: string = serverName.split("\\").pop().trim();
         // Enforce the rules from package.json on the server name
-        const name = originalName.toLowerCase().replace(/[^A-Za-z1-9-]/g, "~");
+        const name = originalName.toLowerCase().replace(/[^a-z0-9-._~]/g, "~");
         const getProperty = (property: string) =>
           vsWinReg.GetStringRegKey(hkeyLocalMachine, path, property);
 
@@ -54,7 +54,8 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
             description: getProperty("Comment"),
             username: (username === undefined || username === "" ? undefined : username),
             webServer: {
-              host: getProperty("Address"),
+              host: getProperty("WebServerAddress") || getProperty("Address"),
+              pathPrefix: getProperty("WebServerInstanceName"),
               port: parseInt(getProperty("WebServerPort"), 10),
               scheme: usesHttps ? "https" : "http",
             },
