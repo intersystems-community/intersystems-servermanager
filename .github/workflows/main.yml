@@ -23,12 +23,16 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+    outputs:
+      name: ${{ steps.set-version.outputs.name }}
+      version: ${{ steps.set-version.outputs.version }}
     steps:
       - uses: actions/checkout@v2
       - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: Set an output
         id: set-version
-        if: runner.os == 'Linux'
+        if: runner.os == 'Windows'
+        shell: bash
         run: |
           set -x
           VERSION=$(jq -r '.version' package.json | cut -d- -f1)
@@ -58,83 +62,59 @@ jobs:
         with:
           run: npm run test
       - name: Build package
-        if: runner.os == 'Linux'
         run: |
           npx vsce package -o ${{ steps.set-version.outputs.name }}.vsix
       - uses: actions/upload-artifact@v2
-        if: runner.os == 'Linux'
+        if: (runner.os == 'Windows') && (github.event_name != 'release')
         with:
           name: ${{ steps.set-version.outputs.name }}.vsix
           path: ${{ steps.set-version.outputs.name }}.vsix
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'Linux'
-        with:
-          name: meta
-          path: |
-            .name
-            .version
   beta:
     if: (github.event_name == 'push')
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: build
     steps:
       - uses: actions/download-artifact@v2
         with:
-          name: meta
-          path: .
-      - name: Set an output
-        id: set-version
-        if: runner.os == 'Linux'
-        run: |
-          set -x
-          echo ::set-output name=version::`cat .version`
-          echo ::set-output name=name::`cat .name`
-      - uses: actions/download-artifact@v2
-        with:
-          name: ${{ steps.set-version.outputs.name }}.vsix
+          name: ${{ needs.test.outputs.name }}.vsix
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
-        if: runner.os == 'Linux'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.set-version.outputs.version }}
-          release_name: v${{ steps.set-version.outputs.version }}
+          tag_name: v${{ needs.test.outputs.version }}
+          release_name: v${{ needs.test.outputs.version }}
           prerelease: ${{ github.event_name != 'release' }}
           body: |
             Changes in this release
-            ${{ steps.set-version.outputs.changelog }}
+            ${{ needs.test.outputs.changelog }}
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
-        if: runner.os == 'Linux'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.set-version.outputs.name }}.vsix
-          asset_name: ${{ steps.set-version.outputs.name }}.vsix
+          asset_path: ${{ needs.test.outputs.name }}.vsix
+          asset_name: ${{ needs.test.outputs.name }}.vsix
           asset_content_type: application/zip
   publish:
     if: github.event_name == 'release'
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: build
     steps:
       - uses: actions/checkout@v2
         with:
           ref: master
           token: ${{ secrets.TOKEN }}
-      - uses: actions/download-artifact@v2
-        with:
-          name: meta
-          path: .
       - name: Use Node.js
         uses: actions/setup-node@v1
         with:
           node-version: 12.x
       - name: Prepare build
         id: set-version
+        shell: bash
         run: |
           VERSION=`cat .version`
           NEXT_VERSION=`cat .version | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.`
@@ -155,7 +135,6 @@ jobs:
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
-        if: runner.os == 'Linux'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

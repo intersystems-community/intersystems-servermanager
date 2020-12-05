@@ -10,15 +10,19 @@ suite("Extension Test Suite", () => {
   suiteSetup(async function () {
     // make sure extension is activated
     const ext = extensions.getExtension(extensionId);
-    await ext?.activate();
+    if (ext) {
+      await ext.activate();
+    } else {
+      assert.fail("Extension not found");
+    }
   });
 
   before(() => {
     window.showInformationMessage("Start all tests.");
   });
 
-  test("Sample test", () => {
-    assert.equal([1, 2, 3].indexOf(5), -1);
-    assert.equal([1, 2, 3].indexOf(0), -1);
+  test("Extension started", () => {
+    assert.ok("All good");
   });
+
 });
