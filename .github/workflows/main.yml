@@ -76,19 +76,19 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         with:
-          name: ${{ needs.test.outputs.name }}.vsix
+          name: ${{ needs.build.outputs.name }}.vsix
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ needs.test.outputs.version }}
-          release_name: v${{ needs.test.outputs.version }}
+          tag_name: v${{ needs.build.outputs.version }}
+          release_name: v${{ needs.build.outputs.version }}
           prerelease: ${{ github.event_name != 'release' }}
           body: |
             Changes in this release
-            ${{ needs.test.outputs.changelog }}
+            ${{ needs.build.outputs.changelog }}
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
@@ -96,8 +96,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ needs.test.outputs.name }}.vsix
-          asset_name: ${{ needs.test.outputs.name }}.vsix
+          asset_path: ${{ needs.build.outputs.name }}.vsix
+          asset_name: ${{ needs.build.outputs.name }}.vsix
           asset_content_type: application/zip
   publish:
     if: github.event_name == 'release'
