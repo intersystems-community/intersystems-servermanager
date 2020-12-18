@@ -41,10 +41,7 @@
   },
   "dependencies": {
     "@types/vscode": "^1.44.0",
-    "node-cmd": "^3.0.0"
-  },
-  "optionalDependencies": {
-    "vscode-windows-registry": "^1.0.2"
+    "node-cmd": "^4.0.0"
   },
   "devDependencies": {
     "@types/glob": "^7.1.1",
