@@ -22,6 +22,7 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
       vscode.window.showInformationMessage("Cancelled server import.");
     });
 
+    // This forces the progress bar to actually show before the possibly long-running load of registry data
     await new Promise(resolve => setTimeout(resolve,0));
 
     await loadRegistryData(config, serverDefinitions, serversMissingUsernames, newServerNames);
