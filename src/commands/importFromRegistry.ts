@@ -62,6 +62,10 @@ async function loadRegistryData(config, serverDefinitions, serversMissingUsernam
     const path = hkeyLocalMachine + "\\SOFTWARE" + folder + subFolder;
     preloadRegistryCache(cmd, path);
     const regData = cmd.runSync("reg query " + path);
+    if (regData.data === null) {
+      // e.g., because the key in question isn't there
+      continue;
+    }
     regData.data.split("\r\n").forEach((serverName) => {
       // We only want folders, not keys (e.g., DefaultServer)
       if (serverName.indexOf(hkeyLocalMachine) !== 0) {
