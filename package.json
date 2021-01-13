@@ -98,7 +98,7 @@
             "/default": "default~iris"
           },
           "patternProperties": {
-            "^[a-z0-9-._~]+$": {
+            "^[a-z0-9-_~]+$": {
               "type": "object",
               "description": "A server definition, with properties that specify how to connect to it.",
               "properties": {
