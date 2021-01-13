@@ -17,8 +17,8 @@ export async function addServer(
         if (serverNames.filter((server) => server.name === value).length) {
           return "Name already exists";
         }
-        if (!value.match(/^[a-z0-9-._~]+$/)) {
-          return "Can only contain a-z, 0-9 and punctuation -._~";
+        if (!value.match(/^[a-z0-9-_~]+$/)) {
+          return "Can only contain a-z, 0-9 and punctuation -_~";
         }
         return null;
       },
