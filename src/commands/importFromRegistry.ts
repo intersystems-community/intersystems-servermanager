@@ -82,7 +82,7 @@ async function loadRegistryData(config, serverDefinitions, serversMissingUsernam
 
       const originalName: string = serverName.split("\\").pop().trim();
       // Enforce the rules from package.json on the server name
-      const name = originalName.toLowerCase().replace(/[^a-z0-9-._~]/g, "~");
+      const name = originalName.toLowerCase().replace(/[^a-z0-9-_~]/g, "~");
       const getProperty = (property: string) => getStringRegKey(cmd, hkeyLocalMachine, path, property);
 
       if (name !== "" && !config.has("servers." + name)) {
@@ -122,26 +122,30 @@ async function promptForUsernames(serverDefinitions: any, serversMissingUsername
     let serverName = serversMissingUsernames.splice(0,1)[0];
     let username = await vscode.window.showInputBox({
       ignoreFocusOut: true,
-      placeHolder: "Username",
+      placeHolder: "Enter a username. Leave empty to be prompted at connect time.",
       prompt: `Username for server '${serverName}'`,
-      validateInput: ((value) => {
-          return value.length > 0 ? "" : "Mandatory field";
-      }),
     });
     if (username === undefined) {
+      // Was cancelled
       return false;
+    }
+    if (username === '') {
+      // If unspecified, actually set to undefined to leave it empty in serverDefinitions
+      username = undefined;
     }
     serverDefinitions[serverName].username = username;
     if (serversMissingUsernames.length > 0) {
+      const reuseMessage = (username === undefined) ? `Prompt for username at connect time for all of them` : `Use '${username}' as the username for all of them`;
       const items = [
-        `Enter usernames individually for ${serversMissingUsernames.length} more server(s)`,
-        `Use username '${username}' for all servers that don't already have a username configured`,
+        `Enter a username individually for each of them`,
+        reuseMessage,
         `Cancel import`].map((label) => {
           return { label };
         });
       const result = await vscode.window.showQuickPick(items, {
         canPickMany: false,
-        ignoreFocusOut: true
+        ignoreFocusOut: true,
+        placeHolder: `${serversMissingUsernames.length} more servers lack a username. What do you want to do?`
       });
       if (result === undefined || result.label === items[2].label) {
         return false;
@@ -172,23 +176,35 @@ async function promptForUsernames(serverDefinitions: any, serversMissingUsername
 
 async function promptForPasswords(serverDefinitions: any, newServerNames: string[]): Promise<void> {
   let reusePassword;
-  let password;
-  for (const serverName of newServerNames) {
+  let password : string | undefined = '';
+  const promptServerNames = new Array();
+  // Only prompt for servers with a username specified, of course.
+  newServerNames.forEach(name => {
+    if (serverDefinitions[name].username !== undefined) {
+      promptServerNames.push(name);
+    }
+  });
+  for (const serverName of promptServerNames) {
     if (!reusePassword) {
       password = await vscode.window.showInputBox({
         ignoreFocusOut: true,
         password: true,
-        placeHolder: "Password to store in keychain",
-        prompt: `For connection to InterSystems server '${serverName}'
+        placeHolder: "Enter password to store in keychain. Leave empty to be prompted at connect time.",
+        prompt: `Password for connection to InterSystems server '${serverName}'
           as ${serverDefinitions[serverName].username}`
       });
 
-      if (!password) {
+      if (password === undefined) {
         return;
+      }
+
+      if (password === '') {
+        password = undefined;
       }
     }
 
-    if ((reusePassword === undefined) && (newServerNames.length > 1)) {
+    if ((reusePassword === undefined) && (promptServerNames.length > 1)) {
+      const placeHolder = (password === undefined) ? `Enter password later for remaining ${promptServerNames.length - 1} server(s)?` : `Store the same password for remaining ${promptServerNames.length - 1} server(s)?`
       const items = [
         `No`,
         `Yes`,
@@ -198,7 +214,7 @@ async function promptForPasswords(serverDefinitions: any, newServerNames: string
       const result = await vscode.window.showQuickPick(items, {
         canPickMany: false,
         ignoreFocusOut: true,
-        placeHolder: `Store the same password for remaining ${newServerNames.length - 1} server(s)?`
+        placeHolder
       });
       if (result === undefined || result.label === items[2].label) {
         return;
