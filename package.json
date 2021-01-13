@@ -40,7 +40,8 @@
     "lint-fix": "tslint --project tsconfig.json -t verbose --fix"
   },
   "dependencies": {
-    "@types/vscode": "^1.44.0"
+    "@types/vscode": "^1.44.0",
+    "node-cmd": "^4.0.0"
   },
   "devDependencies": {
     "@types/glob": "^7.1.1",
@@ -59,7 +60,8 @@
   "main": "./out/extension",
   "activationEvents": [
     "onCommand:intersystems-community.servermanager.storePassword",
-    "onCommand:intersystems-community.servermanager.clearPassword"
+    "onCommand:intersystems-community.servermanager.clearPassword",
+    "onCommand:intersystems-community.servermanager.importServers"
   ],
   "contributes": {
     "configuration": {
@@ -190,7 +192,20 @@
         "command": "intersystems-community.servermanager.clearPassword",
         "category": "InterSystems Server Manager",
         "title": "Clear Password from Keychain"
+      },
+      {
+        "command": "intersystems-community.servermanager.importServers",
+        "category": "InterSystems Server Manager",
+        "title": "Import Servers from Registry"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "intersystems-community.servermanager.importServers",
+          "when": "isWindows"
+        }
+      ]
+    }
   }
 }

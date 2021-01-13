@@ -6,6 +6,7 @@ import { pickServer } from './api/pickServer';
 import { getServerNames } from './api/getServerNames';
 import { getServerSpec } from './api/getServerSpec';
 import { storePassword, clearPassword } from './commands/managePasswords';
+import { importFromRegistry } from './commands/importFromRegistry';
 
 export interface ServerName {
     name: string,
@@ -60,6 +61,11 @@ export function activate(context: vscode.ExtensionContext) {
             });
         })
     );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(`${extensionId}.importServers`, () => {
+      importFromRegistry();
+    })
+  );
 
     let api = {
         async pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {
