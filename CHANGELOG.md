@@ -1,3 +1,7 @@
+## 1.0.3 (15-Jan-2021)
+* On Windows, add `Import Servers from Registry`command to import server definitions from registry (#1).
+* Disallow the `'.'` character in server names (#60).
+
 ## 1.0.2 (13-Nov-2020)
 * Display a notification when a new server is saved.
 * Apply a validation pattern to `pathPrefix`.

@@ -6,6 +6,8 @@ In common with the rest of VS Code, Server Manager stores your connection settin
 
 Using Server Manager you can store connection passwords in the native keystore of your workstation's operating system instead of as plaintext in JSON files.
 
+On Windows you can run `Import Servers from Registry` from [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette) to create connection entries for all connections you previously defined with the InterSystems Server Manager.
+
 ## Defining a new connection
 
 1. Open the VS Code [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette) by typing <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> on macOS) or <kbd>F1</kbd>.
