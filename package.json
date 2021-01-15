@@ -15,7 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.44.0",
+    "vscode": "^1.43.0",
     "node": "^10.2.0"
   },
   "icon": "images/logo.png",
@@ -40,7 +40,7 @@
     "lint-fix": "tslint --project tsconfig.json -t verbose --fix"
   },
   "dependencies": {
-    "@types/vscode": "^1.44.0",
+    "@types/vscode": "^1.43.0",
     "node-cmd": "^4.0.0"
   },
   "devDependencies": {
