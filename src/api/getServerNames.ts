@@ -37,7 +37,9 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
             }
         }
     }
-    names.push(...defaultNames);
+    if (!vscode.workspace.getConfiguration('intersystems.servers', scope).get('/hideEmbeddedEntries')) {
+        names.push(...defaultNames);
+    }
     return names;
 }
 
