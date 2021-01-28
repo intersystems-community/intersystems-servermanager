@@ -7,7 +7,15 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
     const servers = vscode.workspace.getConfiguration('intersystems', scope).get('servers');
 
     if (typeof servers === 'object' && servers) {
-        const myDefault: string = vscode.workspace.getConfiguration('intersystems.servers', scope).inspect('/default')?.defaultValue ? '' : servers['/default'] || '';
+        
+        // Helper function to return true iff inspected setting is not explicitly set at any level
+        const notSet = (inspected):boolean => {
+            return !inspected?.globalLanguageValue && !inspected?.globalValue && !inspected?.workspaceFolderLanguageValue && !inspected?.workspaceFolderValue && !inspected?.workspaceLanguageValue && !inspected?.workspaceValue;
+        }
+        
+        // If a valid default has been explicitly nominated, add it first
+        const inspectedDefault = vscode.workspace.getConfiguration('intersystems.servers', scope).inspect('/default');
+        const myDefault: string = notSet(inspectedDefault) ? '' : servers['/default'] || '';
         if (myDefault.length > 0 && servers[myDefault]) {
             names.push({
                 name: myDefault,
@@ -15,13 +23,14 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
                 detail: serverDetail(servers[myDefault])
             });
         }
+ 
+        // Process the rest
         for (const key in servers) {
             if (!key.startsWith('/') && key !== myDefault) {
                 const inspected = vscode.workspace.getConfiguration('intersystems.servers', scope).inspect(key);
 
-                // At least in VS Code 1.49 the defaultValue unexpectedly returns undefined
-                // even for keys that are defined in package.json as defaults. So we have to check negatively all the other possibilities.
-                if (!inspected?.globalLanguageValue && !inspected?.globalValue && !inspected?.workspaceFolderLanguageValue && !inspected?.workspaceFolderValue && !inspected?.workspaceLanguageValue && !inspected?.workspaceValue) {
+                // Collect embedded (default~*) servers separately
+                if (notSet(inspected)) {
                     defaultNames.push({
                         name: key,
                         description: servers[key].description || '',
@@ -37,7 +46,11 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
             }
         }
     }
-    names.push(...defaultNames);
+
+    // Append the embedded servers unless suppressed
+    if (!vscode.workspace.getConfiguration('intersystems.servers', scope).get('/hideEmbeddedEntries')) {
+        names.push(...defaultNames);
+    }
     return names;
 }
 

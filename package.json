@@ -175,7 +175,11 @@
           "properties": {
             "/default": {
               "type": "string",
-              "description": "Name of the default server."
+              "description": "Name of the server to promote to the top of pick lists."
+            },
+            "/hideEmbeddedEntries": {
+              "type": "boolean",
+              "description": "Do not append the built-in 'default~*' server definitions to pick lists."
             }
           },
           "additionalProperties": false
