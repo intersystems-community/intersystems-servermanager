@@ -116,9 +116,8 @@ jobs:
         id: set-version
         shell: bash
         run: |
-          VERSION=`cat .version`
-          NEXT_VERSION=`cat .version | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.`
-          echo ::set-output name=name::`cat .name`
+          VERSION=${{ needs.build.outputs.version }}
+          NEXT_VERSION=`echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.`
           tmp=$(mktemp)
           git config --global user.name 'ProjectBot'
           git config --global user.email 'bot@users.noreply.github.com'
@@ -131,7 +130,7 @@ jobs:
           git push
       - name: Build package
         run: |
-          npx vsce package -o ${{ steps.set-version.outputs.name }}.vsix
+          npx vsce package -o ${{ needs.build.outputs.name }}.vsix
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
@@ -139,14 +138,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.set-version.outputs.name }}.vsix
-          asset_name: ${{ steps.set-version.outputs.name }}.vsix
+          asset_path: ${{ needs.build.outputs.name }}.vsix
+          asset_name: ${{ needs.build.outputs.name }}.vsix
           asset_content_type: application/zip
       - name: Publish to VSCode Marketplace
+        shell: bash
         run: |
-          [ -n "${{ secrets.VSCE_TOKEN }}" ] && \
-            npx vsce publish --packagePath ${{ steps.set-version.outputs.name }}.vsix -p ${{ secrets.VSCE_TOKEN }} || true
+          [ -z "${{ secrets.VSCE_TOKEN }}" ] && \
+            npx vsce publish --packagePath ${{ needs.build.outputs.name }}.vsix -p ${{ secrets.VSCE_TOKEN }} || true
       - name: Publish to Open VSX Registry
+        shell: bash
         run: |
-          [ -n "${{ secrets.OVSX_TOKEN }}" ] && \
-            npx ovsx publish ${{ steps.set-version.outputs.name }}.vsix --pat ${{ secrets.OVSX_TOKEN }} || true
+          [ -z "${{ secrets.OVSX_TOKEN }}" ] && \
+            npx ovsx publish ${{ needs.build.outputs.name }}.vsix --pat ${{ secrets.OVSX_TOKEN }} || true
