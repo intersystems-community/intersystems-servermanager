@@ -41,7 +41,8 @@ In this example two connections have been defined:
 		},
 		"description": "My local IRIS instance"
 	},
-	"/default": "my-local"
+	"/default": "my-local",
+	"/hideEmbeddedEntries": true
 }
 ```
 
@@ -50,6 +51,8 @@ The JSON editor offers the usual [IntelliSense](https://code.visualstudio.com/do
 Notice how you can add a `description` property to each connection. This will be shown alongside its entry in the server quickpick.
 
 Servers are displayed in the quickpick in the order they are defined in the JSON file. The exception is that if a server name is set as the value of the `/default` property (see example above) it will be shown first in the list.
+
+A set of embedded servers with names beginning `default~` will appear at the end of the quickpick unless you add the property `"/hideEmbeddedEntries": true` to your `intersystems.server` object (see above).
 
 ## Removing a stored password
 
