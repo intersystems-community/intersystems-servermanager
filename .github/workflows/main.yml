@@ -144,10 +144,10 @@ jobs:
       - name: Publish to VSCode Marketplace
         shell: bash
         run: |
-          [ -z "${{ secrets.VSCE_TOKEN }}" ] && \
+          [ -n "${{ secrets.VSCE_TOKEN }}" ] && \
             npx vsce publish --packagePath ${{ needs.build.outputs.name }}.vsix -p ${{ secrets.VSCE_TOKEN }} || true
       - name: Publish to Open VSX Registry
         shell: bash
         run: |
-          [ -z "${{ secrets.OVSX_TOKEN }}" ] && \
+          [ -n "${{ secrets.OVSX_TOKEN }}" ] && \
             npx ovsx publish ${{ needs.build.outputs.name }}.vsix --pat ${{ secrets.OVSX_TOKEN }} || true
