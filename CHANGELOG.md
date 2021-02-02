@@ -1,9 +1,12 @@
-## 1.0.4 (01-Feb-2021)
+## 1.0.5 (02-Feb-2021)
+* Fix publication problem (#69).
+
+## 1.0.4 (01-Feb-2021) - not published
 * Add `/hideEmbeddedEntries` boolean to `intersystems.servers` to hide 'default~iris' etc from lists (#64).
 * Make the `/default` setting work as designed.
-* Fix problem that blocked 1.0.3 publication.
+* Fix problem that blocked release (#66).
 
-## 1.0.3 (15-Jan-2021)
+## 1.0.3 (15-Jan-2021) - not published
 * On Windows, add `Import Servers from Registry`command to import server definitions from registry (#1).
 * Disallow the `'.'` character in server names (#60).
 
