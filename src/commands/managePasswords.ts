@@ -2,9 +2,14 @@ import * as vscode from 'vscode';
 import { extensionId } from '../extension';
 import { Keychain } from '../keychain';
 import { credentialCache } from '../api/getServerSpec';
+import { getServerNames } from '../api/getServerNames';
+import { ServerTreeItem } from '../ui/serverManagerView';
 
-export async function storePassword(): Promise<string> {
-    const name = await commonPickServer({matchOnDetail: true});
+export async function storePassword(treeItem?: ServerTreeItem): Promise<string> {
+    if (treeItem && !getServerNames().some((value) => value.name === treeItem?.label)) {
+        treeItem = undefined;
+    }
+    const name = treeItem?.label || await commonPickServer({matchOnDetail: true});
     let reply = '';
     if (name) {
         await vscode.window
@@ -30,9 +35,12 @@ export async function storePassword(): Promise<string> {
     return reply;
 }
 
-export async function clearPassword(): Promise<string> {
+export async function clearPassword(treeItem?: ServerTreeItem): Promise<string> {
+    if (treeItem && !getServerNames().some((value) => value.name === treeItem?.label)) {
+        treeItem = undefined;
+    }
     let reply = '';
-    const name = await commonPickServer({matchOnDetail: true});
+    const name = treeItem?.label || await commonPickServer({matchOnDetail: true});
     if (name) {
         credentialCache[name] = undefined;
         const keychain = new Keychain(name);

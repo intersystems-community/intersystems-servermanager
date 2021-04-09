@@ -59,11 +59,32 @@
   },
   "main": "./out/extension",
   "activationEvents": [
+    "onView:intersystems-community_servermanager",
+    "onCommand:intersystems-community.servermanager.addServer",
     "onCommand:intersystems-community.servermanager.storePassword",
     "onCommand:intersystems-community.servermanager.clearPassword",
     "onCommand:intersystems-community.servermanager.importServers"
   ],
   "contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "intersystems-community_servermanager",
+					"title": "InterSystems Tools",
+					"icon": "images/toolsContainer.svg"
+				}
+			]
+		},
+    "views": {
+      "intersystems-community_servermanager": [
+        {
+          "id": "intersystems-community_servermanager",
+          "name": "Server Manager",
+          "contextualTitle": "InterSystems Server Manager",
+          "icon": "images/serverManager.svg"
+        }
+      ]
+    },
     "configuration": {
       "title": "InterSystems Server Manager",
       "properties": {
@@ -188,9 +209,27 @@
     },
     "commands": [
       {
+        "command": "intersystems-community.servermanager.addServer",
+        "category": "InterSystems Server Manager",
+        "title": "Add Server",
+        "icon": "$(add)"
+      },
+      {
+        "command": "intersystems-community.servermanager.openManagementPortalExternal",
+        "category": "InterSystems Server Manager",
+        "title": "Open Management Portal in External Browser",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "intersystems-community.servermanager.openManagementPortalInSimpleBrowser",
+        "category": "InterSystems Server Manager",
+        "title": "Open Management Portal in Simple Browser Tab"
+      },
+      {
         "command": "intersystems-community.servermanager.storePassword",
         "category": "InterSystems Server Manager",
-        "title": "Store Password in Keychain"
+        "title": "Store Password in Keychain",
+        "icon": "$(key)"
       },
       {
         "command": "intersystems-community.servermanager.clearPassword",
@@ -208,6 +247,42 @@
         {
           "command": "intersystems-community.servermanager.importServers",
           "when": "isWindows"
+        },
+        {
+          "command": "intersystems-community.servermanager.openManagementPortalExternal",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.openManagementPortalInSimpleBrowser",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "intersystems-community.servermanager.addServer",
+          "when": "view == intersystems-community_servermanager",
+          "group": "navigation"
+        },
+        {
+          "command": "intersystems-community.servermanager.importServers",
+          "when": "view == intersystems-community_servermanager && isWindows"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "intersystems-community.servermanager.openManagementPortalExternal",
+          "when": "view == intersystems-community_servermanager && viewItem == server",
+          "group": "inline"
+        },
+        {
+          "command": "intersystems-community.servermanager.storePassword",
+          "when": "view == intersystems-community_servermanager && viewItem == server",
+          "group": "password@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.clearPassword",
+          "when": "view == intersystems-community_servermanager && viewItem == server",
+          "group": "password@20"
         }
       ]
     }

@@ -7,6 +7,9 @@ import { getServerNames } from './api/getServerNames';
 import { getServerSpec } from './api/getServerSpec';
 import { storePassword, clearPassword } from './commands/managePasswords';
 import { importFromRegistry } from './commands/importFromRegistry';
+import { ServerManagerView, ServerTreeItem } from './ui/serverManagerView';
+import { addServer } from './api/addServer';
+import { getPortalUriWithCredentials } from './api/getPortalUriWithCredentials';
 
 export interface ServerName {
     name: string,
@@ -42,8 +45,39 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register the commands
 	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.storePassword`, () => {
-            storePassword()
+		vscode.commands.registerCommand(`${extensionId}.addServer`, () => {
+            addServer();
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.openManagementPortalExternal`, (server?: ServerTreeItem) => {
+            if (server?.contextValue === 'server' && server.label) {
+                getPortalUriWithCredentials(server.label).then((uriWithCredentials) => {
+                    if (uriWithCredentials) {
+                        vscode.env.openExternal(uriWithCredentials);
+                    }
+                });
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.openManagementPortalInSimpleBrowser`, (server?: ServerTreeItem) => {
+            if (server?.contextValue === 'server' && server.label) {
+                getPortalUriWithCredentials(server.label).then((uriWithCredentials) => {
+                    if (uriWithCredentials) {
+                        //vscode.commands.executeCommand('simpleBrowser.api.open', uriWithCredentials);
+                        //
+                        // It is essential to pass skipEncoding=true when converting the uri to a string,
+                        // otherwise the encoding done within Simple Browser / webview causes double-encoding of the querystring.
+                        vscode.commands.executeCommand('simpleBrowser.show', uriWithCredentials.toString(true));
+                    }
+                });
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.storePassword`, (server?: ServerTreeItem) => {
+            storePassword(server)
                 .then((name) => {
                     if (name && name.length > 0) {
                         _onDidChangePassword.fire(name);
@@ -52,8 +86,8 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.clearPassword`, () => {
-            clearPassword()
+		vscode.commands.registerCommand(`${extensionId}.clearPassword`, (server?: ServerTreeItem) => {
+            clearPassword(server)
             .then((name) => {
                 if (name && name.length > 0) {
                     _onDidChangePassword.fire(name);
@@ -61,11 +95,14 @@ export function activate(context: vscode.ExtensionContext) {
             });
         })
     );
-  context.subscriptions.push(
-    vscode.commands.registerCommand(`${extensionId}.importServers`, () => {
-      importFromRegistry();
-    })
-  );
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.importServers`, () => {
+            importFromRegistry();
+        })
+    );
+
+	// Server Manager View
+	new ServerManagerView(context);
 
     let api = {
         async pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {

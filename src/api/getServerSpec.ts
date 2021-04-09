@@ -49,7 +49,7 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
     // Obtain password from session cache or keychain unless trying to connect anonymously
     if (server.username && !server.password) {
         if (credentialCache[name] && credentialCache[name].username === server.username) {
-            server.password = credentialCache[name];
+            server.password = credentialCache[name].password;
         } else {
             const keychain = new Keychain(name);
             const password = await keychain.getPassword().then(result => {
