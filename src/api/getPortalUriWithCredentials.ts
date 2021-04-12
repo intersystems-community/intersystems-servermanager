@@ -20,8 +20,8 @@ export async function getPortalUriWithCredentials(name: string, scope?: vscode.C
                 queryString += `&CacheUsername=${usernameEncoded}&IRISUsername=${usernameEncoded}`;
             }
 
-            // Push the credentials offscreen
-            queryString = '_=' + ' '.padStart(500,' ') + queryString;
+            // Add a dummy cache-buster and push the actual credentials offscreen
+            queryString = '_=' + new Date().getTime().toString().padEnd(480,' ') + queryString;
 
             return vscode.Uri.parse(`${webServer.scheme}://${webServer.host}:${webServer.port}${webServer.pathPrefix}/csp/sys/UtilHome.csp?${queryString}`, true);
         }

@@ -10,6 +10,7 @@ import { importFromRegistry } from './commands/importFromRegistry';
 import { ServerManagerView, ServerTreeItem } from './ui/serverManagerView';
 import { addServer } from './api/addServer';
 import { getPortalUriWithCredentials } from './api/getPortalUriWithCredentials';
+import { getServerSummary } from './api/getServerSummary';
 
 export interface ServerName {
     name: string,
@@ -43,16 +44,41 @@ export function activate(context: vscode.ExtensionContext) {
 
     const _onDidChangePassword = new vscode.EventEmitter<string>();
 
+	// Server Manager View
+	const view = new ServerManagerView(context);
+
     // Register the commands
 	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.addServer`, () => {
-            addServer();
+		vscode.commands.registerCommand(`${extensionId}.refreshTree`, () => {
+            view.refreshTree();
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.addServer`, async () => {
+            await addServer();
+            view.refreshTree();
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.addToStarred`, async (server?: ServerTreeItem) => {
+            if (server?.contextValue?.match(/\.server\./) && server.name) {
+                await view.addToFavorites(server.name);
+                view.refreshTree();
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.removeFromStarred`, async (server?: ServerTreeItem) => {
+            if (server?.contextValue?.endsWith('.starred') && server.name) {
+                await view.removeFromFavorites(server.name);
+                view.refreshTree();
+            }
         })
     );
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.openManagementPortalExternal`, (server?: ServerTreeItem) => {
-            if (server?.contextValue === 'server' && server.label) {
-                getPortalUriWithCredentials(server.label).then((uriWithCredentials) => {
+            if (server?.contextValue?.match(/\.server\./) && server.name) {
+                getPortalUriWithCredentials(server.name).then((uriWithCredentials) => {
                     if (uriWithCredentials) {
                         vscode.env.openExternal(uriWithCredentials);
                     }
@@ -62,8 +88,8 @@ export function activate(context: vscode.ExtensionContext) {
     );
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.openManagementPortalInSimpleBrowser`, (server?: ServerTreeItem) => {
-            if (server?.contextValue === 'server' && server.label) {
-                getPortalUriWithCredentials(server.label).then((uriWithCredentials) => {
+            if (server?.contextValue?.match(/\.server\./) && server.name) {
+                getPortalUriWithCredentials(server.name).then((uriWithCredentials) => {
                     if (uriWithCredentials) {
                         //vscode.commands.executeCommand('simpleBrowser.api.open', uriWithCredentials);
                         //
@@ -96,13 +122,11 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
     context.subscriptions.push(
-        vscode.commands.registerCommand(`${extensionId}.importServers`, () => {
-            importFromRegistry();
+        vscode.commands.registerCommand(`${extensionId}.importServers`, async () => {
+            await importFromRegistry();
+            view.refreshTree();
         })
     );
-
-	// Server Manager View
-	new ServerManagerView(context);
 
     let api = {
         async pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {
@@ -111,6 +135,10 @@ export function activate(context: vscode.ExtensionContext) {
         },
         getServerNames(scope?: vscode.ConfigurationScope): ServerName[] {
             return getServerNames(scope);
+        },
+
+        getServerSummary(name: string, scope?: vscode.ConfigurationScope): ServerName | undefined {
+            return getServerSummary(name, scope);
         },
 
         async getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false): Promise<ServerSpec | undefined> {

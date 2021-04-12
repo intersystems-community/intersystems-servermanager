@@ -9,7 +9,7 @@ export async function storePassword(treeItem?: ServerTreeItem): Promise<string> 
     if (treeItem && !getServerNames().some((value) => value.name === treeItem?.label)) {
         treeItem = undefined;
     }
-    const name = treeItem?.label || await commonPickServer({matchOnDetail: true});
+    const name = treeItem?.name || await commonPickServer({matchOnDetail: true});
     let reply = '';
     if (name) {
         await vscode.window
@@ -40,7 +40,7 @@ export async function clearPassword(treeItem?: ServerTreeItem): Promise<string> 
         treeItem = undefined;
     }
     let reply = '';
-    const name = treeItem?.label || await commonPickServer({matchOnDetail: true});
+    const name = treeItem?.name || await commonPickServer({matchOnDetail: true});
     if (name) {
         credentialCache[name] = undefined;
         const keychain = new Keychain(name);

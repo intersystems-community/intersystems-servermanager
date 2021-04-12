@@ -11,6 +11,8 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
   const newServerNames = new Array<string>();
   const serversMissingUsernames = new Array<string>();
 
+  let overwriteCount: number;
+
   regQueryCache.clear();
 
   return vscode.window.withProgress({
@@ -25,7 +27,7 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
     // This forces the progress bar to actually show before the possibly long-running load of registry data
     await new Promise(resolve => setTimeout(resolve,0));
 
-    await loadRegistryData(config, serverDefinitions, serversMissingUsernames, newServerNames);
+    overwriteCount = await loadRegistryData(config, serverDefinitions, serversMissingUsernames, newServerNames);
 
     if (cancellationToken.isCancellationRequested) {
       return false;
@@ -34,6 +36,13 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
   }).then(async (keepGoing) => {
     if (!keepGoing) {
       return;
+    }
+    
+    if (overwriteCount > 0) {
+      if (await vscode.window.showWarningMessage(`${overwriteCount} existing definition${overwriteCount > 1 ? "s" : ""} will be overwritten. Continue?`, { modal: true }, "Yes") !=="Yes") {
+        vscode.window.showInformationMessage("Cancelled server import.");
+        return;
+      }
     }
     if (!await promptForUsernames(serverDefinitions, serversMissingUsernames)) {
       vscode.window.showInformationMessage("Cancelled server import.");
@@ -53,10 +62,11 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
   });
 }
 
-async function loadRegistryData(config, serverDefinitions, serversMissingUsernames, newServerNames): Promise<void> {
+async function loadRegistryData(config, serverDefinitions, serversMissingUsernames, newServerNames): Promise<number> {
   const cmd = require("node-cmd");
   const hkeyLocalMachine = "HKEY_LOCAL_MACHINE";
   preloadRegistryCache(cmd, "HKEY_CURRENT_USER\\Software\\InterSystems\\Cache\\Servers");
+  let overwriteCount = 0;
   for (const folder of ['','\\WOW6432Node']) {
     const subFolder = "\\Intersystems\\Cache\\Servers";
     const path = hkeyLocalMachine + "\\SOFTWARE" + folder + subFolder;
@@ -113,8 +123,12 @@ async function loadRegistryData(config, serverDefinitions, serversMissingUsernam
           },
         }
       }
+      else if (!name.startsWith("/")) {
+        overwriteCount++;
+      }
     });
   }
+  return overwriteCount;
 }
 
 async function promptForUsernames(serverDefinitions: any, serversMissingUsernames: string[]): Promise<boolean> {
