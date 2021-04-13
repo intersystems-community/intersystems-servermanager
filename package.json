@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "2.0.0-SNAPSHOT",
+  "version": "2.0.0-SNAPSHOT.1",
   "publisher": "intersystems-community",
   "description": "Helper extension for defining connections to InterSystems servers.",
   "repository": {
@@ -60,6 +60,7 @@
   "main": "./out/extension",
   "activationEvents": [
     "onView:intersystems-community_servermanager",
+    "onCommand:intersystems-community.servermanager.refreshTree",
     "onCommand:intersystems-community.servermanager.addServer",
     "onCommand:intersystems-community.servermanager.storePassword",
     "onCommand:intersystems-community.servermanager.clearPassword",
@@ -241,7 +242,8 @@
       {
         "command": "intersystems-community.servermanager.openManagementPortalInSimpleBrowser",
         "category": "InterSystems Server Manager",
-        "title": "Open Management Portal in Simple Browser Tab"
+        "title": "Open Management Portal in Simple Browser Tab",
+        "icon": "$(tools)"
       },
       {
         "command": "intersystems-community.servermanager.storePassword",
@@ -258,9 +260,73 @@
         "command": "intersystems-community.servermanager.importServers",
         "category": "InterSystems Server Manager",
         "title": "Import Servers from Registry"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconRed",
+        "title": "Red"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconOrange",
+        "title": "Orange"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconYellow",
+        "title": "Yellow"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconGreen",
+        "title": "Green"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconBlue",
+        "title": "Blue"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconPurple",
+        "title": "Purple"
+      },
+      {
+        "command": "intersystems-community.servermanager.resetIconColor",
+        "title": "default"
+      }
+  ],
+    "submenus": [
+      {
+        "id": "intersystems-community.servermanager.iconColor",
+        "label": "Set Icon Color"
       }
     ],
     "menus": {
+      "intersystems-community.servermanager.iconColor": [
+        {
+          "command": "intersystems-community.servermanager.setIconRed",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconOrange",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconYellow",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconGreen",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconBlue",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconPurple",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.resetIconColor",
+          "group": "reset"
+        }
+      ],
       "commandPalette": [
         {
           "command": "intersystems-community.servermanager.importServers",
@@ -311,9 +377,18 @@
           "group": "inline@10"
         },
         {
+          "command": "intersystems-community.servermanager.openManagementPortalInSimpleBrowser",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "inline@80"
+        },
+        {
           "command": "intersystems-community.servermanager.openManagementPortalExternal",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "inline@90"
+        },
+        {
+          "submenu": "intersystems-community.servermanager.iconColor",
+          "group": "color"
         },
         {
           "command": "intersystems-community.servermanager.storePassword",

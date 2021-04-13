@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
-import { getServerSpec } from './getServerSpec';
+import { extensionId } from '../extension';
 
 export async function getPortalUriWithCredentials(name: string, scope?: vscode.ConfigurationScope): Promise<Uri | undefined> {
-    return getServerSpec(name, scope).then((spec) => {
+
+    // Use our own API so that the Recent folder updates with our activity
+    const myApi = vscode.extensions.getExtension(extensionId)?.exports;
+    return myApi.getServerSpec(name, scope).then((spec) => {
         if (typeof spec !== 'undefined') {
             const webServer = spec.webServer;
             let queryString = '';

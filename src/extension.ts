@@ -56,14 +56,12 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.addServer`, async () => {
             await addServer();
-            view.refreshTree();
         })
     );
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.addToStarred`, async (server?: ServerTreeItem) => {
             if (server?.contextValue?.match(/\.server\./) && server.name) {
                 await view.addToFavorites(server.name);
-                view.refreshTree();
             }
         })
     );
@@ -71,7 +69,6 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(`${extensionId}.removeFromStarred`, async (server?: ServerTreeItem) => {
             if (server?.contextValue?.endsWith('.starred') && server.name) {
                 await view.removeFromFavorites(server.name);
-                view.refreshTree();
             }
         })
     );
@@ -121,6 +118,62 @@ export function activate(context: vscode.ExtensionContext) {
             });
         })
     );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.setIconRed`, (server?: ServerTreeItem) => {
+            if (server?.name) {
+                view.setIconColor(server.name, 'red');
+                view.refreshTree();
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.setIconOrange`, (server?: ServerTreeItem) => {
+            if (server?.name) {
+                view.setIconColor(server.name, 'orange');
+                view.refreshTree();
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.setIconYellow`, (server?: ServerTreeItem) => {
+            if (server?.name) {
+                view.setIconColor(server.name, 'yellow');
+                view.refreshTree();
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.setIconGreen`, (server?: ServerTreeItem) => {
+            if (server?.name) {
+                view.setIconColor(server.name, 'green');
+                view.refreshTree();
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.setIconBlue`, (server?: ServerTreeItem) => {
+            if (server?.name) {
+                view.setIconColor(server.name, 'blue');
+                view.refreshTree();
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.setIconPurple`, (server?: ServerTreeItem) => {
+            if (server?.name) {
+                view.setIconColor(server.name, 'purple');
+                view.refreshTree();
+            }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.resetIconColor`, (server?: ServerTreeItem) => {
+            if (server?.name) {
+                view.setIconColor(server.name, undefined);
+                view.refreshTree();
+            }
+        })
+    );
     context.subscriptions.push(
         vscode.commands.registerCommand(`${extensionId}.importServers`, async () => {
             await importFromRegistry();
@@ -128,10 +181,25 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Listen for relevant configuration changes
+	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+		if (e.affectsConfiguration('intersystems.servers') || e.affectsConfiguration('objectscript.conn')) {
+            view.refreshTree();
+        }
+    }));
+
+    // Expose our API
     let api = {
         async pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {
-            return await pickServer(scope, options);
+            const name = await pickServer(scope, options);
 
+            /*
+            if (name) {
+                view.addToRecents(name);
+            }
+            */
+           
+            return name;
         },
         getServerNames(scope?: vscode.ConfigurationScope): ServerName[] {
             return getServerNames(scope);
@@ -142,7 +210,11 @@ export function activate(context: vscode.ExtensionContext) {
         },
 
         async getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false): Promise<ServerSpec | undefined> {
-            return await getServerSpec(name, scope, flushCredentialCache);
+            const spec = await getServerSpec(name, scope, flushCredentialCache);
+            if (spec) {
+                view.addToRecents(name);
+            }
+            return spec;
         },
 
         onDidChangePassword(): vscode.Event<string> {
