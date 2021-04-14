@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "2.0.0-SNAPSHOT.1",
+  "version": "2.0.0-SNAPSHOT.2",
   "publisher": "intersystems-community",
   "description": "Helper extension for defining connections to InterSystems servers.",
   "repository": {
@@ -41,7 +41,10 @@
   },
   "dependencies": {
     "@types/vscode": "^1.55.0",
-    "node-cmd": "^4.0.0"
+    "axios": "^0.21.1",
+    "axios-cookiejar-support": "^1.0.1",
+    "node-cmd": "^4.0.0",
+    "tough-cookie": "^4.0.0"
   },
   "devDependencies": {
     "@types/glob": "^7.1.1",
@@ -289,7 +292,7 @@
         "command": "intersystems-community.servermanager.resetIconColor",
         "title": "default"
       }
-  ],
+    ],
     "submenus": [
       {
         "id": "intersystems-community.servermanager.iconColor",
@@ -388,6 +391,7 @@
         },
         {
           "submenu": "intersystems-community.servermanager.iconColor",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "color"
         },
         {

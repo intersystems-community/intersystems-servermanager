@@ -191,15 +191,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Expose our API
     let api = {
         async pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {
-            const name = await pickServer(scope, options);
-
-            /*
-            if (name) {
-                view.addToRecents(name);
-            }
-            */
-           
-            return name;
+            return await pickServer(scope, options);
         },
         getServerNames(scope?: vscode.ConfigurationScope): ServerName[] {
             return getServerNames(scope);
@@ -209,10 +201,10 @@ export function activate(context: vscode.ExtensionContext) {
             return getServerSummary(name, scope);
         },
 
-        async getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false): Promise<ServerSpec | undefined> {
+        async getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false, options?: { hideFromRecents?: boolean}): Promise<ServerSpec | undefined> {
             const spec = await getServerSpec(name, scope, flushCredentialCache);
-            if (spec) {
-                view.addToRecents(name);
+            if (spec && !options?.hideFromRecents) {
+                await view.addToRecents(name);
             }
             return spec;
         },
