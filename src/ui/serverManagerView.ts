@@ -29,9 +29,10 @@ export class ServerManagerView {
         this._globalState = context.globalState;
         const treeDataProvider = new SMNodeProvider();
         this._treeDataProvider = treeDataProvider;
-		context.subscriptions.push(
-            vscode.window.createTreeView('intersystems-community_servermanager', { treeDataProvider, showCollapseAll: true })
-        );
+        
+        const treeView = vscode.window.createTreeView('intersystems-community_servermanager', { treeDataProvider, showCollapseAll: true })
+		context.subscriptions.push(treeView);
+        treeDataProvider.view = treeView;
 
         // load favoritesMap
         const favorites = this._globalState.get<string[]>(StorageIds.favorites) || [];
@@ -98,6 +99,10 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 	private _onDidChangeTreeData: vscode.EventEmitter<SMTreeItem | undefined | void> = new vscode.EventEmitter<SMTreeItem | undefined | void>();
 	readonly onDidChangeTreeData: vscode.Event<SMTreeItem | undefined | void> = this._onDidChangeTreeData.event;
 
+    view: vscode.TreeView<SMTreeItem>;
+    private _firstRevealDone = false;
+    private _firstRevealItem: SMTreeItem;
+
 	constructor() {
 	}
 
@@ -109,19 +114,49 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 		return element;
 	}
 
+    getParent(element: SMTreeItem): SMTreeItem | undefined {
+        return undefined;
+    }
+
 	async getChildren(element?: SMTreeItem): Promise<SMTreeItem[]> {
         const children: SMTreeItem[] = [];
 		if (!element) {
             // Root folders
+            let firstRevealId = favoritesMap.size > 0 ? 'starred' : recentsArray.length > 0 ? 'recent' : 'sorted';
+
             if (vscode.workspace.workspaceFolders?.length || 0 > 0) {
-                children.push(new SMTreeItem({label: 'Current', id: 'current', tooltip: 'Servers used by current workspace', codiconName: 'home', getChildren: currentServers}));
+                children.push(new SMTreeItem({label: 'Current', id: 'current', tooltip: 'Servers referenced by current workspace', codiconName: 'home', getChildren: currentServers}));
+                firstRevealId = 'current';
+                this._firstRevealItem = children[children.length - 1];
             }
+
             if (favoritesMap.size > 0) {
                 children.push(new SMTreeItem({label: 'Starred', id: 'starred', tooltip: 'Favorite servers', codiconName: 'star-full', getChildren: favoriteServers}));
+                if (firstRevealId === 'starred') {
+                    this._firstRevealItem = children[children.length - 1];
+                }
             }
             children.push(new SMTreeItem({label: 'Recent', id: 'recent', tooltip: 'Recently used servers', codiconName: 'history', getChildren: recentServers}));
-            children.push(new SMTreeItem({label: 'Ordered', id: 'ordered', tooltip: 'All servers in settings.json order', codiconName: 'list-ordered', getChildren: allServers, params: {sorted: false}}));
-            children.push(new SMTreeItem({label: 'Sorted', id: 'sorted', tooltip: 'All servers in alphabetical order', codiconName: 'triangle-down', getChildren: allServers, params: {sorted: true}}));
+            if (firstRevealId === 'recent') {
+                this._firstRevealItem = children[children.length - 1];
+            }
+
+            // TODO - use this when we can implement resequencing in the UI
+            // children.push(new SMTreeItem({label: 'Ordered', id: 'ordered', tooltip: 'All servers in settings.json order', codiconName: 'list-ordered', getChildren: allServers, params: {sorted: false}}));
+
+            children.push(new SMTreeItem({label: 'All Servers', id: 'sorted', tooltip: 'All servers in alphabetical order', codiconName: 'server-environment', getChildren: allServers, params: {sorted: true}}));
+            if (firstRevealId === 'sorted') {
+                this._firstRevealItem = children[children.length - 1];
+            }
+
+            setTimeout(async () => {
+                if (!this._firstRevealDone && this._firstRevealItem) {
+                    await this.view.reveal(this._firstRevealItem, {select: false, expand: 1});
+                    this._firstRevealDone = true;
+                    }
+        
+            }, 20);
+    
             return children;
 		}
         else {
@@ -251,14 +286,21 @@ export class ServerTreeItem extends SMTreeItem {
             getChildren: serverFeatures
         });
         this.name = serverName.name;
-        //this.command = {command: 'intersystems-community.servermanager.openManagementPortalInSimpleBrowser', title: 'Open Management Portal in Simple Browser Tab', arguments: [this]};
+        //this.command = {command: 'intersystems-community.servermanager.openPortalTab', title: 'Open Management Portal in Simple Browser Tab', arguments: [this]};
         this.contextValue = `${parentFolderId}.server.${favoritesMap.has(this.name) ? 'starred' : ''}`;
         const color = colorsMap.get(this.name);
         this.iconPath = new vscode.ThemeIcon('server-environment', color ? new vscode.ThemeColor('charts.' + color) : undefined);
 	}
 }
 
-async function serverFeatures(element: ServerTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
+/**
+ * getChildren function returning starred servers,
+ * 
+ * @param element parent
+ * @param params (unused)
+ * @returns feature folders of a server.
+ */
+ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
     const children: FeatureTreeItem[] = [];
 
     children.push(new NamespacesTreeItem(element.id || '', element.name));
@@ -288,7 +330,14 @@ export class NamespacesTreeItem extends FeatureTreeItem {
 	}
 }
 
-async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<NamespaceTreeItem[] | undefined> {
+/**
+ * getChildren function returning namespaces of a server,
+ * 
+ * @param element parent
+ * @param params (unused)
+ * @returns namespaces of a server.
+ */
+ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<NamespaceTreeItem[] | undefined> {
     const children: NamespaceTreeItem[] = [];
 
     if (params?.serverName) {

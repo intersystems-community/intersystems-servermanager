@@ -26,7 +26,7 @@ export interface AtelierRESTEndpoint {
  * @param endpoint Optional endpoint object. If omitted the request will be to /api/atelier/
  * @param data Optional request data. Usually passed for POST requests.
  */
- export async function makeRESTRequest(method: "GET"|"POST", server: ServerSpec, endpoint?: AtelierRESTEndpoint, data?: any): Promise<AxiosResponse | undefined> {
+ export async function makeRESTRequest(method: "HEAD"|"GET"|"POST", server: ServerSpec, endpoint?: AtelierRESTEndpoint, data?: any): Promise<AxiosResponse | undefined> {
 
 	// Build the URL
 	var url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
@@ -59,7 +59,7 @@ export interface AtelierRESTEndpoint {
                     }
                 }
             );
-            if (respdata.status === 401) {
+            if (respdata.status === 401 && typeof server.username !== 'undefined' && typeof server.password !== 'undefined') {
                 // Either we had no cookies or they expired, so resend the request with basic auth
 
                 respdata = await axios.request(
@@ -71,8 +71,8 @@ export interface AtelierRESTEndpoint {
                             'Content-Type': 'application/json'
                         },
                         auth: {
-                            username: server.username || "",
-                            password: server.password || ""
+                            username: server.username,
+                            password: server.password
                         },
                         withCredentials: true,
                         jar: cookieJar
@@ -93,7 +93,7 @@ export interface AtelierRESTEndpoint {
                     }
                 }
             );
-            if (respdata.status === 401) {
+            if (respdata.status === 401 && typeof server.username !== 'undefined' && typeof server.password !== 'undefined') {
                 // Either we had no cookies or they expired, so resend the request with basic auth
 
                 respdata = await axios.request(
@@ -101,8 +101,8 @@ export interface AtelierRESTEndpoint {
                         method: method,
                         url: url,
                         auth: {
-                            username: server.username || "",
-                            password: server.password || ""
+                            username: server.username,
+                            password: server.password
                         },
                         withCredentials: true,
                         jar: cookieJar

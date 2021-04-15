@@ -73,7 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.openManagementPortalExternal`, (server?: ServerTreeItem) => {
+		vscode.commands.registerCommand(`${extensionId}.openPortalExternal`, (server?: ServerTreeItem) => {
             if (server?.contextValue?.match(/\.server\./) && server.name) {
                 getPortalUriWithCredentials(server.name).then((uriWithCredentials) => {
                     if (uriWithCredentials) {
@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.openManagementPortalInSimpleBrowser`, (server?: ServerTreeItem) => {
+		vscode.commands.registerCommand(`${extensionId}.openPortalTab`, (server?: ServerTreeItem) => {
             if (server?.contextValue?.match(/\.server\./) && server.name) {
                 getPortalUriWithCredentials(server.name).then((uriWithCredentials) => {
                     if (uriWithCredentials) {
@@ -96,6 +96,12 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 });
             }
+        })
+    );
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.editSettings`, (server?: ServerTreeItem) => {
+            // Until there's a dedicated settings editor the best we can do is jump to the right section
+            vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${extensionId}`);
         })
     );
 	context.subscriptions.push(
@@ -201,8 +207,8 @@ export function activate(context: vscode.ExtensionContext) {
             return getServerSummary(name, scope);
         },
 
-        async getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false, options?: { hideFromRecents?: boolean}): Promise<ServerSpec | undefined> {
-            const spec = await getServerSpec(name, scope, flushCredentialCache);
+        async getServerSpec(name: string, scope?: vscode.ConfigurationScope, flushCredentialCache: boolean = false, options?: { hideFromRecents?: boolean, noCredentials?: boolean}): Promise<ServerSpec | undefined> {
+            const spec = await getServerSpec(name, scope, flushCredentialCache, options?.noCredentials);
             if (spec && !options?.hideFromRecents) {
                 await view.addToRecents(name);
             }

@@ -83,8 +83,8 @@
       "intersystems-community_servermanager": [
         {
           "id": "intersystems-community_servermanager",
-          "name": "Server Manager",
-          "contextualTitle": "InterSystems Server Manager",
+          "name": "Servers",
+          "contextualTitle": "InterSystems Tools",
           "icon": "images/serverManager.svg"
         }
       ]
@@ -237,16 +237,22 @@
         "icon": "$(star-empty)"
       },
       {
-        "command": "intersystems-community.servermanager.openManagementPortalExternal",
+        "command": "intersystems-community.servermanager.openPortalExternal",
         "category": "InterSystems Server Manager",
         "title": "Open Management Portal in External Browser",
         "icon": "$(link-external)"
       },
       {
-        "command": "intersystems-community.servermanager.openManagementPortalInSimpleBrowser",
+        "command": "intersystems-community.servermanager.openPortalTab",
         "category": "InterSystems Server Manager",
-        "title": "Open Management Portal in Simple Browser Tab",
+        "title": "Open Management Portal in Tab",
         "icon": "$(tools)"
+      },
+      {
+        "command": "intersystems-community.servermanager.editSettings",
+        "category": "InterSystems Server Manager",
+        "title": "Edit Settings",
+        "icon": "$(edit)"
       },
       {
         "command": "intersystems-community.servermanager.storePassword",
@@ -344,11 +350,11 @@
           "when": "false"
         },
         {
-          "command": "intersystems-community.servermanager.openManagementPortalExternal",
+          "command": "intersystems-community.servermanager.openPortalExternal",
           "when": "false"
         },
         {
-          "command": "intersystems-community.servermanager.openManagementPortalInSimpleBrowser",
+          "command": "intersystems-community.servermanager.openPortalTab",
           "when": "false"
         }
       ],
@@ -364,8 +370,14 @@
           "group": "navigation@20"
         },
         {
+          "command": "intersystems-community.servermanager.editSettings",
+          "when": "view == intersystems-community_servermanager",
+          "group": "1_edit"
+        },
+        {
           "command": "intersystems-community.servermanager.importServers",
-          "when": "view == intersystems-community_servermanager && isWindows"
+          "when": "view == intersystems-community_servermanager && isWindows",
+          "group": "2_import"
         }
       ],
       "view/item/context": [
@@ -380,29 +392,34 @@
           "group": "inline@10"
         },
         {
-          "command": "intersystems-community.servermanager.openManagementPortalInSimpleBrowser",
+          "command": "intersystems-community.servermanager.openPortalTab",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "inline@80"
         },
         {
-          "command": "intersystems-community.servermanager.openManagementPortalExternal",
+          "command": "intersystems-community.servermanager.openPortalExternal",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "inline@90"
         },
         {
           "submenu": "intersystems-community.servermanager.iconColor",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "color"
+          "group": "1_edit@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.editSettings",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "1_edit@20"
         },
         {
           "command": "intersystems-community.servermanager.storePassword",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "password@10"
+          "group": "2_password@10"
         },
         {
           "command": "intersystems-community.servermanager.clearPassword",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "password@20"
+          "group": "2_password@20"
         }
       ]
     }
