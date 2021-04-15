@@ -187,6 +187,43 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    const addWorkspaceFolderAsync = async (readonly: boolean, namespaceTreeItem?: ServerTreeItem) => {
+        if (namespaceTreeItem) {
+            const pathParts = namespaceTreeItem.id?.split(':');
+            if (pathParts && pathParts.length === 4) {
+                const serverName = pathParts[1];
+                const namespace = pathParts[3];
+                const serverSpec = await getServerSpec(serverName, undefined, undefined, true);
+                if (serverSpec) {
+                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${serverSpec.webServer.pathPrefix || ''}`);
+                    const label = `${serverName}:${namespace}${readonly ? " (read-only)" : ""}`;
+                    const added = vscode.workspace.updateWorkspaceFolders(
+                        vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
+                        0,
+                        { uri, name: label }
+                      );
+                    // Switch to Explorer view so user sees the outcome
+                    await vscode.commands.executeCommand("workbench.view.explorer");
+                    // Handle failure
+                    if (added) {
+                        await view.addToRecents(serverName);
+                    }
+                    else {
+                        vscode.window.showErrorMessage(`Folder ${uri.toString()} could not be added. Maybe it already exists in the workspace.`, "Close")
+                    }
+                }
+            }
+        }
+    }
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.editNamespace`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(false, namespaceTreeItem)})
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.viewNamespace`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(true, namespaceTreeItem)})
+    );
+
     // Listen for relevant configuration changes
 	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
 		if (e.affectsConfiguration('intersystems.servers') || e.affectsConfiguration('objectscript.conn')) {

@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "2.0.0-SNAPSHOT.2",
+  "version": "2.0.0-SNAPSHOT.3",
   "publisher": "intersystems-community",
   "description": "Helper extension for defining connections to InterSystems servers.",
   "repository": {
@@ -297,6 +297,16 @@
       {
         "command": "intersystems-community.servermanager.resetIconColor",
         "title": "default"
+      },
+      {
+        "command": "intersystems-community.servermanager.editNamespace",
+        "title": "Edit Code in Namespace",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "intersystems-community.servermanager.viewNamespace",
+        "title": "View Code in Namespace",
+        "icon": "$(eye)"
       }
     ],
     "submenus": [
@@ -390,6 +400,16 @@
           "command": "intersystems-community.servermanager.removeFromStarred",
           "when": "view == intersystems-community_servermanager && viewItem == starred.server.starred",
           "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.editNamespace",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewNamespace",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "inline@20"
         },
         {
           "command": "intersystems-community.servermanager.openPortalTab",
