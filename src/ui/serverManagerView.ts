@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getServerNames } from '../api/getServerNames';
-import { getServerSpec } from '../api/getServerSpec';
+import { credentialCache, getServerSpec } from '../api/getServerSpec';
 import { getServerSummary } from '../api/getServerSummary';
 import { ServerName } from '../extension';
 import { makeRESTRequest } from '../makeRESTRequest';
@@ -23,6 +23,8 @@ export class ServerManagerView {
 
     private _globalState: vscode.Memento;
 
+    private _treeView: vscode.TreeView<SMTreeItem>;
+
     private _treeDataProvider: SMNodeProvider;
 
 	constructor(context: vscode.ExtensionContext) {
@@ -31,6 +33,7 @@ export class ServerManagerView {
         this._treeDataProvider = treeDataProvider;
         
         const treeView = vscode.window.createTreeView('intersystems-community_servermanager', { treeDataProvider, showCollapseAll: true })
+        this._treeView = treeView;
 		context.subscriptions.push(treeView);
         treeDataProvider.view = treeView;
 
@@ -115,36 +118,39 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 	}
 
     getParent(element: SMTreeItem): SMTreeItem | undefined {
+        // This is a hack to allow reveal() to work on the first-level folders,
+        // so we can open one of them automatically at startup.
+        // TODO implement it properly for all items.
         return undefined;
     }
 
-	async getChildren(element?: SMTreeItem): Promise<SMTreeItem[]> {
+	async getChildren(element?: SMTreeItem): Promise<SMTreeItem[] | undefined> {
         const children: SMTreeItem[] = [];
 		if (!element) {
             // Root folders
             let firstRevealId = favoritesMap.size > 0 ? 'starred' : recentsArray.length > 0 ? 'recent' : 'sorted';
 
             if (vscode.workspace.workspaceFolders?.length || 0 > 0) {
-                children.push(new SMTreeItem({label: 'Current', id: 'current', tooltip: 'Servers referenced by current workspace', codiconName: 'home', getChildren: currentServers}));
+                children.push(new SMTreeItem({parent: element, label: 'Current', id: 'current', tooltip: 'Servers referenced by current workspace', codiconName: 'home', getChildren: currentServers}));
                 firstRevealId = 'current';
                 this._firstRevealItem = children[children.length - 1];
             }
 
             if (favoritesMap.size > 0) {
-                children.push(new SMTreeItem({label: 'Starred', id: 'starred', tooltip: 'Favorite servers', codiconName: 'star-full', getChildren: favoriteServers}));
+                children.push(new SMTreeItem({parent: element, label: 'Starred', id: 'starred', tooltip: 'Favorite servers', codiconName: 'star-full', getChildren: favoriteServers}));
                 if (firstRevealId === 'starred') {
                     this._firstRevealItem = children[children.length - 1];
                 }
             }
-            children.push(new SMTreeItem({label: 'Recent', id: 'recent', tooltip: 'Recently used servers', codiconName: 'history', getChildren: recentServers}));
+            children.push(new SMTreeItem({parent: element, label: 'Recent', id: 'recent', tooltip: 'Recently used servers', codiconName: 'history', getChildren: recentServers}));
             if (firstRevealId === 'recent') {
                 this._firstRevealItem = children[children.length - 1];
             }
 
             // TODO - use this when we can implement resequencing in the UI
-            // children.push(new SMTreeItem({label: 'Ordered', id: 'ordered', tooltip: 'All servers in settings.json order', codiconName: 'list-ordered', getChildren: allServers, params: {sorted: false}}));
+            // children.push(new SMTreeItem({parent: element, label: 'Ordered', id: 'ordered', tooltip: 'All servers in settings.json order', codiconName: 'list-ordered', getChildren: allServers, params: {sorted: false}}));
 
-            children.push(new SMTreeItem({label: 'All Servers', id: 'sorted', tooltip: 'All servers in alphabetical order', codiconName: 'server-environment', getChildren: allServers, params: {sorted: true}}));
+            children.push(new SMTreeItem({parent: element, label: 'All Servers', id: 'sorted', tooltip: 'All servers in alphabetical order', codiconName: 'server-environment', getChildren: allServers, params: {sorted: true}}));
             if (firstRevealId === 'sorted') {
                 this._firstRevealItem = children[children.length - 1];
             }
@@ -168,12 +174,13 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 interface SMItem {
     label: string,
     id: string,
+    parent: SMTreeItem | undefined,
     contextValue?: string,
     tooltip?: string | vscode.MarkdownString,
     description?: string,
     codiconName?: string,
     getChildren?: Function,
-    params?: any
+    params?: any,
 }
 
 class SMTreeItem extends vscode.TreeItem {
@@ -181,11 +188,14 @@ class SMTreeItem extends vscode.TreeItem {
     private readonly _getChildren?: Function;
     private readonly _params?: any;
 
+    readonly parent: SMTreeItem | undefined;
+
 	constructor(item: SMItem) {
         const collapsibleState = item.getChildren ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None;
 		super(item.label, collapsibleState);
 
         this.id = item.id;
+        this.parent = item.parent;
         this.contextValue = item.contextValue;
 		this.tooltip = item.tooltip;
 		this.description = item.description;
@@ -196,17 +206,17 @@ class SMTreeItem extends vscode.TreeItem {
         this._params = item.params;
 	}
 
-    public async getChildren(): Promise<SMTreeItem[]> {
+    public async getChildren(): Promise<SMTreeItem[] | undefined> {
         if (this._getChildren) {
-            return await this._getChildren(this, this._params) || [];
+            return await this._getChildren(this, this._params);
         }
         else {
-            return [];
+            return;
         }
     }
 }
 
-function allServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
+function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
     const children: ServerTreeItem[] = [];
     const getAllServers = (sorted?: boolean): ServerTreeItem[] => {
         let serverNames = getServerNames();
@@ -214,7 +224,7 @@ function allServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
             serverNames = serverNames.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
         }
         return serverNames.map((serverName) => {
-            return new ServerTreeItem(sorted ? 'sorted' : 'ordered', serverName);
+            return new ServerTreeItem({ label: serverName.name, id:serverName.name, parent: treeItem }, serverName);
         })
     }
     
@@ -230,7 +240,7 @@ function currentServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
         if (['isfs', 'isfs-readonly'].includes(folder.uri.scheme)) {
             const serverSummary = getServerSummary(serverName);
             if (serverSummary) {
-                children.set(serverName, new ServerTreeItem('current', serverSummary));
+                children.set(serverName, new ServerTreeItem({ parent: element, label: serverName, id: serverName }, serverSummary));
             }
         }
         const conn = vscode.workspace.getConfiguration('objectscript.conn', folder);
@@ -238,7 +248,7 @@ function currentServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
         if (connServer) {
             const serverSummary = getServerSummary(connServer);
             if (serverSummary) {
-                children.set(connServer, new ServerTreeItem('current', serverSummary));
+                children.set(connServer, new ServerTreeItem({ parent: element, label: serverName, id: serverName }, serverSummary));
             }
         }
     });
@@ -252,7 +262,7 @@ function favoriteServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
     favoritesMap.forEach((_, name) => {
         const serverSummary = getServerSummary(name);
         if (serverSummary) {
-            children.push(new ServerTreeItem('starred', serverSummary));
+            children.push(new ServerTreeItem({ parent: element, label: name, id: name}, serverSummary));
         }
     });
 
@@ -265,7 +275,7 @@ function recentServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
     recentsArray.map((name) => {
         const serverSummary = getServerSummary(name);
         if (serverSummary) {
-            children.push(new ServerTreeItem('recent', serverSummary));
+            children.push(new ServerTreeItem({ parent: element, label: name, id: name}, serverSummary));
         }
     });
 
@@ -275,17 +285,20 @@ function recentServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
 export class ServerTreeItem extends SMTreeItem {
     public readonly name: string;
 	constructor(
-        parentFolderId: string,
-		serverName: ServerName
+        element: SMItem,
+		serverSummary: ServerName
 	) {
+        const parentFolderId = element.parent?.id || "";
         // Wrap detail (a uri string) as a null link to prevent it from being linkified
 		super({
-            label: serverName.name,
-            id: parentFolderId + ':' + serverName.name,
-            tooltip: new vscode.MarkdownString(`[${serverName.detail}]()`).appendMarkdown(serverName.description ? `\n\n*${serverName.description}*` : ''),
-            getChildren: serverFeatures
+            parent: element.parent,
+            label: serverSummary.name,
+            id: parentFolderId + ':' + serverSummary.name,
+            tooltip: new vscode.MarkdownString(`[${serverSummary.detail}]()`).appendMarkdown(serverSummary.description ? `\n\n*${serverSummary.description}*` : ''),
+            getChildren: serverFeatures,
+            params: { serverSummary }
         });
-        this.name = serverName.name;
+        this.name = serverSummary.name;
         //this.command = {command: 'intersystems-community.servermanager.openPortalTab', title: 'Open Management Portal in Simple Browser Tab', arguments: [this]};
         this.contextValue = `${parentFolderId}.server.${favoritesMap.has(this.name) ? 'starred' : ''}`;
         const color = colorsMap.get(this.name);
@@ -294,7 +307,7 @@ export class ServerTreeItem extends SMTreeItem {
 }
 
 /**
- * getChildren function returning starred servers,
+ * getChildren function returning server features (the child nodes of a server),
  * 
  * @param element parent
  * @param params (unused)
@@ -303,21 +316,56 @@ export class ServerTreeItem extends SMTreeItem {
  async function serverFeatures(element: ServerTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
     const children: FeatureTreeItem[] = [];
 
-    children.push(new NamespacesTreeItem(element.id || '', element.name));
-
+    if (params?.serverSummary) {
+        const name = params.serverSummary.name;
+        const serverSpec = await getServerSpec(name)
+        if (!serverSpec) {
+            return undefined
+        }
+        
+        const response = await makeRESTRequest("HEAD", serverSpec)
+        if (!response) {
+            children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
+            credentialCache[name] = undefined;
+        }
+        else {
+            children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name));
+        }
+    }
     return children;
 }
 
 export class FeatureTreeItem extends SMTreeItem {
 }
 
+export class OfflineTreeItem extends FeatureTreeItem {
+    public readonly name: string;
+	constructor(
+        element: SMItem,
+        serverName: string
+	) {
+        const parentFolderId = element.parent?.id || '';
+		super({
+            parent: element.parent,
+            label: `Offline at ${new Date().toLocaleTimeString()}`,
+            id: parentFolderId + ':offline',
+            tooltip: `Server could not be reached`,
+        });
+        this.name = 'offline';
+        this.contextValue = 'offline';
+        this.iconPath = new vscode.ThemeIcon('warning');
+	}
+}
+
 export class NamespacesTreeItem extends FeatureTreeItem {
     public readonly name: string;
 	constructor(
-        parentFolderId: string,
+        element: SMItem,
         serverName: string
 	) {
+        const parentFolderId = element.parent?.id || '';
 		super({
+            parent: element.parent,
             label: 'Namespaces',
             id: parentFolderId + ':namespaces',
             tooltip: `Namespaces you can access`,
@@ -341,17 +389,20 @@ export class NamespacesTreeItem extends FeatureTreeItem {
     const children: NamespaceTreeItem[] = [];
 
     if (params?.serverName) {
-        const server = await getServerSpec(params.serverName)
-        if (!server) {
+        const name: string = params.serverName;
+        const serverSpec = await getServerSpec(name)
+        if (!serverSpec) {
             return undefined
         }
         
-        const response = await makeRESTRequest("GET", server)
-
-        if (response) {
-
-            response.data.result.content.namespaces.map((name) => {
-                children.push(new NamespaceTreeItem(element.id || '', name, server.name));
+        const response = await makeRESTRequest("GET", serverSpec)
+        if (!response) {
+            children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
+            credentialCache[params.serverName] = undefined;
+        }
+        else {
+            response.data.result.content.namespaces.map((namespace) => {
+                children.push(new NamespaceTreeItem({ parent: element, label: name, id: name }, namespace, name));
             });
         }
     }
@@ -362,12 +413,14 @@ export class NamespacesTreeItem extends FeatureTreeItem {
 export class NamespaceTreeItem extends SMTreeItem {
     public readonly name: string;
 	constructor(
-        parentFolderId: string,
+        element: SMItem,
         name: string,
         serverName: string
 	) {
+        const parentFolderId = element.parent?.id || '';
         const id = parentFolderId + ':' + name;
 		super({
+            parent: element.parent,
             label: name,
             id,
             tooltip: `${name} on ${serverName}`

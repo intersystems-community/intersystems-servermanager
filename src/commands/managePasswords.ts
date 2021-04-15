@@ -24,8 +24,7 @@ export async function storePassword(treeItem?: ServerTreeItem): Promise<string> 
         })
         .then((password) => {
             if (password) {
-                credentialCache[name] = undefined;
-                new Keychain(name).setPassword(password).then(() => {
+                filePassword(name, password).then(() => {
                     vscode.window.showInformationMessage(`Password for '${name}' stored in keychain.`);
                 });
                 reply = name;
@@ -33,6 +32,11 @@ export async function storePassword(treeItem?: ServerTreeItem): Promise<string> 
         })
     }
     return reply;
+}
+
+export async function filePassword(serverName: string, password: string): Promise<boolean> {
+    credentialCache[serverName] = undefined;
+    return new Keychain(serverName).setPassword(password).then(() => true, () => false);
 }
 
 export async function clearPassword(treeItem?: ServerTreeItem): Promise<string> {

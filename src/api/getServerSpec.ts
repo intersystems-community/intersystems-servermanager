@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { filePassword } from '../commands/managePasswords';
 import { ServerSpec } from '../extension';
 import { Keychain } from '../keychain';
 
@@ -82,16 +83,38 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
             
         }
         if (server.username && !server.password) {
-            await vscode.window
-            .showInputBox({
-                password: true,
-                placeHolder: `Password for user '${server.username}' on InterSystems server '${name}'`,
-                validateInput: (value => {
-                    return value.length > 0 ? '' : 'Mandatory field';
-                }),
-                ignoreFocusOut: true,
-            })
-            .then((password) => {
+            const doInputBox = async (): Promise<string | undefined> => {
+                return await new Promise<string | undefined>((resolve, reject) => {
+                    const inputBox = vscode.window.createInputBox();
+                    inputBox.password = true,
+                    inputBox.title = `Password for InterSystems server '${name}'`,
+                    inputBox.placeholder = `Password for user '${server?.username}' on '${name}'`,
+                    inputBox.prompt = 'To store your password securely, submit it using the $(key) button',
+                    inputBox.ignoreFocusOut = true,
+                    inputBox.buttons = [{ iconPath: new vscode.ThemeIcon('key'), tooltip: 'Store Password in Keychain' }]
+
+                    async function done(store: boolean) {
+                        // File the password and return it
+                        if (store) {
+                            await filePassword(name, inputBox.value)
+                        }
+                        // Resolve the promise and tidy up
+                        resolve(inputBox.value);
+                        inputBox.hide();
+                        inputBox.dispose();
+                    }
+
+                    inputBox.onDidTriggerButton((button) => {
+                        // We only added one button  
+                        done(true);
+                    });
+                    inputBox.onDidAccept(() => {
+                        done(false);
+                    });
+                    inputBox.show();
+                })
+            };
+            await doInputBox().then((password) => {
                 if (password && server) {
                     server.password = password;
                     credentialCache[name] = {username: server.username, password: password};

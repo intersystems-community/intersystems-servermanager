@@ -226,27 +226,28 @@
       },
       {
         "command": "intersystems-community.servermanager.addToStarred",
-        "category": "InterSystems Server Manager",
         "title": "Add to Starred",
         "icon": "$(star-full)"
       },
       {
         "command": "intersystems-community.servermanager.removeFromStarred",
-        "category": "InterSystems Server Manager",
         "title": "Remove from Starred",
         "icon": "$(star-empty)"
       },
       {
         "command": "intersystems-community.servermanager.openPortalExternal",
-        "category": "InterSystems Server Manager",
         "title": "Open Management Portal in External Browser",
         "icon": "$(link-external)"
       },
       {
         "command": "intersystems-community.servermanager.openPortalTab",
-        "category": "InterSystems Server Manager",
         "title": "Open Management Portal in Tab",
         "icon": "$(tools)"
+      },
+      {
+        "command": "intersystems-community.servermanager.retryServer",
+        "title": "Reconnect",
+        "icon": "$(refresh)"
       },
       {
         "command": "intersystems-community.servermanager.editSettings",
@@ -268,7 +269,7 @@
       {
         "command": "intersystems-community.servermanager.importServers",
         "category": "InterSystems Server Manager",
-        "title": "Import Servers from Registry"
+        "title": "Import Servers from Windows Registry"
       },
       {
         "command": "intersystems-community.servermanager.setIconRed",
@@ -399,6 +400,11 @@
         {
           "command": "intersystems-community.servermanager.removeFromStarred",
           "when": "view == intersystems-community_servermanager && viewItem == starred.server.starred",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.retryServer",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /offline$/",
           "group": "inline@10"
         },
         {

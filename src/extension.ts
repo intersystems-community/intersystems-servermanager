@@ -187,6 +187,12 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.retryServer`, () => {
+            view.refreshTree();
+        })
+    );
+
     const addWorkspaceFolderAsync = async (readonly: boolean, namespaceTreeItem?: ServerTreeItem) => {
         if (namespaceTreeItem) {
             const pathParts = namespaceTreeItem.id?.split(':');
