@@ -23,8 +23,6 @@ export class ServerManagerView {
 
     private _globalState: vscode.Memento;
 
-    private _treeView: vscode.TreeView<SMTreeItem>;
-
     private _treeDataProvider: SMNodeProvider;
 
 	constructor(context: vscode.ExtensionContext) {
@@ -33,7 +31,6 @@ export class ServerManagerView {
         this._treeDataProvider = treeDataProvider;
         
         const treeView = vscode.window.createTreeView('intersystems-community_servermanager', { treeDataProvider, showCollapseAll: true })
-        this._treeView = treeView;
 		context.subscriptions.push(treeView);
         treeDataProvider.view = treeView;
 
@@ -91,8 +88,8 @@ export class ServerManagerView {
         }
     };
 
-    refreshTree() {
-        this._treeDataProvider.refresh();
+    refreshTree(item?: SMTreeItem | undefined) {
+        this._treeDataProvider.refresh(item);
     }
 
 }
@@ -109,8 +106,8 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 	constructor() {
 	}
 
-	refresh(): void {
-		this._onDidChangeTreeData.fire();
+	refresh(item: SMTreeItem | undefined): void {
+		this._onDidChangeTreeData.fire(item);
 	}
 
 	getTreeItem(element:SMTreeItem): vscode.TreeItem {
@@ -183,7 +180,7 @@ interface SMItem {
     params?: any,
 }
 
-class SMTreeItem extends vscode.TreeItem {
+export class SMTreeItem extends vscode.TreeItem {
 
     private readonly _getChildren?: Function;
     private readonly _params?: any;

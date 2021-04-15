@@ -7,7 +7,7 @@ import { getServerNames } from './api/getServerNames';
 import { getServerSpec } from './api/getServerSpec';
 import { storePassword, clearPassword } from './commands/managePasswords';
 import { importFromRegistry } from './commands/importFromRegistry';
-import { ServerManagerView, ServerTreeItem } from './ui/serverManagerView';
+import { ServerManagerView, ServerTreeItem, SMTreeItem } from './ui/serverManagerView';
 import { addServer } from './api/addServer';
 import { getPortalUriWithCredentials } from './api/getPortalUriWithCredentials';
 import { getServerSummary } from './api/getServerSummary';
@@ -188,8 +188,17 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.retryServer`, () => {
-            view.refreshTree();
+		vscode.commands.registerCommand(`${extensionId}.retryServer`, (treeItem: SMTreeItem) => {
+            const depth = treeItem.id?.split(':').length;
+            if (depth === 2) {
+                view.refreshTree(treeItem);
+            }
+            else if (depth === 3) {
+                view.refreshTree(treeItem.parent);
+            }
+            else if (depth === 4) {
+                view.refreshTree(treeItem.parent?.parent);
+            }
         })
     );
 
