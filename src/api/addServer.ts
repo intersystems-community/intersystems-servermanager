@@ -27,69 +27,78 @@ export async function addServer(
     .then(
       async (name): Promise<string | undefined> => {
         if (name) {
-          const host = await vscode.window.showInputBox({
-            placeHolder: "Hostname or IP address of web server",
-            validateInput: (value) => {
-              return value.trim().length ? undefined : "Required";
-            },
+          const description = await vscode.window.showInputBox({
+            placeHolder: "Optional description",
             ignoreFocusOut: true
           });
-          if (host) {
-            spec.webServer.host = host.trim();
-            const portString = await vscode.window.showInputBox({
-              placeHolder: "Port of web server",
+          if (typeof description !== 'undefined') {
+            if (description) {
+              spec.description = description.trim();
+            }
+            const host = await vscode.window.showInputBox({
+              placeHolder: "Hostname or IP address of web server",
               validateInput: (value) => {
-                const port = +value;
-                return value.match(/\d+/) &&
-                  port.toString() === value &&
-                  port > 0 &&
-                  port < 65536
-                  ? undefined
-                  : "Required, 1-65535";
+                return value.trim().length ? undefined : "Required";
               },
               ignoreFocusOut: true
             });
-            if (portString) {
-              spec.webServer.port = +portString;
-              const username = await vscode.window.showInputBox({
-                placeHolder:
-                  "Username",
-                prompt:
-                  "Leave empty to be prompted when connecting.",
+            if (host) {
+              spec.webServer.host = host.trim();
+              const portString = await vscode.window.showInputBox({
+                placeHolder: "Port of web server",
+                validateInput: (value) => {
+                  const port = +value;
+                  return value.match(/\d+/) &&
+                    port.toString() === value &&
+                    port > 0 &&
+                    port < 65536
+                    ? undefined
+                    : "Required, 1-65535";
+                },
                 ignoreFocusOut: true
-                });
-              if (typeof username !== 'undefined') {
-                const usernameTrimmed = username.trim();
-                if (usernameTrimmed !== "") {
-                  spec.username = usernameTrimmed;
-                }
-                const scheme = await vscode.window.showQuickPick(
-                  ["http", "https"],
-                  {
-                    placeHolder:
-                      "Confirm connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.",
-                      ignoreFocusOut: true
+              });
+              if (portString) {
+                spec.webServer.port = +portString;
+                const username = await vscode.window.showInputBox({
+                  placeHolder:
+                    "Username",
+                  prompt:
+                    "Leave empty to be prompted when connecting.",
+                  ignoreFocusOut: true
+                  });
+                if (typeof username !== 'undefined') {
+                  const usernameTrimmed = username.trim();
+                  if (usernameTrimmed !== "") {
+                    spec.username = usernameTrimmed;
+                  }
+                  const scheme = await vscode.window.showQuickPick(
+                    ["http", "https"],
+                    {
+                      placeHolder:
+                        "Confirm connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.",
+                        ignoreFocusOut: true
+                      }
+                  );
+                  if (scheme) {
+                    spec.webServer.scheme = scheme;
+                    try {
+                      const config = vscode.workspace.getConfiguration(
+                        "intersystems",
+                        scope
+                      );
+                      // For simplicity we always add to the user-level (aka Global) settings
+                      const servers: any =
+                        config.inspect("servers")?.globalValue || {};
+                      servers[name] = spec;
+                      await config.update("servers", servers, true);
+                      vscode.window.showInformationMessage(`Server '${name}' stored in user-level settings.`);
+                      return name;
+                    } catch (error) {
+                      vscode.window.showErrorMessage(
+                        "Failed to store server '${name}' definition."
+                      );
+                      return undefined;
                     }
-                );
-                if (scheme) {
-                  spec.webServer.scheme = scheme;
-                  try {
-                    const config = vscode.workspace.getConfiguration(
-                      "intersystems",
-                      scope
-                    );
-                    // For simplicity we always add to the user-level (aka Global) settings
-                    const servers: any =
-                      config.inspect("servers")?.globalValue || {};
-                    servers[name] = spec;
-                    await config.update("servers", servers, true);
-                    vscode.window.showInformationMessage(`Server '${name}' stored in user-level settings.`);
-                    return name;
-                  } catch (error) {
-                    vscode.window.showErrorMessage(
-                      "Failed to store server '${name}' definition."
-                    );
-                    return undefined;
                   }
                 }
               }

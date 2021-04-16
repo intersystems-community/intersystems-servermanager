@@ -2,9 +2,14 @@ import * as vscode from 'vscode';
 import { extensionId } from '../extension';
 import { Keychain } from '../keychain';
 import { credentialCache } from '../api/getServerSpec';
+import { getServerNames } from '../api/getServerNames';
+import { ServerTreeItem } from '../ui/serverManagerView';
 
-export async function storePassword(): Promise<string> {
-    const name = await commonPickServer({matchOnDetail: true});
+export async function storePassword(treeItem?: ServerTreeItem): Promise<string> {
+    if (treeItem && !getServerNames().some((value) => value.name === treeItem?.label)) {
+        treeItem = undefined;
+    }
+    const name = treeItem?.name || await commonPickServer({matchOnDetail: true});
     let reply = '';
     if (name) {
         await vscode.window
@@ -19,8 +24,7 @@ export async function storePassword(): Promise<string> {
         })
         .then((password) => {
             if (password) {
-                credentialCache[name] = undefined;
-                new Keychain(name).setPassword(password).then(() => {
+                filePassword(name, password).then(() => {
                     vscode.window.showInformationMessage(`Password for '${name}' stored in keychain.`);
                 });
                 reply = name;
@@ -30,9 +34,17 @@ export async function storePassword(): Promise<string> {
     return reply;
 }
 
-export async function clearPassword(): Promise<string> {
+export async function filePassword(serverName: string, password: string): Promise<boolean> {
+    credentialCache[serverName] = undefined;
+    return new Keychain(serverName).setPassword(password).then(() => true, () => false);
+}
+
+export async function clearPassword(treeItem?: ServerTreeItem): Promise<string> {
+    if (treeItem && !getServerNames().some((value) => value.name === treeItem?.label)) {
+        treeItem = undefined;
+    }
     let reply = '';
-    const name = await commonPickServer({matchOnDetail: true});
+    const name = treeItem?.name || await commonPickServer({matchOnDetail: true});
     if (name) {
         credentialCache[name] = undefined;
         const keychain = new Keychain(name);

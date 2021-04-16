@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { ServerName, ServerSpec } from '../extension';
+import { ServerName } from '../extension';
+import { serverDetail } from './getServerSummary';
 
 export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] {
     let names: ServerName[] = [];
@@ -19,7 +20,7 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
         if (myDefault.length > 0 && servers[myDefault]) {
             names.push({
                 name: myDefault,
-                description: `${servers[myDefault].description || ''} (default)`,
+                description: `${servers[myDefault].description || ''} (default)`.trim(),
                 detail: serverDetail(servers[myDefault])
             });
         }
@@ -52,8 +53,4 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
         names.push(...defaultNames);
     }
     return names;
-}
-
-function serverDetail(connSpec: ServerSpec): string {
-    return `${connSpec.webServer.scheme || 'http'}://${connSpec.webServer.host}:${connSpec.webServer.port}/${connSpec.webServer.pathPrefix || ''}`;
 }

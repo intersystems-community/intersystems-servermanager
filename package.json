@@ -1,9 +1,9 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "1.0.6-SNAPSHOT",
+  "version": "2.0.0-SNAPSHOT",
   "publisher": "intersystems-community",
-  "description": "Helper extension for defining connections to InterSystems servers.",
+  "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
     "type": "git",
     "url": "https://github.com/intersystems-community/intersystems-servermanager"
@@ -40,8 +40,11 @@
     "lint-fix": "tslint --project tsconfig.json -t verbose --fix"
   },
   "dependencies": {
-    "@types/vscode": "^1.43.0",
-    "node-cmd": "^4.0.0"
+    "@types/vscode": "^1.55.0",
+    "axios": "^0.21.1",
+    "axios-cookiejar-support": "^1.0.1",
+    "node-cmd": "^4.0.0",
+    "tough-cookie": "^4.0.0"
   },
   "devDependencies": {
     "@types/glob": "^7.1.1",
@@ -49,7 +52,7 @@
     "@types/mocha": "^8.0.4",
     "@types/node": "^8.10.60",
     "glob": "^7.1.6",
-    "mocha": "^8.2.1",
+    "mocha": "^8.3.2",
     "ovsx": "latest",
     "ts-loader": "^6.2.2",
     "tslint": "^5.20.1",
@@ -59,11 +62,40 @@
   },
   "main": "./out/extension",
   "activationEvents": [
+    "onView:intersystems-community_servermanager",
+    "onCommand:intersystems-community.servermanager.refreshTree",
+    "onCommand:intersystems-community.servermanager.addServer",
     "onCommand:intersystems-community.servermanager.storePassword",
     "onCommand:intersystems-community.servermanager.clearPassword",
     "onCommand:intersystems-community.servermanager.importServers"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "intersystems-community_servermanager",
+          "title": "InterSystems Tools",
+          "icon": "images/toolsContainer.svg"
+        }
+      ]
+    },
+    "views": {
+      "intersystems-community_servermanager": [
+        {
+          "id": "intersystems-community_servermanager",
+          "name": "Servers",
+          "contextualTitle": "InterSystems Tools",
+          "icon": "images/serverManager.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "explorer",
+        "contents": "Use the 'InterSystems Tools: Servers' view to work with your servers.\n[Manage Servers $(tools)](command:workbench.view.extension.intersystems-community_servermanager)"
+      }
+    ]
+    ,
     "configuration": {
       "title": "InterSystems Server Manager",
       "properties": {
@@ -188,9 +220,53 @@
     },
     "commands": [
       {
+        "command": "intersystems-community.servermanager.refreshTree",
+        "category": "InterSystems Server Manager",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "intersystems-community.servermanager.addServer",
+        "category": "InterSystems Server Manager",
+        "title": "Add Server",
+        "icon": "$(add)"
+      },
+      {
+        "command": "intersystems-community.servermanager.addToStarred",
+        "title": "Add to Starred",
+        "icon": "$(star-full)"
+      },
+      {
+        "command": "intersystems-community.servermanager.removeFromStarred",
+        "title": "Remove from Starred",
+        "icon": "$(star-empty)"
+      },
+      {
+        "command": "intersystems-community.servermanager.openPortalExternal",
+        "title": "Open Management Portal in External Browser",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "intersystems-community.servermanager.openPortalTab",
+        "title": "Open Management Portal in Tab",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "intersystems-community.servermanager.retryServer",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "intersystems-community.servermanager.editSettings",
+        "category": "InterSystems Server Manager",
+        "title": "Edit Settings",
+        "icon": "$(edit)"
+      },
+      {
         "command": "intersystems-community.servermanager.storePassword",
         "category": "InterSystems Server Manager",
-        "title": "Store Password in Keychain"
+        "title": "Store Password in Keychain",
+        "icon": "$(key)"
       },
       {
         "command": "intersystems-community.servermanager.clearPassword",
@@ -200,14 +276,193 @@
       {
         "command": "intersystems-community.servermanager.importServers",
         "category": "InterSystems Server Manager",
-        "title": "Import Servers from Registry"
+        "title": "Import Servers from Windows Registry"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconRed",
+        "title": "Red"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconOrange",
+        "title": "Orange"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconYellow",
+        "title": "Yellow"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconGreen",
+        "title": "Green"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconBlue",
+        "title": "Blue"
+      },
+      {
+        "command": "intersystems-community.servermanager.setIconPurple",
+        "title": "Purple"
+      },
+      {
+        "command": "intersystems-community.servermanager.resetIconColor",
+        "title": "default"
+      },
+      {
+        "command": "intersystems-community.servermanager.editNamespace",
+        "title": "Edit Code in Namespace",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "intersystems-community.servermanager.viewNamespace",
+        "title": "View Code in Namespace",
+        "icon": "$(eye)"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "intersystems-community.servermanager.iconColor",
+        "label": "Set Icon Color"
       }
     ],
     "menus": {
+      "intersystems-community.servermanager.iconColor": [
+        {
+          "command": "intersystems-community.servermanager.setIconRed",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconOrange",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconYellow",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconGreen",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconBlue",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconPurple",
+          "group": "color"
+        },
+        {
+          "command": "intersystems-community.servermanager.resetIconColor",
+          "group": "reset"
+        }
+      ],
       "commandPalette": [
         {
           "command": "intersystems-community.servermanager.importServers",
           "when": "isWindows"
+        },
+        {
+          "command": "intersystems-community.servermanager.addToStarred",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.removeFromStarred",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExternal",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalTab",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "intersystems-community.servermanager.refreshTree",
+          "when": "view == intersystems-community_servermanager",
+          "group": "navigation@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.addServer",
+          "when": "view == intersystems-community_servermanager",
+          "group": "navigation@20"
+        },
+        {
+          "command": "intersystems-community.servermanager.editSettings",
+          "when": "view == intersystems-community_servermanager",
+          "group": "1_edit"
+        },
+        {
+          "command": "intersystems-community.servermanager.importServers",
+          "when": "view == intersystems-community_servermanager && isWindows",
+          "group": "2_import"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "intersystems-community.servermanager.addServer",
+          "when": "view == intersystems-community_servermanager && viewItem == sorted",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.addToStarred",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\.$/",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.removeFromStarred",
+          "when": "view == intersystems-community_servermanager && viewItem == starred.server.starred",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.retryServer",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /offline$/",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.editNamespace",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewNamespace",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "inline@20"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalTab",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "inline@80"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExternal",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "inline@90"
+        },
+        {
+          "command": "intersystems-community.servermanager.retryServer",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "0_refresh@10"
+        },
+        {
+          "submenu": "intersystems-community.servermanager.iconColor",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "1_edit@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.editSettings",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "1_edit@20"
+        },
+        {
+          "command": "intersystems-community.servermanager.storePassword",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "2_password@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.clearPassword",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "2_password@20"
         }
       ]
     }
