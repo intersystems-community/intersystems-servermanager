@@ -1,3 +1,6 @@
+## 2.0.0 (16-Apr-2021)
+* Add tree view interface.
+
 ## 1.0.5 (02-Feb-2021)
 * Fix publication problem (#69).
 

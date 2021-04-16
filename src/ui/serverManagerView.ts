@@ -128,26 +128,26 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
             let firstRevealId = favoritesMap.size > 0 ? 'starred' : recentsArray.length > 0 ? 'recent' : 'sorted';
 
             if (vscode.workspace.workspaceFolders?.length || 0 > 0) {
-                children.push(new SMTreeItem({parent: element, label: 'Current', id: 'current', tooltip: 'Servers referenced by current workspace', codiconName: 'home', getChildren: currentServers}));
+                children.push(new SMTreeItem({parent: element, label: 'Current', id: 'current', contextValue: 'current', tooltip: 'Servers referenced by current workspace', codiconName: 'home', getChildren: currentServers}));
                 firstRevealId = 'current';
                 this._firstRevealItem = children[children.length - 1];
             }
 
             if (favoritesMap.size > 0) {
-                children.push(new SMTreeItem({parent: element, label: 'Starred', id: 'starred', tooltip: 'Favorite servers', codiconName: 'star-full', getChildren: favoriteServers}));
+                children.push(new SMTreeItem({parent: element, label: 'Favorites', id: 'starred', contextValue: 'starred', tooltip: 'Favorite servers', codiconName: 'star-full', getChildren: favoriteServers}));
                 if (firstRevealId === 'starred') {
                     this._firstRevealItem = children[children.length - 1];
                 }
             }
-            children.push(new SMTreeItem({parent: element, label: 'Recent', id: 'recent', tooltip: 'Recently used servers', codiconName: 'history', getChildren: recentServers}));
+            children.push(new SMTreeItem({parent: element, label: 'Recent', id: 'recent', contextValue: 'recent', tooltip: 'Recently used servers', codiconName: 'history', getChildren: recentServers}));
             if (firstRevealId === 'recent') {
                 this._firstRevealItem = children[children.length - 1];
             }
 
             // TODO - use this when we can implement resequencing in the UI
-            // children.push(new SMTreeItem({parent: element, label: 'Ordered', id: 'ordered', tooltip: 'All servers in settings.json order', codiconName: 'list-ordered', getChildren: allServers, params: {sorted: false}}));
+            // children.push(new SMTreeItem({parent: element, label: 'Ordered', id: 'ordered', contextValue: 'ordered', tooltip: 'All servers in settings.json order', codiconName: 'list-ordered', getChildren: allServers, params: {sorted: false}}));
 
-            children.push(new SMTreeItem({parent: element, label: 'All Servers', id: 'sorted', tooltip: 'All servers in alphabetical order', codiconName: 'server-environment', getChildren: allServers, params: {sorted: true}}));
+            children.push(new SMTreeItem({parent: element, label: 'All Servers', id: 'sorted', contextValue: 'sorted', tooltip: 'All servers in alphabetical order', codiconName: 'server-environment', getChildren: allServers, params: {sorted: true}}));
             if (firstRevealId === 'sorted') {
                 this._firstRevealItem = children[children.length - 1];
             }
@@ -286,20 +286,30 @@ export class ServerTreeItem extends SMTreeItem {
 		serverSummary: ServerName
 	) {
         const parentFolderId = element.parent?.id || "";
+        // Convert linebreaks etc, escape Markdown characters, truncate
+        const escapedDescription = serverSummary.description
+            .replace(/[\n\t]/g, ' ')
+            .replace(/[\r\f\b]/g, '')
+            .replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&')
+            .substr(0,90)
+            .trim();
         // Wrap detail (a uri string) as a null link to prevent it from being linkified
+        const wrappedDetail = `[${serverSummary.detail}]()`;
 		super({
             parent: element.parent,
             label: serverSummary.name,
             id: parentFolderId + ':' + serverSummary.name,
-            tooltip: new vscode.MarkdownString(`[${serverSummary.detail}]()`).appendMarkdown(serverSummary.description ? `\n\n*${serverSummary.description}*` : ''),
+            tooltip: new vscode.MarkdownString(wrappedDetail).appendMarkdown(escapedDescription ? `\n\n*${escapedDescription}*` : ''),
             getChildren: serverFeatures,
             params: { serverSummary }
         });
         this.name = serverSummary.name;
-        //this.command = {command: 'intersystems-community.servermanager.openPortalTab', title: 'Open Management Portal in Simple Browser Tab', arguments: [this]};
         this.contextValue = `${parentFolderId}.server.${favoritesMap.has(this.name) ? 'starred' : ''}`;
         const color = colorsMap.get(this.name);
         this.iconPath = new vscode.ThemeIcon('server-environment', color ? new vscode.ThemeColor('charts.' + color) : undefined);
+
+        // TODO If single click on server item should open Portal tab
+        // this.command = {command: 'intersystems-community.servermanager.openPortalTab', title: 'Open Management Portal in Simple Browser Tab', arguments: [this]};
 	}
 }
 

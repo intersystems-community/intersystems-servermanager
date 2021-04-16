@@ -1,9 +1,9 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "2.0.0-SNAPSHOT.4",
+  "version": "2.0.0-SNAPSHOT",
   "publisher": "intersystems-community",
-  "description": "Helper extension for defining connections to InterSystems servers.",
+  "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
     "type": "git",
     "url": "https://github.com/intersystems-community/intersystems-servermanager"
@@ -89,6 +89,13 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "explorer",
+        "contents": "Use the 'InterSystems Tools: Servers' view to work with your servers.\n[Manage Servers $(tools)](command:workbench.view.extension.intersystems-community_servermanager)"
+      }
+    ]
+    ,
     "configuration": {
       "title": "InterSystems Server Manager",
       "properties": {
@@ -392,6 +399,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "intersystems-community.servermanager.addServer",
+          "when": "view == intersystems-community_servermanager && viewItem == sorted",
+          "group": "inline@10"
+        },
         {
           "command": "intersystems-community.servermanager.addToStarred",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\.$/",
