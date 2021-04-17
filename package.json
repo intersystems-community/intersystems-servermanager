@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "2.0.0-SNAPSHOT",
+  "version": "2.0.1-SNAPSHOT",
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
@@ -94,8 +94,7 @@
         "view": "explorer",
         "contents": "Use the 'InterSystems Tools: Servers' view to work with your servers.\n[Manage Servers $(tools)](command:workbench.view.extension.intersystems-community_servermanager)"
       }
-    ]
-    ,
+    ],
     "configuration": {
       "title": "InterSystems Server Manager",
       "properties": {
