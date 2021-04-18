@@ -75,7 +75,7 @@
         {
           "id": "intersystems-community_servermanager",
           "title": "InterSystems Tools",
-          "icon": "images/toolsContainer.svg"
+          "icon": "images/toolbox.svg"
         }
       ]
     },
