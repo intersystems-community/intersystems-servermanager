@@ -52,7 +52,7 @@ The first button uses VS Code's Simple Browser feature, which creates a tab alon
 
 ### Notes About Simple Browser
 - There is only ever a single Simple Browser tab. Launching another server's Management Portal in it will replace the previous one.
-- If the server version is InterSystems IRIS 2021.1.1 or later you will need to change a setting on the suite of web applications that implement Management Portal. This is a consequence of change [SGM031 - Support SameSite for CSP session and user cookies](https://docs.intersystems.com/iris20201/csp/docbook/relnotes/index.html#SGM031). Simple Browser will not be permitted to store Portal's session management cookies, so Portal must be willing to fall back to using the CSPCHD query parameter mechanism.
+- If the server version is InterSystems IRIS 2020.1.1 or later you will need to change a setting on the suite of web applications that implement Management Portal. This is a consequence of change [SGM031 - Support SameSite for CSP session and user cookies](https://docs.intersystems.com/iris20201/csp/docbook/relnotes/index.html#SGM031). Simple Browser will not be permitted to store Portal's session management cookies, so Portal must be willing to fall back to using the CSPCHD query parameter mechanism.
     -  Locate the five web applications whose path begins with `/csp/sys`
 	![Portal web app list](images/README/portalWebApps.png)
 
@@ -178,3 +178,6 @@ To obtain an array of server names:
   const allServerNames = await serverManagerApi.getServerNames();
 ```
 For details of the API, including result types and available parameters, review the source code of the extension's `activate` method [here](https://github.com/intersystems-community/intersystems-servermanager/blob/master/src/extension.ts).
+
+---
+<div>Activity Bar icon made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
