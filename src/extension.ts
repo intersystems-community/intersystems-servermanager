@@ -211,21 +211,23 @@ export function activate(context: vscode.ExtensionContext) {
                 const serverSpec = await getServerSpec(serverName, undefined, undefined, true);
                 if (serverSpec) {
                     const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${serverSpec.webServer.pathPrefix || ''}`);
-                    const label = `${serverName}:${namespace}${readonly ? " (read-only)" : ""}`;
-                    const added = vscode.workspace.updateWorkspaceFolders(
-                        vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
-                        0,
-                        { uri, name: label }
-                      );
-                    // Switch to Explorer view so user sees the outcome
-                    await vscode.commands.executeCommand("workbench.view.explorer");
-                    // Handle failure
-                    if (added) {
-                        await view.addToRecents(serverName);
+                    if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {                       
+                        const label = `${serverName}:${namespace}${readonly ? " (read-only)" : ""}`;
+                        const added = vscode.workspace.updateWorkspaceFolders(
+                            vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
+                            0,
+                            { uri, name: label }
+                        );
+                        // Handle failure
+                        if (added) {
+                            await view.addToRecents(serverName);
+                        }
+                        else {
+                            vscode.window.showErrorMessage(`Folder ${uri.toString()} could not be added.`, "Close")
+                        }
                     }
-                    else {
-                        vscode.window.showErrorMessage(`Folder ${uri.toString()} could not be added. Maybe it already exists in the workspace.`, "Close")
-                    }
+                    // Switch to Explorer view and focus on the folder
+                    await vscode.commands.executeCommand("revealInExplorer", uri);
                 }
             }
         }
