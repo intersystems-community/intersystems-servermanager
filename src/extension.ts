@@ -210,6 +210,22 @@ export function activate(context: vscode.ExtensionContext) {
                 const namespace = pathParts[3];
                 const serverSpec = await getServerSpec(serverName, undefined, undefined, true);
                 if (serverSpec) {
+                    const ISFS_ID = 'intersystems-community.vscode-objectscript';
+                    const isfsExtension = vscode.extensions.getExtension(ISFS_ID);
+                    if (isfsExtension) {
+                        if (!isfsExtension.isActive) {
+                            await isfsExtension.activate();
+                            if (!isfsExtension.isActive) {
+                                vscode.window.showErrorMessage(`${ISFS_ID} could not be activated.`, "Close")
+                                return;
+                            }
+                        }
+                    }
+                    else {
+                        vscode.window.showErrorMessage(`${ISFS_ID} is not installed.`, "Close")
+                        return;
+                    }
+
                     const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${serverSpec.webServer.pathPrefix || ''}`);
                     const label = `${serverName}:${namespace}${readonly ? " (read-only)" : ""}`;
                     const added = vscode.workspace.updateWorkspaceFolders(
