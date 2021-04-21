@@ -314,6 +314,16 @@
         "command": "intersystems-community.servermanager.viewNamespace",
         "title": "View Code in Namespace",
         "icon": "$(eye)"
+      },
+      {
+        "command": "intersystems-community.servermanager.editNamespaceWebAppFiles",
+        "title": "Edit Web Application Files for Namespace",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "intersystems-community.servermanager.viewNamespaceWebAppFiles",
+        "title": "View Web Application Files for Namespace",
+        "icon": "$(telescope)"
       }
     ],
     "submenus": [
@@ -373,6 +383,54 @@
         {
           "command": "intersystems-community.servermanager.openPortalTab",
           "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.retryServer",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconRed",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconOrange",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconYellow",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconGreen",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconBlue",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.setIconPurple",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.resetIconColor",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.editNamespace",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewNamespace",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.editNamespaceWebAppFiles",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewNamespaceWebAppFiles",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -420,11 +478,13 @@
         },
         {
           "command": "intersystems-community.servermanager.editNamespace",
+          "alt": "intersystems-community.servermanager.editNamespaceWebAppFiles",
           "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
           "group": "inline@10"
         },
         {
           "command": "intersystems-community.servermanager.viewNamespace",
+          "alt": "intersystems-community.servermanager.viewNamespaceWebAppFiles",
           "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
           "group": "inline@20"
         },
