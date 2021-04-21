@@ -55,7 +55,10 @@ export function activate(context: vscode.ExtensionContext) {
     );
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.addServer`, async () => {
-            await addServer();
+            const name = await addServer();
+            if (name) {
+                await view.addToRecents(name);
+            }
         })
     );
 	context.subscriptions.push(
