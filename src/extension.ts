@@ -205,7 +205,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    const addWorkspaceFolderAsync = async (readonly: boolean, namespaceTreeItem?: ServerTreeItem) => {
+    const addWorkspaceFolderAsync = async (readonly: boolean, csp: boolean, namespaceTreeItem?: ServerTreeItem) => {
         if (namespaceTreeItem) {
             const pathParts = namespaceTreeItem.id?.split(':');
             if (pathParts && pathParts.length === 4) {
@@ -229,9 +229,9 @@ export function activate(context: vscode.ExtensionContext) {
                         return;
                     }
 
-                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${serverSpec.webServer.pathPrefix || ''}`);
+                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${serverSpec.webServer.pathPrefix || ''}${csp ? '?csp' : ''}`);
                     if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {                       
-                        const label = `${serverName}:${namespace}${readonly ? " (read-only)" : ""}`;
+                        const label = `${serverName}:${namespace}${csp ? ' webfiles' : ''}${readonly ? " (read-only)" : ""}`;
                         const added = vscode.workspace.updateWorkspaceFolders(
                             vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
                             0,
@@ -253,11 +253,19 @@ export function activate(context: vscode.ExtensionContext) {
     }
     
     context.subscriptions.push(
-        vscode.commands.registerCommand(`${extensionId}.editNamespace`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(false, namespaceTreeItem)})
+        vscode.commands.registerCommand(`${extensionId}.editNamespace`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(false, false, namespaceTreeItem)})
     );
     
     context.subscriptions.push(
-        vscode.commands.registerCommand(`${extensionId}.viewNamespace`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(true, namespaceTreeItem)})
+        vscode.commands.registerCommand(`${extensionId}.viewNamespace`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(true, false, namespaceTreeItem)})
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.editNamespaceWebAppFiles`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(false, true, namespaceTreeItem)})
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.viewNamespaceWebAppFiles`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(true, true, namespaceTreeItem)})
     );
 
     // Listen for relevant configuration changes
