@@ -55,7 +55,10 @@ export function activate(context: vscode.ExtensionContext) {
     );
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.addServer`, async () => {
-            await addServer();
+            const name = await addServer();
+            if (name) {
+                await view.addToRecents(name);
+            }
         })
     );
 	context.subscriptions.push(
@@ -210,22 +213,40 @@ export function activate(context: vscode.ExtensionContext) {
                 const namespace = pathParts[3];
                 const serverSpec = await getServerSpec(serverName, undefined, undefined, true);
                 if (serverSpec) {
-                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${serverSpec.webServer.pathPrefix || ''}${csp ? '?csp' : ''}`);
-                    const label = `${serverName}:${namespace}${csp ? ' webfiles' : ''}${readonly ? " (read-only)" : ""}`;
-                    const added = vscode.workspace.updateWorkspaceFolders(
-                        vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
-                        0,
-                        { uri, name: label }
-                      );
-                    // Switch to Explorer view so user sees the outcome
-                    await vscode.commands.executeCommand("workbench.view.explorer");
-                    // Handle failure
-                    if (added) {
-                        await view.addToRecents(serverName);
+                    const ISFS_ID = 'intersystems-community.vscode-objectscript';
+                    const isfsExtension = vscode.extensions.getExtension(ISFS_ID);
+                    if (isfsExtension) {
+                        if (!isfsExtension.isActive) {
+                            await isfsExtension.activate();
+                            if (!isfsExtension.isActive) {
+                                vscode.window.showErrorMessage(`${ISFS_ID} could not be activated.`, "Close")
+                                return;
+                            }
+                        }
                     }
                     else {
-                        vscode.window.showErrorMessage(`Folder ${uri.toString()} could not be added. Maybe it already exists in the workspace.`, "Close")
+                        vscode.window.showErrorMessage(`${ISFS_ID} is not installed.`, "Close")
+                        return;
                     }
+
+                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${serverSpec.webServer.pathPrefix || ''}${csp ? '?csp' : ''}`);
+                    if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {                       
+                        const label = `${serverName}:${namespace}${csp ? ' webfiles' : ''}${readonly ? " (read-only)" : ""}`;
+                        const added = vscode.workspace.updateWorkspaceFolders(
+                            vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
+                            0,
+                            { uri, name: label }
+                        );
+                        // Handle failure
+                        if (added) {
+                            await view.addToRecents(serverName);
+                        }
+                        else {
+                            vscode.window.showErrorMessage(`Folder ${uri.toString()} could not be added.`, "Close")
+                        }
+                    }
+                    // Switch to Explorer view and focus on the folder
+                    await vscode.commands.executeCommand("revealInExplorer", uri);
                 }
             }
         }
