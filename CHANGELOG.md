@@ -1,3 +1,14 @@
+## 2.0.2 (22-Apr-2021)
+* Support <kbd>Alt</kbd> / <kbd>Option</kbd> modifier on Edit and View buttons to add workspace folder for server-side web application files.
+* Add newly defined server to the 'Recent' list.
+* Handle repeated use of the same Edit or View button better.
+* Notify user if ObjectScript extension is missing.
+* Add more information to README.
+
+## 2.0.1 (19-Apr-2021)
+* New icon for Activity Bar.
+* Fix minor typo in README.
+
 ## 2.0.0 (16-Apr-2021)
 * Add tree view interface.
 
