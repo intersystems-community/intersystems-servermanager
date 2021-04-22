@@ -3,9 +3,11 @@
 
 InterSystems Server Manager is a Visual Studio Code extension for defining connections to [InterSystems](https://www.intersystems.com/) servers. These definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript) for code editing.
 
+See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for changes in each release.
+
 # New in 2.0 - April 2021
 
-> We are pleased to publish version 2.0 of this extension, adding a tree-style user interface. This significant new release is competing in the April 2021 InterSystems Programming Contest for Developer Tools. If you like the new 2.0 features please visit the [contest page](https://openexchange.intersystems.com/contest/13) no later than April 25 and vote for us.
+> We are pleased to publish version 2.0 of this extension, adding a tree-style user interface. This significant new release is competing in the April 2021 InterSystems Programming Contest for Developer Tools. If you like the new 2.0 features please visit the [contest page](https://openexchange.intersystems.com/contest/13) no later than April 25 and vote for the **Server Manager for VSCode** entry.
 
 > Thanks to [George James Software](https://georgejames.com) for backing this development effort.
 
@@ -19,7 +21,7 @@ In this tree you can:
 
 - Launch the InterSystems Management Portal, either in a VS Code tab or in your default browser.
 - List namespaces.
-- Add namespaces to your VS Code workspace for viewing or editing code on the server with the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript).
+- Add namespaces to your VS Code workspace for viewing or editing source code on the server, including web application (formerly CSP) files, with the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript).
 - Tag favorite servers.
 - Set icon colors.
 - Focus on recently used connections.
@@ -38,11 +40,26 @@ On Windows, Server Manager can create connection entries for all connections you
 2. Complete the sequence of prompts.
 3. Expand `All Servers` to see your new entry in the tree.
 
-The server definition is added to your [user-level](https://code.visualstudio.com/docs/getstarted/settings) `settings.json` file.
+The server definition is added to your [user-level](https://code.visualstudio.com/docs/getstarted/settings) `settings.json` file and also appears at the top of the 'Recent' folder.
 
 Optionally use its context menu to store the password for the username you entered when defining the server. You can also set the color of the server icon.
 
 The 'star' button that appears when you hover over the row lets you add the server to the `Favorites` list at the top of the tree.
+
+## Viewing and Editing Source Code
+
+1. Expand the target server, then expand its 'Namespaces' folder.
+2. Hover over the target namespace to reveal its command buttons.
+3. Click the 'edit pencil' icon to add an `isfs://server:namespace/` folder to your VS Code workspace, or use the 'viewing eye' icon to add an `isfs-readonly://server:namespace/` one.
+4. To add a folder that gives you access to server-side web application files (for example, CSP files), hold the <kbd>Alt</kbd> / <kbd>Option</kbd> key down as you click the button for the type of access you want.
+
+Learn more about `isfs` and `isfs-readonly` folders in the [InterSystems ObjectScript for VS Code documentation](https://intersystems-community.github.io/vscode-objectscript/serverside).
+
+> If you are already doing client-side editing of your code (for example, managing it with Git), be sure you understand the consequences of also doing server-side editing using `isfs`. The ObjectScript extension's [README](https://marketplace.visualstudio.com/items?itemName=intersystems-community.vscode-objectscript) outlines the differences between client-side and server-side editing. If in doubt, limit yourself to `isfs-readonly` by only using the eye icon.
+
+## The 'Current' Folder
+
+When you have a folder or a workspace (including a multi-root one) open in VS Code, the Server Manager displays a 'Current' node at the start of its tree if your workspace references any server defined in Server Manager. The linking happens automatically if you added workspace folders from Server Manager as described above. If you are using the client-side mode of working, your `objectscript.conn` setting needs to use the `server` property.
 
 ## Launching Management Portal
 
