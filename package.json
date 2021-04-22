@@ -317,12 +317,12 @@
       },
       {
         "command": "intersystems-community.servermanager.editNamespaceWebAppFiles",
-        "title": "Edit Web Application Files for Namespace",
+        "title": "Edit Web Application Files",
         "icon": "$(file-code)"
       },
       {
         "command": "intersystems-community.servermanager.viewNamespaceWebAppFiles",
-        "title": "View Web Application Files for Namespace",
+        "title": "View Web Application Files",
         "icon": "$(telescope)"
       }
     ],
