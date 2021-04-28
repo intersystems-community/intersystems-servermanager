@@ -1,3 +1,6 @@
+## 2.0.3 (28-Apr-2021)
+* Only supply credentials to Portal if password came as plaintext from settings (#84).
+
 ## 2.0.2 (22-Apr-2021)
 * Support <kbd>Alt</kbd> / <kbd>Option</kbd> modifier on Edit and View buttons to add workspace folder for server-side web application files.
 * Add newly defined server to the 'Recent' list.

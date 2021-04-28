@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
-import { extensionId } from '../extension';
+import { extensionId, ServerSpec } from '../extension';
 
 export async function getPortalUriWithCredentials(name: string, scope?: vscode.ConfigurationScope): Promise<Uri | undefined> {
 
@@ -10,21 +10,23 @@ export async function getPortalUriWithCredentials(name: string, scope?: vscode.C
         if (typeof spec !== 'undefined') {
             const webServer = spec.webServer;
             let queryString = '';
+
+            // We can only pass credentials in cleartext as a queryparam, so only do this if user was willing to store password in cleartext in settings.
+            const settingsSpec: ServerSpec | undefined = vscode.workspace.getConfiguration('intersystems.servers', scope).get(name);
+            spec.password = settingsSpec?.password;
         
-            // At this point we don't know if the target is IRIS or Cache, so add credentials in both formats.
-            // Deliberately put password before username, otherwise it is visible in VS Code's confirmation dialog triggered target domain
-            // hasn't been set as trusted. Likewise, deliberately put IRIS* after Cache*
-            if (spec?.password) {
+            if (spec?.password && spec?.username) {
+                // At this point we don't know if the target is IRIS or Cache, so add credentials in both formats.
+                // Deliberately put password before username, otherwise it is visible in VS Code's confirmation dialog triggered target domain
+                // hasn't been set as trusted. Likewise, deliberately put IRIS* after Cache*
                 const passwordEncoded = encodeURIComponent(spec.password);
                 queryString += `&CachePassword=${passwordEncoded}&IRISPassword=${passwordEncoded}`;
-            }
-            if (spec?.username) {
                 const usernameEncoded = encodeURIComponent(spec.username);
                 queryString += `&CacheUsername=${usernameEncoded}&IRISUsername=${usernameEncoded}`;
+                
+                // Add a cache-buster and push any credentials offscreen
+                queryString = '_=' + new Date().getTime().toString().padEnd(480,' ') + queryString;
             }
-
-            // Add a dummy cache-buster and push the actual credentials offscreen
-            queryString = '_=' + new Date().getTime().toString().padEnd(480,' ') + queryString;
 
             return vscode.Uri.parse(`${webServer.scheme}://${webServer.host}:${webServer.port}${webServer.pathPrefix}/csp/sys/UtilHome.csp?${queryString}`, true);
         }
