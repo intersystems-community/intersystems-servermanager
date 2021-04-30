@@ -216,10 +216,7 @@ export class SMTreeItem extends vscode.TreeItem {
 function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
     const children: ServerTreeItem[] = [];
     const getAllServers = (sorted?: boolean): ServerTreeItem[] => {
-        let serverNames = getServerNames();
-        if (sorted) {
-            serverNames = serverNames.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
-        }
+        let serverNames = getServerNames(undefined, sorted);
         return serverNames.map((serverName) => {
             return new ServerTreeItem({ label: serverName.name, id:serverName.name, parent: treeItem }, serverName);
         })

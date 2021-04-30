@@ -280,8 +280,9 @@ export function activate(context: vscode.ExtensionContext) {
         async pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {
             return await pickServer(scope, options);
         },
-        getServerNames(scope?: vscode.ConfigurationScope): ServerName[] {
-            return getServerNames(scope);
+        
+        getServerNames(scope?: vscode.ConfigurationScope, sorted?: boolean): ServerName[] {
+            return getServerNames(scope, sorted);
         },
 
         getServerSummary(name: string, scope?: vscode.ConfigurationScope): ServerName | undefined {
