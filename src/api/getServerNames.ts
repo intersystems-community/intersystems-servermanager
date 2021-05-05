@@ -2,9 +2,10 @@ import * as vscode from 'vscode';
 import { ServerName } from '../extension';
 import { serverDetail } from './getServerSummary';
 
-export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] {
+export function getServerNames(scope?: vscode.ConfigurationScope, sorted?: boolean): ServerName[] {
+    const allNames: ServerName[] = [];
     let names: ServerName[] = [];
-    let defaultNames: ServerName[] = [];
+    const embeddedNames: ServerName[] = [];
     const servers = vscode.workspace.getConfiguration('intersystems', scope).get('servers');
 
     if (typeof servers === 'object' && servers) {
@@ -18,7 +19,7 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
         const inspectedDefault = vscode.workspace.getConfiguration('intersystems.servers', scope).inspect('/default');
         const myDefault: string = notSet(inspectedDefault) ? '' : servers['/default'] || '';
         if (myDefault.length > 0 && servers[myDefault]) {
-            names.push({
+            allNames.push({
                 name: myDefault,
                 description: `${servers[myDefault].description || ''} (default)`.trim(),
                 detail: serverDetail(servers[myDefault])
@@ -32,7 +33,7 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
 
                 // Collect embedded (default~*) servers separately
                 if (notSet(inspected)) {
-                    defaultNames.push({
+                    embeddedNames.push({
                         name: key,
                         description: servers[key].description || '',
                         detail: serverDetail(servers[key])
@@ -48,9 +49,17 @@ export function getServerNames(scope?: vscode.ConfigurationScope): ServerName[] 
         }
     }
 
+    // If requested, sort what we found
+    if (sorted) {
+        names = names.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    }
+
+    // Append them
+    allNames.push(...names);
+
     // Append the embedded servers unless suppressed
     if (!vscode.workspace.getConfiguration('intersystems.servers', scope).get('/hideEmbeddedEntries')) {
-        names.push(...defaultNames);
+        allNames.push(...embeddedNames);
     }
-    return names;
+    return allNames;
 }
