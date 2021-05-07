@@ -9,8 +9,8 @@ import { storePassword, clearPassword } from './commands/managePasswords';
 import { importFromRegistry } from './commands/importFromRegistry';
 import { ServerManagerView, ServerTreeItem, SMTreeItem } from './ui/serverManagerView';
 import { addServer } from './api/addServer';
-import { getPortalUriWithCredentials } from './api/getPortalUriWithCredentials';
 import { getServerSummary } from './api/getServerSummary';
+import { BrowserTarget, getPortalUriWithToken } from './api/getPortalUriWithToken';
 
 export interface ServerName {
     name: string,
@@ -78,9 +78,9 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.openPortalExternal`, (server?: ServerTreeItem) => {
             if (server?.contextValue?.match(/\.server\./) && server.name) {
-                getPortalUriWithCredentials(server.name).then((uriWithCredentials) => {
-                    if (uriWithCredentials) {
-                        vscode.env.openExternal(uriWithCredentials);
+                getPortalUriWithToken(BrowserTarget.EXTERNAL, server.name).then((uriWithToken) => {
+                    if (uriWithToken) {
+                        vscode.env.openExternal(uriWithToken);
                     }
                 });
             }
@@ -89,13 +89,12 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.openPortalTab`, (server?: ServerTreeItem) => {
             if (server?.contextValue?.match(/\.server\./) && server.name) {
-                getPortalUriWithCredentials(server.name).then((uriWithCredentials) => {
-                    if (uriWithCredentials) {
-                        //vscode.commands.executeCommand('simpleBrowser.api.open', uriWithCredentials);
+                getPortalUriWithToken(BrowserTarget.SIMPLE, server.name).then((uriWithToken) => {
+                    if (uriWithToken) {
                         //
                         // It is essential to pass skipEncoding=true when converting the uri to a string,
                         // otherwise the encoding done within Simple Browser / webview causes double-encoding of the querystring.
-                        vscode.commands.executeCommand('simpleBrowser.show', uriWithCredentials.toString(true));
+                        vscode.commands.executeCommand('simpleBrowser.show', uriWithToken.toString(true));
                     }
                 });
             }

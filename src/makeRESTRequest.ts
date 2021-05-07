@@ -36,7 +36,7 @@ export interface AtelierRESTEndpoint {
 	}
     url += "/api/atelier/";
     if (endpoint) {
-        url += "/api/atelier/v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
+        url += "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
     }
 
 	// Make the request (SASchema support removed)
@@ -65,7 +65,7 @@ export interface AtelierRESTEndpoint {
                 respdata = await axios.request(
                     {
                         method: method,
-                        url: url,
+                        url: encodeURI(url),
                         data: data,
                         headers: {
                             'Content-Type': 'application/json'
@@ -85,7 +85,7 @@ export interface AtelierRESTEndpoint {
             respdata = await axios.request(
                 {
                     method: method,
-                    url: url,
+                    url: encodeURI(url),
                     withCredentials: true,
                     jar: cookieJar,
                     validateStatus: function (status) {
@@ -99,7 +99,7 @@ export interface AtelierRESTEndpoint {
                 respdata = await axios.request(
                     {
                         method: method,
-                        url: url,
+                        url: encodeURI(url),
                         auth: {
                             username: server.username,
                             password: server.password
