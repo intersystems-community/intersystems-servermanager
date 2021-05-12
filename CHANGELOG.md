@@ -1,3 +1,7 @@
+## 2.0.4 (12-May-2021)
+* 'All Servers' folder contents were not sorted as documented (#87).
+* Use web app token instead of passing credentials to Portal.
+
 ## 2.0.3 (28-Apr-2021)
 * Only supply credentials to Portal if password came as plaintext from settings (#84).
 
