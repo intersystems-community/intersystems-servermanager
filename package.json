@@ -23,10 +23,10 @@
     "Other"
   ],
   "capabilities": {
-		"untrustedWorkspaces": {
-			"supported": true
-		}
-	},
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
   "contributors": [
     {
       "name": "John Murray",
