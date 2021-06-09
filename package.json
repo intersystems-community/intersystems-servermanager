@@ -22,6 +22,11 @@
   "categories": [
     "Other"
   ],
+  "capabilities": {
+		"untrustedWorkspaces": {
+			"supported": true
+		}
+	},
   "contributors": [
     {
       "name": "John Murray",
