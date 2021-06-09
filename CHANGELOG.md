@@ -1,3 +1,6 @@
+## 2.0.5 (09-Jun-2021)
+* Allow extension in untrusted workspaces (#92).
+
 ## 2.0.4 (12-May-2021)
 * 'All Servers' folder contents were not sorted as documented (#87).
 * Use web app token instead of passing credentials to Portal.
