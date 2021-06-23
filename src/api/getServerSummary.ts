@@ -10,5 +10,5 @@ export function getServerSummary(name: string, scope?: vscode.ConfigurationScope
 }
 
 export function serverDetail(connSpec: ServerSpec): string {
-    return `${connSpec.webServer.scheme || 'http'}://${connSpec.webServer.host}:${connSpec.webServer.port}/${connSpec.webServer.pathPrefix || ''}`;
+    return `${connSpec.webServer.scheme || 'http'}://${connSpec.webServer.host}:${connSpec.webServer.port}${connSpec.webServer.pathPrefix || ''}/`;
 }

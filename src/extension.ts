@@ -228,7 +228,7 @@ export function activate(context: vscode.ExtensionContext) {
                         return;
                     }
 
-                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${serverSpec.webServer.pathPrefix || ''}${csp ? '?csp' : ''}`);
+                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}${serverSpec.webServer.pathPrefix || ''}/${csp ? '?csp' : ''}`);
                     if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {                       
                         const label = `${serverName}:${namespace}${csp ? ' webfiles' : ''}${readonly ? " (read-only)" : ""}`;
                         const added = vscode.workspace.updateWorkspaceFolders(

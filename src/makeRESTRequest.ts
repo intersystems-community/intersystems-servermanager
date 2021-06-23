@@ -32,7 +32,7 @@ export interface AtelierRESTEndpoint {
 	var url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
     const pathPrefix = server.webServer.pathPrefix;
 	if (pathPrefix && pathPrefix !== "") {
-		url = url.concat("/",pathPrefix)
+		url += pathPrefix;
 	}
     url += "/api/atelier/";
     if (endpoint) {
