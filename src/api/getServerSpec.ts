@@ -33,7 +33,7 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
     server.name = name;
     server.description = server.description || '';
     server.webServer.scheme = server.webServer.scheme || 'http';
-    server.webServer.port = server.webServer.port || server.webServer.scheme === 'https' ? 443 : 80;
+    server.webServer.port = server.webServer.port || (server.webServer.scheme === 'https' ? 443 : 80);
     server.webServer.pathPrefix = server.webServer.pathPrefix || '';
 
     if (noCredentials) {
