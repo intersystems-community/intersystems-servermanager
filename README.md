@@ -7,7 +7,7 @@ See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-comm
 
 # New in 2.0 - April 2021
 
-> We are pleased to publish version 2.0 of this extension, adding a tree-style user interface. This significant new release came first in the [April 2021 InterSystems Programming Contest for Developer Tools](https://openexchange.intersystems.com/contest/13).
+> We are pleased to publish version 2.0 of this extension, adding a tree-style user interface. This significant new release won the [April 2021 InterSystems Programming Contest for Developer Tools](https://openexchange.intersystems.com/contest/13).
 
 > Thanks to [George James Software](https://georgejames.com) for backing this development effort.
 
