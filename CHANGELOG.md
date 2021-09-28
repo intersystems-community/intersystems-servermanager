@@ -1,3 +1,7 @@
+## 2.0.6 (28-Sep-2021)
+* Apply `pathPrefix` correctly (#95, #99).
+* Update vulnerable dependencies.
+
 ## 2.0.5 (09-Jun-2021)
 * Allow extension in untrusted workspaces (#92).
 
