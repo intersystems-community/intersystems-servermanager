@@ -62,40 +62,49 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
   });
 }
 
-async function loadRegistryData(config, serverDefinitions, serversMissingUsernames, newServerNames): Promise<number> {
+async function loadRegistryData(config: vscode.WorkspaceConfiguration, serverDefinitions, serversMissingUsernames: string[], newServerNames: string[]): Promise<number> {
   const cmd = require("node-cmd");
-  const hkeyLocalMachine = "HKEY_LOCAL_MACHINE";
-  preloadRegistryCache(cmd, "HKEY_CURRENT_USER\\Software\\InterSystems\\Cache\\Servers");
+  const subFolder = "\\Intersystems\\Cache\\Servers";
+  const fullPaths: string[] = [];
+  fullPaths.push("HKEY_CURRENT_USER\\SOFTWARE" + subFolder);
+  fullPaths.push("HKEY_LOCAL_MACHINE\\SOFTWARE" + subFolder);
+  fullPaths.push("HKEY_LOCAL_MACHINE\\WOW6432Node\\SOFTWARE" + subFolder);
+  const existingUserNames: string[] = [];
   let overwriteCount = 0;
-  for (const folder of ['','\\WOW6432Node']) {
-    const subFolder = "\\Intersystems\\Cache\\Servers";
-    const path = hkeyLocalMachine + "\\SOFTWARE" + folder + subFolder;
-    preloadRegistryCache(cmd, path);
-    const regData = cmd.runSync("reg query " + path);
+  for (const fullPath of fullPaths) {
+    const hive = fullPath.split("\\")[0];
+    preloadRegistryCache(cmd, fullPath);
+    const regData = cmd.runSync("reg query " + fullPath);
     if (regData.data === null) {
       // e.g., because the key in question isn't there
       continue;
     }
-    regData.data.split("\r\n").forEach((serverName) => {
+    regData.data.split("\r\n").forEach((serverName: string) => {
       // We only want folders, not keys (e.g., DefaultServer)
-      if (serverName.indexOf(hkeyLocalMachine) !== 0) {
+      if (!serverName.startsWith(hive)) {
         return;
       }
-
       // For WOW6432Node, skip the line for the subfolder itself
-      if (serverName.split(subFolder).pop().length === 0) {
+      if ((serverName.split(subFolder).pop()?? "").length === 0) {
         return;
       }
 
       // remove HKEY_LOCAL_MACHINE\ and whitespace from the server name
-      const path = serverName.substring(hkeyLocalMachine.length + 1).trim();
+      const path = serverName.substring(hive.length + 1).trim();
 
-      const originalName: string = serverName.split("\\").pop().trim();
+      const originalName: string = (serverName.split("\\").pop()?? "").trim();
       // Enforce the rules from package.json on the server name
       const name = originalName.toLowerCase().replace(/[^a-z0-9-_~]/g, "~");
-      const getProperty = (property: string) => getStringRegKey(cmd, hkeyLocalMachine, path, property);
+      if (name === "") {
+        return;
+      }
+      const getProperty = (property: string) => getStringRegKey(cmd, hive, path, property);
 
-      if (name !== "" && !config.has("servers." + name)) {
+      if (!config.has("servers." + name)) {
+        // Ignore incomplete definition
+        if (!getProperty("Address")) {
+          return;
+        }
         if (!newServerNames.includes(name)) {
           newServerNames.push(name);
         }
@@ -124,7 +133,10 @@ async function loadRegistryData(config, serverDefinitions, serversMissingUsernam
         }
       }
       else if (!name.startsWith("/")) {
-        overwriteCount++;
+        if (!existingUserNames.includes(name)) {
+          existingUserNames.push(name);
+          overwriteCount++;
+        }
       }
     });
   }
