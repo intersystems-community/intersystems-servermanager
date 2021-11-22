@@ -7,11 +7,13 @@ import {
 	Disposable,
 	Event,
 	EventEmitter,
+	extensions,
 	SecretStorage,
 	ThemeIcon,
 	window,
 } from 'vscode';
-import { pickServer } from './api/pickServer';
+
+export const AUTHENTICATIONPROVIDER = "intersystems-server-credentials";
 
 class ServerManagerAuthenticationSession implements AuthenticationSession {
     public readonly id: string;
@@ -31,8 +33,8 @@ class ServerManagerAuthenticationSession implements AuthenticationSession {
 }
 
 export class ServerManagerAuthenticationProvider implements AuthenticationProvider, Disposable {
-	static id = 'intersystems-servermanager';
-	static label = 'InterSystems Server Manager';
+	static id = AUTHENTICATIONPROVIDER;
+	static label = 'InterSystems Server Credentials';
     static secretKeyPrefix = 'authenticationProvider:';
 	static sessionId(serverName: string, userName: string): string {
         return `${serverName}@${userName}`;
@@ -45,12 +47,14 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 	private _sessions: ServerManagerAuthenticationSession[] = [];
 
+	private _serverManagerExtension = extensions.getExtension('intersystems-community.servermanager');
+
 	private _onDidChangeSessions = new EventEmitter<AuthenticationProviderAuthenticationSessionsChangeEvent>();
 	get onDidChangeSessions(): Event<AuthenticationProviderAuthenticationSessionsChangeEvent> {
 		return this._onDidChangeSessions.event;
 	}
 
-	constructor(private readonly secretStorage: SecretStorage) { }
+	constructor(private readonly secretStorage: SecretStorage) {}
 
 	dispose(): void {
 		this._initializedDisposable?.dispose();
@@ -102,7 +106,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	}
 
 	// This function is called after `this.getSessions` is called, and only when:
-	// - `this.getSessions` returns nothing but `createIfNone` was set to `true` in `vscode.authentication.getSession`
+	// - `this.getSessions` returns nothing but `createIfNone` was set to `true` in client's call to `vscode.authentication.getSession`
 	// - `vscode.authentication.getSession` was called with `forceNewSession: true` or `forceNewSession: "Reason message for modal dialog"` (proposed API since 1.59, finalized in 1.63)
 	// - The end user initiates the "silent" auth flow via the Accounts menu
 	async createSession(scopes: string[]): Promise<AuthenticationSession> {
@@ -111,7 +115,13 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
         let serverName = scopes[0] ?? '';
         if (!serverName) {
             // Prompt for the server name.
-            serverName = await pickServer() ?? '';
+			if (!this._serverManagerExtension) {
+                throw new Error('InterSystems Server Manager extension is not available to provide server selection');
+			}
+			if (!this._serverManagerExtension.isActive) {
+				await this._serverManagerExtension.activate();
+			}	
+			serverName = await this._serverManagerExtension.exports.pickServer() ?? '';
             if (!serverName) {
                 throw new Error('Server name is required');
             }
@@ -129,24 +139,31 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
                 throw new Error('Username is required');
             }
         }
-        const credentialKey = ServerManagerAuthenticationProvider.credentialKey(ServerManagerAuthenticationProvider.sessionId(serverName, userName));
 
-        let password = await this.secretStorage.get(credentialKey);
-
+		// Return existing session if found
+		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
+		const existingSession = this._sessions.find((session) => session.id === sessionId);
+		if (existingSession) {
+			return existingSession;
+		}
+		
+		// Seek password in secret storage
+		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+        let password =  await this.secretStorage.get(credentialKey);
         if (!password) {
-            // Prompt for the password.
+            // Prompt for password
             const doInputBox = async (): Promise<string | undefined> => {
                 return await new Promise<string | undefined>((resolve, reject) => {
                     const inputBox = window.createInputBox();
                     inputBox.password = true,
                     inputBox.title = `Password for InterSystems server '${serverName}'`,
                     inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`,
-                    inputBox.prompt = 'To store your password securely, submit it using the $(key) button',
+                    inputBox.prompt = 'Use $(key) button above to store password securely',
                     inputBox.ignoreFocusOut = true,
                     inputBox.buttons = [{ iconPath: new ThemeIcon('key'), tooltip: 'Store Password in Keychain' }]
 
                     async function done(secretStorage?: SecretStorage) {
-                        // File the password and return it
+                        // Return the password, having stored it if storage was passed
 						const password = inputBox.value;
                         if (secretStorage && password) {
 							await secretStorage.store(credentialKey, password);
@@ -159,7 +176,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
                     }
 
                     inputBox.onDidTriggerButton((_button) => {
-                        // We only added one button  
+                        // We only added the one button, which stores the password  
                         done(this.secretStorage);
                     });
                     inputBox.onDidAccept(() => {
