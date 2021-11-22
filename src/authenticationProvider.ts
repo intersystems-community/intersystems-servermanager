@@ -8,6 +8,7 @@ import {
 	Event,
 	EventEmitter,
 	SecretStorage,
+	ThemeIcon,
 	window,
 } from 'vscode';
 import { pickServer } from './api/pickServer';
@@ -19,7 +20,7 @@ class ServerManagerAuthenticationSession implements AuthenticationSession {
     public readonly scopes: string[];
 	constructor(
         public readonly serverName: string,
-        userName: string,
+        public readonly userName: string,
         password: string
         ) {
         this.id = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
@@ -40,11 +41,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
         return `${ServerManagerAuthenticationProvider.secretKeyPrefix}${sessionId}`;
     }
 
-	private _sessionChangeEmitter = new EventEmitter<AuthenticationProviderAuthenticationSessionsChangeEvent>();
-
-	// this property is used to determine if the token has been changed in another window of VS Code.
-	// It is used in the checkForUpdates function.
-	private _currentToken: Promise<string | undefined> | undefined;
 	private _initializedDisposable: Disposable | undefined;
 
 	private _sessions: ServerManagerAuthenticationSession[] = [];
@@ -62,62 +58,40 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 	private _ensureInitialized(): void {
 		if (this._initializedDisposable === undefined) {
-			//void this._cacheTokenFromStorage();
 
 			this._initializedDisposable = Disposable.from(
 				// This onDidChange event happens when the secret storage changes in _any window_ since
 				// secrets are shared across all open windows.
 				this.secretStorage.onDidChange(e => {
-					if (e.key.startsWith(ServerManagerAuthenticationProvider.secretKeyPrefix)) {
-						void this._checkForUpdates();
-					}
+					this._sessions.forEach(
+						async (session, index) => {
+							const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
+							if (credentialKey === e.key) {
+								const password = await this.secretStorage.get(credentialKey);
+								if (!password) {
+									this._sessions.splice(index, 1);
+								}
+								else {
+									this._sessions[index] = new ServerManagerAuthenticationSession(session.serverName, session.userName, password);
+								}
+							}
+						},
+						this
+					);
 				}),
 				// This fires when the user initiates a "silent" auth flow via the Accounts menu.
 				authentication.onDidChangeSessions(e => {
 					if (e.provider.id === ServerManagerAuthenticationProvider.id) {
-						void this._checkForUpdates();
+						//void this._checkForUpdates();
 					}
 				}),
 			);
 		}
 	}
 
-	// This is a crucial function that handles whether or not the token has changed in
-	// a different window of VS Code and sends the necessary event if it has.
-	private async _checkForUpdates(): Promise<void> {
-		const added: AuthenticationSession[] = [];
-		const removed: AuthenticationSession[] = [];
-		const changed: AuthenticationSession[] = [];
-
-		const previousToken = await this._currentToken;
-		const session = (await this.getSessions())[0];
-
-		if (session?.accessToken && !previousToken) {
-			added.push(session);
-		} else if (!session?.accessToken && previousToken) {
-			removed.push(session);
-		} else if (session?.accessToken !== previousToken) {
-			changed.push(session);
-		} else {
-			return;
-		}
-
-		//void this._cacheTokenFromStorage();
-		this._onDidChangeSessions.fire({ added: added, removed: removed, changed: changed });
-	}
-
-    /*
-	private _cacheTokenFromStorage() {
-		this._currentToken = this.secretStorage.get(ServerManagerAuthenticationProvider._secretKey) as Promise<string | undefined>;
-		return this._currentToken;
-	}
-    */
-
 	// This function is called first when `vscode.authentication.getSessions` is called.
 	async getSessions(scopes: string[] = []): Promise<readonly AuthenticationSession[]> {
 		this._ensureInitialized();
-		//const token = await this._cacheTokenFromStorage();
-		//return token ? [new ServerManagerAuthenticationSession(token)] : [];
 		let sessions = this._sessions;
 
 		// Filter to return only those that match all supplied scopes, which are positional.
@@ -161,41 +135,80 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
         if (!password) {
             // Prompt for the password.
-            password = await window.showInputBox({
-                ignoreFocusOut: true,
-                placeHolder: `Password for ${userName} on ${serverName}`,
-                prompt: `Enter the user's password.`,
-                password: true,
-            });
-            
+            const doInputBox = async (): Promise<string | undefined> => {
+                return await new Promise<string | undefined>((resolve, reject) => {
+                    const inputBox = window.createInputBox();
+                    inputBox.password = true,
+                    inputBox.title = `Password for InterSystems server '${serverName}'`,
+                    inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`,
+                    inputBox.prompt = 'To store your password securely, submit it using the $(key) button',
+                    inputBox.ignoreFocusOut = true,
+                    inputBox.buttons = [{ iconPath: new ThemeIcon('key'), tooltip: 'Store Password in Keychain' }]
+
+                    async function done(secretStorage?: SecretStorage) {
+                        // File the password and return it
+						const password = inputBox.value;
+                        if (secretStorage && password) {
+							await secretStorage.store(credentialKey, password);
+							console.log(`Stored password at ${credentialKey}`);
+                        }
+                        // Resolve the promise and tidy up
+                        resolve(password);
+                        inputBox.hide();
+                        inputBox.dispose();
+                    }
+
+                    inputBox.onDidTriggerButton((_button) => {
+                        // We only added one button  
+                        done(this.secretStorage);
+                    });
+                    inputBox.onDidAccept(() => {
+                        done();
+                    });
+                    inputBox.show();
+                })
+            };
+            password = await doInputBox();
             if (!password) {
                 throw new Error('Password is required');
             }
-
-        	/*  //TODO store password
-            await this.secretStorage.store(credentialKey, password);
-			*/
-            console.log(`TODO: Store password at ${credentialKey}`);
 		}
 
+		// We have all we need to create the session object
 		const session = new ServerManagerAuthenticationSession(serverName, userName, password);
-
-		// Remove previous session with this id, which may exist if clearSessionPreference was set on the getSession call
-		this._sessions = this._sessions.filter((sess) => sess.id !== session.id );
-
-		// Store the new session and return it
-		this._sessions.push(session);
-
-		// Raise the event
-		this._sessionChangeEmitter.fire({ added: [session], removed: [], changed: [] });
-
+		
+		// Update this._sessions and raise the event to notify
+		const added: AuthenticationSession[] = [];
+		const changed: AuthenticationSession[] = [];
+		const index = this._sessions.findIndex((item) => item.id === session.id)
+		if (index !== -1) {
+			this._sessions[index] = session;
+			changed.push(session);
+		}
+		else {
+			this._sessions.push(session);
+			added.push(session);
+		}
+		this._onDidChangeSessions.fire({ added, removed: [], changed });
+		
 		return session;
 	}
-
+	
 	// This function is called when the end user signs out of the account.
 	async removeSession(sessionId: string): Promise<void> {
-        const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-		await this.secretStorage.delete(credentialKey);
-		this._sessions = this._sessions.filter((session) => {session.id !== sessionId} );
+		const index = this._sessions.findIndex((item) => item.id === sessionId);
+		const session = this._sessions[index];
+
+		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+		if (await this.secretStorage.get(credentialKey)) {
+			// Delete from secret storage, which will trigger an event that we will use to remove the session
+			await this.secretStorage.delete(credentialKey);
+			console.log(`Deleted password at ${credentialKey}`);
+		}
+		else if (index > -1) {
+			// Password wasn't stored, so remove session here
+			this._sessions.splice(index, 1);
+		}
+		this._onDidChangeSessions.fire({ added: [], removed: [session], changed: [] });
 	}
 }
