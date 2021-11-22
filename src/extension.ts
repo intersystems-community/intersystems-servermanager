@@ -11,6 +11,7 @@ import { ServerManagerView, ServerTreeItem, SMTreeItem } from './ui/serverManage
 import { addServer } from './api/addServer';
 import { getServerSummary } from './api/getServerSummary';
 import { BrowserTarget, getPortalUriWithToken } from './api/getPortalUriWithToken';
+import { ServerManagerAuthenticationProvider } from './authenticationProvider';
 
 export interface ServerName {
     name: string,
@@ -44,10 +45,98 @@ export function activate(context: vscode.ExtensionContext) {
 
     const _onDidChangePassword = new vscode.EventEmitter<string>();
 
+	// Register our authentication provider. NOTE: this will register the provider globally which means that
+	// any other extension can request to use use this provider via the `vscode.authentication.getSession` API.
+	context.subscriptions.push(vscode.authentication.registerAuthenticationProvider(
+		ServerManagerAuthenticationProvider.id,
+		ServerManagerAuthenticationProvider.label,
+		new ServerManagerAuthenticationProvider(context.secrets),
+        {supportsMultipleAccounts: true}
+	));
+
 	// Server Manager View
 	const view = new ServerManagerView(context);
 
     // Register the commands
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testLogin', async () => {
+            // Get our session.
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, [], { createIfNone: true });
+            vscode.window.showInformationMessage(`testLogin returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testScopedLogin', async () => {
+            // Get our session.
+            const scopes = ['iris201', 'johnm'];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { createIfNone: true });
+            vscode.window.showInformationMessage(`testScopedLogin with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testScopedLogin2', async () => {
+            // Get our session.
+            const scopes = ['iris201', 'johnm2'];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { createIfNone: true });
+            vscode.window.showInformationMessage(`testScopedLogin2 with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testScopedLoginWithPreferenceCleared', async () => {
+            // Get our session.
+            const scopes = ['iris201', 'johnm'];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { createIfNone: true, clearSessionPreference: true });
+            vscode.window.showInformationMessage(`testScopedLoginWithPreferenceCleared with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testScopedLogin2WithPreferenceCleared', async () => {
+            // Get our session.
+            const scopes = ['iris201', 'johnm2'];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { createIfNone: true, clearSessionPreference: true });
+            vscode.window.showInformationMessage(`testScopedLogin2WithPreferenceCleared with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testPartiallyScopedLogin', async () => {
+            // Get our session.
+            const scopes = ['iris201'];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { createIfNone: true });
+            vscode.window.showInformationMessage(`testPartiallyScopedLogin with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testPartiallyScopedLoginWithPreferenceCleared', async () => {
+            // Get our session.
+            const scopes = ['iris201'];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { clearSessionPreference: true, createIfNone: true });
+            vscode.window.showInformationMessage(`testPartiallyScopedLoginWithPreferenceCleared with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testQuietLogin', async () => {
+            // Get our session.
+            const scopes = [];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { createIfNone: false });
+            vscode.window.showInformationMessage(`testQuietLogin with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testScopedQuietLogin', async () => {
+            // Get our session.
+            const scopes = ['iris201', 'johnm'];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { createIfNone: false });
+            vscode.window.showInformationMessage(`testScopedQuietLogin with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
+	context.subscriptions.push(
+        vscode.commands.registerCommand('intersystems-community.servermanager.testScopedQuietLogin2', async () => {
+            // Get our session.
+            const scopes = ['iris201', 'johnm2'];
+            const session = await vscode.authentication.getSession(ServerManagerAuthenticationProvider.id, scopes, { createIfNone: false });
+            vscode.window.showInformationMessage(`testScopedQuietLogin2 with scopes ${JSON.stringify(scopes)} returned session ${JSON.stringify(session)}`);
+        })
+    );
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.refreshTree`, () => {
             view.refreshTree();
