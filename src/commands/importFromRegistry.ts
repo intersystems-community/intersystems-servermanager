@@ -16,8 +16,8 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
   regQueryCache.clear();
 
   return vscode.window.withProgress({
-    "location": vscode.ProgressLocation.Notification,
-    "cancellable": true
+    cancellable: true,
+    location: vscode.ProgressLocation.Notification,
   }, async (progress, cancellationToken) => {
     progress.report({message: "Loading server definitions from Windows registry..."});
     cancellationToken.onCancellationRequested(() => {
@@ -25,7 +25,7 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
     });
 
     // This forces the progress bar to actually show before the possibly long-running load of registry data
-    await new Promise(resolve => setTimeout(resolve,0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     overwriteCount = await loadRegistryData(config, serverDefinitions, serversMissingUsernames, newServerNames);
 
@@ -37,9 +37,9 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
     if (!keepGoing) {
       return;
     }
-    
+
     if (overwriteCount > 0) {
-      if (await vscode.window.showWarningMessage(`${overwriteCount} existing definition${overwriteCount > 1 ? "s" : ""} will be overwritten. Continue?`, { modal: true }, "Yes") !=="Yes") {
+      if (await vscode.window.showWarningMessage(`${overwriteCount} existing definition${overwriteCount > 1 ? "s" : ""} will be overwritten. Continue?`, { modal: true }, "Yes") !== "Yes") {
         vscode.window.showInformationMessage("Cancelled server import.");
         return;
       }
@@ -62,7 +62,12 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
   });
 }
 
-async function loadRegistryData(config: vscode.WorkspaceConfiguration, serverDefinitions, serversMissingUsernames: string[], newServerNames: string[]): Promise<number> {
+async function loadRegistryData(
+  config: vscode.WorkspaceConfiguration,
+  serverDefinitions,
+  serversMissingUsernames: string[],
+  newServerNames: string[],
+): Promise<number> {
   const cmd = require("node-cmd");
   const subFolder = "\\Intersystems\\Cache\\Servers";
   const fullPaths: string[] = [];
@@ -85,14 +90,14 @@ async function loadRegistryData(config: vscode.WorkspaceConfiguration, serverDef
         return;
       }
       // For WOW6432Node, skip the line for the subfolder itself
-      if ((serverName.split(subFolder).pop()?? "").length === 0) {
+      if ((serverName.split(subFolder).pop() ?? "").length === 0) {
         return;
       }
 
       // remove HKEY_LOCAL_MACHINE\ and whitespace from the server name
       const path = serverName.substring(hive.length + 1).trim();
 
-      const originalName: string = (serverName.split("\\").pop()?? "").trim();
+      const originalName: string = (serverName.split("\\").pop() ?? "").trim();
       // Enforce the rules from package.json on the server name
       const name = originalName.toLowerCase().replace(/[^a-z0-9-_~]/g, "~");
       if (name === "") {
@@ -126,13 +131,12 @@ async function loadRegistryData(config: vscode.WorkspaceConfiguration, serverDef
           username,
           webServer: {
             host: getProperty("WebServerAddress") || getProperty("Address"),
-            pathPrefix: instanceName ? '/' + instanceName : undefined,
+            pathPrefix: instanceName ? "/" + instanceName : undefined,
             port: parseInt(getProperty("WebServerPort") || "", 10),
             scheme: usesHttps ? "https" : "http",
           },
-        }
-      }
-      else if (!name.startsWith("/")) {
+        };
+      } else if (!name.startsWith("/")) {
         if (!existingUserNames.includes(name)) {
           existingUserNames.push(name);
           overwriteCount++;
@@ -145,7 +149,7 @@ async function loadRegistryData(config: vscode.WorkspaceConfiguration, serverDef
 
 async function promptForUsernames(serverDefinitions: any, serversMissingUsernames: string[]): Promise<boolean> {
   if (serversMissingUsernames.length) {
-    let serverName = serversMissingUsernames.splice(0,1)[0];
+    let serverName = serversMissingUsernames.splice(0, 1)[0];
     let username = await vscode.window.showInputBox({
       ignoreFocusOut: true,
       placeHolder: "Enter a username. Leave empty to be prompted at connect time.",
@@ -155,7 +159,7 @@ async function promptForUsernames(serverDefinitions: any, serversMissingUsername
       // Was cancelled
       return false;
     }
-    if (username === '') {
+    if (username === "") {
       // If unspecified, actually set to undefined to leave it empty in serverDefinitions
       username = undefined;
     }
@@ -171,7 +175,7 @@ async function promptForUsernames(serverDefinitions: any, serversMissingUsername
       const result = await vscode.window.showQuickPick(items, {
         canPickMany: false,
         ignoreFocusOut: true,
-        placeHolder: `${serversMissingUsernames.length} more servers lack a username. What do you want to do?`
+        placeHolder: `${serversMissingUsernames.length} more servers lack a username. What do you want to do?`,
       });
       if (result === undefined || result.label === items[2].label) {
         return false;
@@ -202,10 +206,10 @@ async function promptForUsernames(serverDefinitions: any, serversMissingUsername
 
 async function promptForPasswords(serverDefinitions: any, newServerNames: string[]): Promise<void> {
   let reusePassword;
-  let password : string | undefined = '';
+  let password: string | undefined = "";
   const promptServerNames = new Array();
   // Only prompt for servers with a username specified, of course.
-  newServerNames.forEach(name => {
+  newServerNames.forEach((name) => {
     if (serverDefinitions[name].username !== undefined) {
       promptServerNames.push(name);
     }
@@ -217,20 +221,20 @@ async function promptForPasswords(serverDefinitions: any, newServerNames: string
         password: true,
         placeHolder: "Enter password to store in keychain. Leave empty to be prompted at connect time.",
         prompt: `Password for connection to InterSystems server '${serverName}'
-          as ${serverDefinitions[serverName].username}`
+          as ${serverDefinitions[serverName].username}`,
       });
 
       if (password === undefined) {
         return;
       }
 
-      if (password === '') {
+      if (password === "") {
         password = undefined;
       }
     }
 
     if ((reusePassword === undefined) && (promptServerNames.length > 1)) {
-      const placeHolder = (password === undefined) ? `Enter password later for remaining ${promptServerNames.length - 1} server(s)?` : `Store the same password for remaining ${promptServerNames.length - 1} server(s)?`
+      const placeHolder = (password === undefined) ? `Enter password later for remaining ${promptServerNames.length - 1} server(s)?` : `Store the same password for remaining ${promptServerNames.length - 1} server(s)?`;
       const items = [
         `No`,
         `Yes`,
@@ -240,7 +244,7 @@ async function promptForPasswords(serverDefinitions: any, newServerNames: string
       const result = await vscode.window.showQuickPick(items, {
         canPickMany: false,
         ignoreFocusOut: true,
-        placeHolder
+        placeHolder,
       });
       if (result === undefined || result.label === items[2].label) {
         return;
@@ -261,10 +265,10 @@ function preloadRegistryCache(cmd, fullPath) {
   if (!regData.data) {
     return;
   }
-  regData.data.split("\r\n\r\n").forEach(pathResult => {
+  regData.data.split("\r\n\r\n").forEach((pathResult) => {
     // Equivalent of running "reg query " + queryPath
     const lines = pathResult.split("\r\n");
-    const queryPath = lines.splice(0,1)[0];
+    const queryPath = lines.splice(0, 1)[0];
     const queryResult = lines.join("\r\n");
     regQueryCache.set(queryPath, { data: queryResult });
   });
@@ -279,14 +283,14 @@ function getStringRegKey(cmd, hive, path, key): string | undefined {
   regQueryCache.set(queryPath, regData);
   const results = regData.data.split("\r\n")
     // Result lines from reg query are 4-space-delimited
-    .map(line => line.split('    '))
+    .map((line) => line.split("    "))
     // Registry has format [<empty>, key, type, value]
-    .filter(line => line.length === 4)
+    .filter((line) => line.length === 4)
     // We're only interested in the specified key
-    .filter(line => line[1] === key)
+    .filter((line) => line[1] === key)
     // We want the value...
-    .map(line => line[3])
+    .map((line) => line[3])
     // ... and we'll treat empty strings as undefined
-    .filter(result => result != '');
+    .filter((result) => result !== "");
   return results[0];
 }
