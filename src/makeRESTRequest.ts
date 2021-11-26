@@ -4,6 +4,8 @@
 import axios, { AxiosResponse } from "axios";
 import axiosCookieJarSupport from "axios-cookiejar-support";
 import tough = require("tough-cookie");
+import * as vscode from "vscode";
+import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { IServerSpec } from "./extension";
 
 axiosCookieJarSupport(axios);
@@ -11,7 +13,7 @@ axiosCookieJarSupport(axios);
 /**
  * Cookie jar for REST requests to InterSystems servers.
  */
-const cookieJar: tough.CookieJar = new tough.CookieJar();
+export const cookieJar: tough.CookieJar = new tough.CookieJar();
 
 export interface IAtelierRESTEndpoint {
     apiVersion: number;
@@ -65,25 +67,28 @@ export async function makeRESTRequest(
                     withCredentials: true,
                 },
             );
-            if (respdata.status === 401 && typeof server.username !== "undefined" && typeof server.password !== "undefined") {
-                // Either we had no cookies or they expired, so resend the request with basic auth
-
-                respdata = await axios.request(
-                    {
-                        auth: {
-                            password: server.password,
-                            username: server.username,
+            if (respdata.status === 401) {
+                // Use AuthenticationProvider to get password if not supplied by caller
+                await resolvePassword(server);
+                if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
+                    // Either we had no cookies or they expired, so resend the request with basic auth
+                    respdata = await axios.request(
+                        {
+                            auth: {
+                                password: server.password,
+                                username: server.username,
+                            },
+                            data,
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            jar: cookieJar,
+                            method,
+                            url: encodeURI(url),
+                            withCredentials: true,
                         },
-                        data,
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        jar: cookieJar,
-                        method,
-                        url: encodeURI(url),
-                        withCredentials: true,
-                    },
-                );
+                    );
+                }
             }
         } else {
             // No data payload
@@ -98,26 +103,52 @@ export async function makeRESTRequest(
                     withCredentials: true,
                 },
             );
-            if (respdata.status === 401 && typeof server.username !== "undefined" && typeof server.password !== "undefined") {
-                // Either we had no cookies or they expired, so resend the request with basic auth
-
-                respdata = await axios.request(
-                    {
-                        auth: {
-                            password: server.password,
-                            username: server.username,
+            if (respdata.status === 401) {
+                // Use AuthenticationProvider to get password if not supplied by caller
+                await resolvePassword(server);
+                if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
+                    // Either we had no cookies or they expired, so resend the request with basic auth
+                    respdata = await axios.request(
+                        {
+                            auth: {
+                                password: server.password,
+                                username: server.username,
+                            },
+                            jar: cookieJar,
+                            method,
+                            url: encodeURI(url),
+                            withCredentials: true,
                         },
-                        jar: cookieJar,
-                        method,
-                        url: encodeURI(url),
-                        withCredentials: true,
-                    },
-                );
+                    );
+                }
             }
         }
         return respdata;
     } catch (error) {
         console.log(error);
         return undefined;
+    }
+}
+
+export async function resolvePassword(serverSpec: IServerSpec) {
+    // This arises if setting says to use authentication provider
+    if (typeof serverSpec.password === "undefined") {
+        const scopes = [serverSpec.name, serverSpec.username || ""];
+        let session = await vscode.authentication.getSession(
+            AUTHENTICATION_PROVIDER,
+            scopes,
+            { silent: true },
+        );
+        if (!session) {
+            session = await vscode.authentication.getSession(
+                AUTHENTICATION_PROVIDER,
+                scopes,
+                { createIfNone: true },
+            );
+        }
+        if (session) {
+            serverSpec.username = session.scopes[1];
+            serverSpec.password = session.accessToken;
+        }
     }
 }

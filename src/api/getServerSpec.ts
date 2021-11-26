@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { AUTHENTICATION_PROVIDER } from "../authenticationProvider";
 import { filePassword } from "../commands/managePasswords";
 import { IServerSpec } from "../extension";
 import { Keychain } from "../keychain";
@@ -35,13 +36,19 @@ export async function getServerSpec(
         return undefined;
     }
 
+    const useOurAuthProvider = (
+        vscode.workspace
+        .getConfiguration("intersystemsServerManager.authentication")
+        .get<string>("provider", "") === AUTHENTICATION_PROVIDER
+    );
+
     server.name = name;
     server.description = server.description || "";
     server.webServer.scheme = server.webServer.scheme || "http";
     server.webServer.port = server.webServer.port || (server.webServer.scheme === "https" ? 443 : 80);
     server.webServer.pathPrefix = server.webServer.pathPrefix || "";
 
-    if (noCredentials) {
+    if (noCredentials && !useOurAuthProvider) {
         server.username = undefined;
         server.password = undefined;
     } else {
@@ -67,8 +74,9 @@ export async function getServerSpec(
             }
         }
 
-        // Obtain password from session cache or keychain unless trying to connect anonymously
-        if (server.username && !server.password) {
+        // Obtain password from session cache or keychain
+        // unless trying to connect anonymously or using the AuthenticationProvider
+        if (server.username && !server.password && !useOurAuthProvider) {
             if (credentialCache[name] && credentialCache[name].username === server.username) {
                 server.password = credentialCache[name].password;
             } else {
@@ -87,7 +95,7 @@ export async function getServerSpec(
             }
 
         }
-        if (server.username && !server.password) {
+        if (server.username && !server.password && !useOurAuthProvider) {
             const doInputBox = async (): Promise<string | undefined> => {
                 return await new Promise<string | undefined>((resolve, reject) => {
                     const inputBox = vscode.window.createInputBox();
@@ -129,6 +137,12 @@ export async function getServerSpec(
                     server = undefined;
                 }
             });
+        }
+
+        // When authentication provider is being used we should only have a password if it came from the deprecated
+        // property of the settings object. Otherwise return it as undefined.
+        if (useOurAuthProvider && !server.password) {
+            server.password = undefined;
         }
     }
     return server;

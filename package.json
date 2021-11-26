@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "3.0.0-SNAPSHOT",
+  "version": "3.0.0-SNAPSHOT-authentication-provider-20211126",
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
@@ -15,7 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.61.0",
+    "vscode": "^1.63.0",
     "node": "^10.2.0"
   },
   "icon": "images/logo.png",
@@ -45,7 +45,6 @@
     "lint-fix": "tslint --project tsconfig.json -t verbose --fix"
   },
   "dependencies": {
-    "@types/vscode": "^1.61.0",
     "axios": "^0.21.2",
     "axios-cookiejar-support": "^1.0.1",
     "node-cmd": "^4.0.0",
@@ -231,9 +230,27 @@
           },
           "additionalProperties": false
         },
-        "intersystemsServerManager.useAuthenticationProvider": {
-          "type": "boolean",
-          "markdownDescription": "Use the 'intersystems-server-credentials' authentication provider for password management. Extensions that use the getServerSpec API will no longer receive a password in the response object. Instead they should call [`vscode.authentication`](https://code.visualstudio.com/api/references/vscode-api#authentication)`.getSession('intersystems-server-credentials', [serverName, userName])`. The `accessToken` property of the [`AuthenticationSession`](https://code.visualstudio.com/api/references/vscode-api#AuthenticationSession) promise returned is the password. If `serverName` or `userName` is omitted the user will be prompted.",
+        "intersystemsServerManager.authentication.provider": {
+          "type": "string",
+          "description": "Authentication provider that Server Manager will use for accessing InterSystems servers and for fulfilling the API it published to other extensions.",
+          "enum": ["none", "intersystems-server-credentials"],
+          "enumDescriptions": [
+            "Do not use VS Code's authentication model. Credential storage is handled natively by Server Manager, but it is unable to identify which extensions are accessing those credentials via Server Manager's API.",
+            "Use Server Manager's embedded authentication provider."
+          ],
+          "default": "none",
+          "scope": "application"
+        },
+        "intersystemsServerManager.authentication.forgetPasswordOnSignout": {
+          "type": "string",
+          "description": "Whether to delete an account's stored password after signing out.",
+          "enum": ["ask", "always", "never"],
+          "enumDescriptions": [
+            "Ask each time, after signout has completed.",
+            "Always delete stored password after signing out.",
+            "Retain stored password after signing out."
+          ],
+          "default": "ask",
           "scope": "application"
         }
       }
