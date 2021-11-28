@@ -402,7 +402,7 @@ export class OfflineTreeItem extends FeatureTreeItem {
         const parentFolderId = element.parent?.id || "";
         super({
             id: parentFolderId + ":offline",
-            label: `Offline at ${new Date().toLocaleTimeString()}`,
+            label: `Unavailable at ${new Date().toLocaleTimeString()}`,
             parent: element.parent,
             tooltip: `Server could not be reached`,
         });

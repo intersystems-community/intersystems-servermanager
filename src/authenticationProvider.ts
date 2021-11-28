@@ -16,11 +16,12 @@ import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState } from "./extension";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
+const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
 
 export class ServerManagerAuthenticationProvider implements AuthenticationProvider, Disposable {
     public static id = AUTHENTICATION_PROVIDER;
-    public static label = "InterSystems Server Credentials";
-    public static secretKeyPrefix = "authenticationProvider:";
+    public static label = AUTHENTICATION_PROVIDER_LABEL;
+    public static secretKeyPrefix = "credentialProvider:";
     public static sessionId(serverName: string, userName: string): string {
         return `${serverName}/${userName}`;
     }
@@ -74,28 +75,30 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
         if (!serverName) {
             // Prompt for the server name.
             if (!this._serverManagerExtension) {
-                throw new Error("InterSystems Server Manager extension is not available to provide server selection");
+                throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
             }
             if (!this._serverManagerExtension.isActive) {
                 await this._serverManagerExtension.activate();
             }
             serverName = await this._serverManagerExtension.exports.pickServer() ?? "";
             if (!serverName) {
-                throw new Error("Server name is required");
+                throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Server name is required.`);
             }
         }
 
         let userName = scopes[1] ?? "";
         if (!userName) {
             // Prompt for the username.
-            userName = await window.showInputBox({
+            const enteredUserName = await window.showInputBox({
                 ignoreFocusOut: true,
                 placeHolder: `Username on server '${serverName}'`,
-                prompt: "Enter the username with which to access the InterSystems server.",
-            }) ?? "";
-            if (!userName) {
-                throw new Error("Username is required");
+                prompt: "Enter the username to access the InterSystems server with. Leave blank for unauthenticated access as 'UnknownUser'.",
+                title: `${AUTHENTICATION_PROVIDER_LABEL}: Username on InterSystems server '${serverName}'`,
+            });
+            if (typeof enteredUserName === "undefined") {
+                throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
             }
+            userName = enteredUserName === "" ? "UnknownUser" : enteredUserName;
         }
 
         // Return existing session if found
@@ -104,48 +107,58 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
         if (existingSession) {
             return existingSession;
         }
-        // Seek password in secret storage
-        const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-        let password =  await this.secretStorage.get(credentialKey);
-        if (!password) {
-            // Prompt for password
-            const doInputBox = async (): Promise<string | undefined> => {
-                return await new Promise<string | undefined>((resolve, reject) => {
-                    const inputBox = window.createInputBox();
-                    inputBox.value = "";
-                    inputBox.password = true;
-                    inputBox.title = `Password for InterSystems server '${serverName}'`;
-                    inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`;
-                    inputBox.prompt = "Optionally use $(key) button above to store password";
-                    inputBox.ignoreFocusOut = true;
-                    inputBox.buttons = [{ iconPath: new ThemeIcon("key"), tooltip: "Store Password in Keychain" }];
 
-                    async function done(secretStorage?: SecretStorage) {
-                        // Return the password, having stored it if storage was passed
-                        const enteredPassword = inputBox.value;
-                        if (secretStorage && enteredPassword) {
-                            await secretStorage.store(credentialKey, enteredPassword);
-                            console.log(`Stored password at ${credentialKey}`);
-                        }
-                        // Resolve the promise and tidy up
-                        resolve(enteredPassword);
-                        inputBox.hide();
-                        inputBox.dispose();
-                    }
+        let password: string | undefined = "";
 
-                    inputBox.onDidTriggerButton((_button) => {
-                        // We only added the one button, which stores the password
-                        done(this.secretStorage);
-                    });
-                    inputBox.onDidAccept(() => {
-                        done();
-                    });
-                    inputBox.show();
-                });
-            };
-            password = await doInputBox();
+        if (userName !== "UnknownUser") {
+            // Seek password in secret storage
+            const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+            password =  await this.secretStorage.get(credentialKey);
             if (!password) {
-                throw new Error("Password is required");
+                // Prompt for password
+                const doInputBox = async (): Promise<string | undefined> => {
+                    return await new Promise<string | undefined>((resolve, reject) => {
+                        const inputBox = window.createInputBox();
+                        inputBox.value = "";
+                        inputBox.password = true;
+                        inputBox.title = `${AUTHENTICATION_PROVIDER_LABEL}: Password for user '${userName}'`;
+                        inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`;
+                        inputBox.prompt = "Optionally use $(key) button above to store password";
+                        inputBox.ignoreFocusOut = true;
+                        inputBox.buttons = [
+                            {
+                                iconPath: new ThemeIcon("key"),
+                                tooltip: "Store Password Securely in Workstation Keychain",
+                            },
+                        ];
+
+                        async function done(secretStorage?: SecretStorage) {
+                            // Return the password, having stored it if storage was passed
+                            const enteredPassword = inputBox.value;
+                            if (secretStorage && enteredPassword) {
+                                await secretStorage.store(credentialKey, enteredPassword);
+                                console.log(`Stored password at ${credentialKey}`);
+                            }
+                            // Resolve the promise and tidy up
+                            resolve(enteredPassword);
+                            inputBox.hide();
+                            inputBox.dispose();
+                        }
+
+                        inputBox.onDidTriggerButton((_button) => {
+                            // We only added the one button, which stores the password
+                            done(this.secretStorage);
+                        });
+                        inputBox.onDidAccept(() => {
+                            done();
+                        });
+                        inputBox.show();
+                    });
+                };
+                password = await doInputBox();
+                if (!password) {
+                    throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
+                }
             }
         }
 
@@ -175,12 +188,13 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
         let deletePassword = false;
         const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
         if (await this.secretStorage.get(credentialKey)) {
-            const passwordOption = workspace.getConfiguration("intersystemsServerManager.authentication").get<string>("forgetPasswordOnSignout", "ask");
+            const passwordOption = workspace.getConfiguration("intersystemsServerManager.credentialsProvider")
+                .get<string>("deletePasswordOnSignout", "ask");
             deletePassword = (passwordOption === "always");
             if (passwordOption === "ask") {
                 const choice = await window.showWarningMessage(
                     `Do you want to keep the password or delete it?`,
-                    { detail: `The account you signed out (${session.account.label}) is currently storing its password securely on your workstation.`, modal: true },
+                    { detail: `The ${AUTHENTICATION_PROVIDER_LABEL} account you signed out (${session.account.label}) is currently storing its password securely on your workstation.`, modal: true },
                     { title: "Keep", isCloseAffordance: true },
                     { title: "Delete", isCloseAffordance: false },
                 );
@@ -190,10 +204,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
         if (deletePassword) {
             // Delete from secret storage
             await this.secretStorage.delete(credentialKey);
-            console.log(`Deleted password at ${credentialKey}`);
+            console.log(`${AUTHENTICATION_PROVIDER_LABEL}: Deleted password at ${credentialKey}`);
         }
         if (index > -1) {
-            // Remove session here
+            // Remove session here so we don't store it
             this._sessions.splice(index, 1);
         }
         await this._storeStrippedSessions();
@@ -209,12 +223,16 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
             this._initializedDisposable = Disposable.from(
                 // This onDidChange event happens when the secret storage changes in _any window_ since
                 // secrets are shared across all open windows.
-                this.secretStorage.onDidChange((e) => {
-                    this._sessions.forEach(
-                        async (session, index) => {
-                            const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
-                            if (credentialKey === e.key) {
-                                const password = await this.secretStorage.get(credentialKey);
+                this.secretStorage.onDidChange(async (e) => {
+                    for (const session of this._sessions) {
+                        const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
+                        if (credentialKey === e.key) {
+                            const password = await this.secretStorage.get(credentialKey);
+
+                            // Only look up the session in _sessions after the await for password has completed,
+                            // in case _sessions has been changed elsewhere in the meantime
+                            const index = this._sessions.findIndex((sess) => sess.id === session.id );
+                            if (index > -1) {
                                 if (!password) {
                                     this._sessions.splice(index, 1);
                                 }  else {
@@ -222,12 +240,11 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
                                         session.serverName,
                                         session.userName,
                                         password,
-                                    );
+                                        );
                                 }
                             }
-                        },
-                        this,
-                    );
+                        }
+                    }
                 }),
                 // This fires when the user initiates a "silent" auth flow via the Accounts menu.
                 authentication.onDidChangeSessions(async (e) => {

@@ -54,7 +54,7 @@ export async function getServerSpec(
     } else {
 
         // Obtain a username (including blank to try connecting anonymously)
-        if (!server.username) {
+        if (!server.username && !useOurAuthProvider) {
             await vscode.window
             .showInputBox({
                 ignoreFocusOut: true,

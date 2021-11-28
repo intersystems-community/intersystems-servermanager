@@ -69,7 +69,7 @@ export async function makeRESTRequest(
             );
             if (respdata.status === 401) {
                 // Use AuthenticationProvider to get password if not supplied by caller
-                await resolvePassword(server);
+                await resolveCredentials(server);
                 if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
                     // Either we had no cookies or they expired, so resend the request with basic auth
                     respdata = await axios.request(
@@ -105,7 +105,7 @@ export async function makeRESTRequest(
             );
             if (respdata.status === 401) {
                 // Use AuthenticationProvider to get password if not supplied by caller
-                await resolvePassword(server);
+                await resolveCredentials(server);
                 if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
                     // Either we had no cookies or they expired, so resend the request with basic auth
                     respdata = await axios.request(
@@ -130,7 +130,7 @@ export async function makeRESTRequest(
     }
 }
 
-export async function resolvePassword(serverSpec: IServerSpec) {
+export async function resolveCredentials(serverSpec: IServerSpec) {
     // This arises if setting says to use authentication provider
     if (typeof serverSpec.password === "undefined") {
         const scopes = [serverSpec.name, serverSpec.username || ""];
@@ -147,7 +147,7 @@ export async function resolvePassword(serverSpec: IServerSpec) {
             );
         }
         if (session) {
-            serverSpec.username = session.scopes[1];
+            serverSpec.username = session.scopes[1] === "UnknownUser" ? "" : session.scopes[1];
             serverSpec.password = session.accessToken;
         }
     }
