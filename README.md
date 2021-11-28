@@ -5,11 +5,77 @@ InterSystems Server Manager is a Visual Studio Code extension for defining conne
 
 See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for changes in each release.
 
-# New in 2.0 - April 2021
+# New in 3.0 - November 2021
 
-> We are pleased to publish version 2.0 of this extension, adding a tree-style user interface. This significant new release won the [April 2021 InterSystems Programming Contest for Developer Tools](https://openexchange.intersystems.com/contest/13).
+We are pleased to publish version 3.0 of this extension which improves the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). This significant new release has been entered into the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19).
+
+> 2021-11-27: This is currently a preview release, available only as a VSIX file. It requires VS Code 1.63, which until mid-December (estimated) is only available by installing and running the [Insiders](https://code.visualstudio.com/insiders) build. Note that Insiders can be installed alongside the Stable build (currently 1.62.3).
 
 > Thanks to [George James Software](https://georgejames.com) for backing this development effort.
+
+## The Authentication Provider
+
+Since version 2.0 Server Manager has enabled you to store connection passwords in the native keystore of your workstation's operating system. This was a more secure alternative to you putting them as plaintext in your JSON files. However, the `getServerSpec` function in Server Manager 2.0's API allowed **any** installed extension to obtain these stored passwords without requiring your permission.
+
+VS Code's Authentication Provider API, introduced in version 1.54 ([February 2021](https://code.visualstudio.com/updates/v1_54#_authentication-provider-api)) is now (version 1.63) mature enough for us to use.
+
+Server Manager 3.0 does the following:
+
+1. Implements an authentication provider called 'intersystems-server-credentials'.
+2. Uses this authentication provider when accessing servers from its own [Server Tree](#the-server-tree).
+3. No longer returns passwords to callers of `getServerSpec`.
+
+> Items #2 and #3 have implications regarding backward compatibility. An interim [legacy mode](#legacy-mode) is available to help with the transition.
+
+### Signing In
+
+The first time you expand a server in the tree VS Code displays a modal dialog asking for your permission:
+
+![Allow an extension](images/README/authenticationProvider-allow.png)
+
+If you allow this and your server definition in `intersystems.servers` does not specify a `username` the next step is:
+
+![Enter username](images/README/authenticationProvider-username.png)
+
+If you proceed, or if this step was skipped because your server definition includes a username, the next step is:
+
+![Enter password](images/README/authenticationProvider-password.png)
+
+If you click the 'key' button after typing your password it will be saved securely in your workstation keychain, from where the 'InterSystems Server Credentials' authentication provider will be able to retrieve it after you restart VS Code.
+
+If instead you press 'Enter' the password will be available only until you restart VS Code.
+
+Either way, you are now signed in on the specified account.
+
+### Trusting Other Extensions
+
+When another extension first asks to use an InterSystems Server Credentials account you must either allow this or deny it. For example, with a pre-release build of the InterSystems ObjectScript extension which uses the new authentication provider you get this after you click the edit pencil button alongside a namespace in the [Server Manager tree](#the-server-tree):
+
+![Allow another extension](images/README/authenticationProvider-allow.png)
+
+### Managing Signed In Accounts
+
+You can use the menu of VS Code's Accounts icon in the activity bar to manage your signed in accounts:
+
+![Manage account](images/README/authenticationProvider-signedIn.png)
+
+The 'Manage Trusted Extensions' option lets you remove an extension from the list of those you previously granted access to this InterSystems Server Credentials account:
+
+![Manage trusted extension list](images/README/authenticationProvider-manageTrusted.png)
+
+The 'Sign Out' option lets you sign out this account after confirmation:
+
+![Sign out](images/README/authenticationProvider-signOut.png)
+
+When signing out an account for which you previously saved the password will get an option to delete the password, unless you have altered the `intersystemsServerManager.credentialsProvider.deletePasswordOnSignout` setting:
+
+![Delete password](images/README/authenticationProvider-deletePassword.png)
+
+---
+
+# New in 2.0 - April 2021
+
+The following features were originally introduced in Server Manager version 2.0.
 
 ## The Server Tree
 
@@ -130,6 +196,14 @@ Use the server's context menu. Alternatively, run `InterSystems Server Manager: 
 ---
 
 ## Technical Notes
+
+### Legacy Mode
+
+Server Manager 3.0 makes changes which may degrade the user experience relative to version 2.0. To revert, make this user-level setting:
+```json
+"intersystemsServerManager.authentication.provider": "none"
+```
+Please only use this as a short term measure until extensions that use the Server Manager `getServerSpec` API get updated to use the 'intersystems-server-credentials' authentication provider. The setting may be removed in a future release.
 
 ### Colors, Favorites and Recents
 

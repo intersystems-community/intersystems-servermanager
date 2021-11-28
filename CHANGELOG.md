@@ -1,3 +1,6 @@
+## 3.0.0 (27-Nov-2021 pre-release)
+* Implement `intersystems-server-credentials` authentication provider.
+
 ## 2.0.6 (28-Sep-2021)
 * Apply `pathPrefix` correctly (#95, #99).
 * Update vulnerable dependencies.
