@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "3.0.0-SNAPSHOT-authentication-provider-20211127",
+  "version": "3.1.2021112701-SNAPSHOT",
   "preview": true,
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
