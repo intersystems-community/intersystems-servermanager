@@ -7,7 +7,7 @@
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gjsjohnmurray/intersystems-servermanager"
+    "url": "https://github.com/intersystems-community/intersystems-servermanager"
   },
   "license": "MIT",
   "keywords": [
