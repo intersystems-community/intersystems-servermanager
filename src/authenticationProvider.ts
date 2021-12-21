@@ -23,7 +23,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
     public static label = AUTHENTICATION_PROVIDER_LABEL;
     public static secretKeyPrefix = "credentialProvider:";
     public static sessionId(serverName: string, userName: string): string {
-        return `${serverName}/${userName}`;
+        const canonicalUserName = userName.toLowerCase();
+        return `${serverName}/${canonicalUserName}`;
     }
     public static credentialKey(sessionId: string): string {
         return `${ServerManagerAuthenticationProvider.secretKeyPrefix}${sessionId}`;
@@ -56,9 +57,9 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
         await this._ensureInitialized();
         let sessions = this._sessions;
 
-        // Filter to return only those that match all supplied scopes, which are positional.
+        // Filter to return only those that match all supplied scopes, which are positional and case-insensitive.
         for (let index = 0; index < scopes.length; index++) {
-            sessions = sessions.filter((session) => session.scopes[index] === scopes[index]);
+            sessions = sessions.filter((session) => session.scopes[index] === scopes[index].toLowerCase());
         }
         return sessions;
     }
