@@ -1,4 +1,4 @@
-## 3.1.2021122101 (21-Dec-2021 pre-release)
+## 3.1.2021122102 (21-Dec-2021 pre-release)
 * Make username case-insensitive in authentication provider.
 
 ## 3.0.0 (27-Nov-2021 pre-release)
