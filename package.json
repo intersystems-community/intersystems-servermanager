@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@types/vscode": "^1.55.0",
-    "axios": "^0.21.2",
+    "axios": "^0.24.0",
     "axios-cookiejar-support": "^1.0.1",
     "node-cmd": "^4.0.0",
     "tough-cookie": "^4.0.0"
