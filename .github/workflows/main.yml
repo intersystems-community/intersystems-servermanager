@@ -62,6 +62,7 @@ jobs:
         with:
           run: npm run test
       - name: Build package
+        if: runner.os == 'Windows'
         run: |
           npx vsce package -o ${{ steps.set-version.outputs.name }}.vsix
       - uses: actions/upload-artifact@v2
