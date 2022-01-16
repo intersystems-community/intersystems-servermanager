@@ -15,8 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.43.0",
-    "node": "^10.2.0"
+    "vscode": "^1.43.0"
   },
   "icon": "images/logo.png",
   "categories": [
