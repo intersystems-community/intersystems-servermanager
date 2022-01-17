@@ -31,7 +31,7 @@ jobs:
       - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: Set an output
         id: set-version
-        if: runner.os == 'Windows'
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           set -x
@@ -62,10 +62,11 @@ jobs:
         with:
           run: npm run test
       - name: Build package
+        if: runner.os == 'Linux'
         run: |
           npx vsce package -o ${{ steps.set-version.outputs.name }}.vsix
       - uses: actions/upload-artifact@v2
-        if: (runner.os == 'Windows') && (github.event_name != 'release')
+        if: (runner.os == 'Linux') && (github.event_name != 'release')
         with:
           name: ${{ steps.set-version.outputs.name }}.vsix
           path: ${{ steps.set-version.outputs.name }}.vsix
