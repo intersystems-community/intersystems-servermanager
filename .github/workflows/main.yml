@@ -54,7 +54,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 14.x
       - run: npm install
       - run: npm run compile
       - name: npm test
@@ -62,6 +62,7 @@ jobs:
         with:
           run: npm run test
       - name: Build package
+        if: runner.os == 'Windows'
         run: |
           npx vsce package -o ${{ steps.set-version.outputs.name }}.vsix
       - uses: actions/upload-artifact@v2
@@ -111,7 +112,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 14.x
       - name: Prepare build
         id: set-version
         shell: bash
