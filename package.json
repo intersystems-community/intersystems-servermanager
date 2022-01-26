@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "3.1.2022012602",
+  "version": "3.1.2022012603-SNAPSHOT",
   "preview": true,
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
@@ -238,7 +238,10 @@
           "intersystemsServerManager.authentication.provider": {
             "type": "string",
             "description": "Authentication provider that Server Manager will use for accessing InterSystems servers. This setting also affects the API that Server Manager publishes for use by other extensions.",
-            "enum": ["intersystems-server-credentials", "none"],
+            "enum": [
+              "intersystems-server-credentials",
+              "none"
+            ],
             "enumDescriptions": [
               "Use Server Manager's embedded 'InterSystems Server Credentials' authentication provider. Server Manager's own API will no longer return credentials that have been stored securely in the workstation's keychain.",
               "Do not use VS Code's authentication model. Secure credential storage will be handled natively by Server Manager using the workstation's keychain, but Server Manager is unable to restrict which extensions can access those credentials via its API. Only use this if other extensions using the API have not yet been updated to use the authentication provider."
@@ -249,7 +252,11 @@
           "intersystemsServerManager.credentialsProvider.deletePasswordOnSignout": {
             "type": "string",
             "description": "Whether to delete an account's stored password after signing out.",
-            "enum": ["ask", "always", "never"],
+            "enum": [
+              "ask",
+              "always",
+              "never"
+            ],
             "enumDescriptions": [
               "Ask each time, after signout has completed.",
               "Always delete stored password after signing out.",
