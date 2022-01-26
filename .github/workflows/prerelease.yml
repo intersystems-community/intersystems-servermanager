@@ -25,6 +25,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+    outputs:
+      name: ${{ steps.set-version.outputs.name }}
+      version: ${{ steps.set-version.outputs.version }}
     steps:
       - uses: actions/checkout@v2
       - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
@@ -65,17 +68,10 @@ jobs:
         run: |
           npx vsce package --pre-release -o ${{ steps.set-version.outputs.name }}.vsix
       - uses: actions/upload-artifact@v2
-        if: runner.os == 'Windows'
+        if: (runner.os == 'Windows') && (github.event_name != 'release')
         with:
           name: ${{ steps.set-version.outputs.name }}.vsix
           path: ${{ steps.set-version.outputs.name }}.vsix
-      - uses: actions/upload-artifact@v2
-        if: runner.os == 'Windows'
-        with:
-          name: meta
-          path: |
-            .name
-            .version
   beta:
     if: (github.event_name == 'push')
     runs-on: windows-latest
@@ -83,18 +79,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         with:
-          name: meta
-          path: .
-      - name: Set an output
-        id: set-version
-        if: runner.os == 'Windows'
-        run: |
-          set -x
-          echo ::set-output name=version::`cat .version`
-          echo ::set-output name=name::`cat .name`
-      - uses: actions/download-artifact@v2
-        with:
-          name: ${{ steps.set-version.outputs.name }}.vsix
+          name: ${{ needs.build.outputs.name }}.vsix
       - name: Create Pre-Release
         id: create_release
         uses: actions/create-release@v1
@@ -102,12 +87,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.set-version.outputs.version }}
-          release_name: v${{ steps.set-version.outputs.version }}
+          tag_name: v${{ needs.build.outputs.version }}
+          release_name: v${{ needs.build.outputs.version }}
           prerelease: ${{ github.event_name != 'release' }}
           body: |
             Changes in this pre-release
-            ${{ steps.set-version.outputs.changelog }}
+            ${{ needs.build.outputs.changelog }}
       - name: Upload Pre-Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
@@ -116,8 +101,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.set-version.outputs.name }}.vsix
-          asset_name: ${{ steps.set-version.outputs.name }}.vsix
+          asset_path: ${{ needs.build.outputs.name }}.vsix
+          asset_name: ${{ needs.build.outputs.name }}.vsix
           asset_content_type: application/zip
   publish:
     if: github.event_name == 'release'
@@ -128,10 +113,6 @@ jobs:
         with:
           ref: prerelease
           token: ${{ secrets.TOKEN }}
-      - uses: actions/download-artifact@v2
-        with:
-          name: meta
-          path: .
       - name: Use Node.js
         uses: actions/setup-node@v1
         with:
@@ -140,9 +121,8 @@ jobs:
         id: set-version
         shell: bash
         run: |
-          VERSION=`cat .version`
-          NEXT_VERSION=`cat .version | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.`
-          echo ::set-output name=name::`cat .name`
+          VERSION=${{ needs.build.outputs.version }}
+          NEXT_VERSION=`echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.`
           tmp=$(mktemp)
           git config --global user.name 'ProjectBot'
           git config --global user.email 'bot@users.noreply.github.com'
@@ -155,7 +135,7 @@ jobs:
           git push
       - name: Build pre-release package
         run: |
-          npx vsce package --pre-release -o ${{ steps.set-version.outputs.name }}.vsix
+          npx vsce package --pre-release -o ${{ needs.build.outputs.name }}.vsix
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
@@ -164,11 +144,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.set-version.outputs.name }}.vsix
-          asset_name: ${{ steps.set-version.outputs.name }}.vsix
+          asset_path: ${{ needs.build.outputs.name }}.vsix
+          asset_name: ${{ needs.build.outputs.name }}.vsix
           asset_content_type: application/zip
       - name: Publish to VSCode Marketplace
         shell: bash
         run: |
           [ -n "${{ secrets.VSCE_TOKEN }}" ] && \
-            npx vsce publish --pre-release --packagePath ${{ steps.set-version.outputs.name }}.vsix -p ${{ secrets.VSCE_TOKEN }} || true
+            npx vsce publish --pre-release --packagePath ${{ needs.build.outputs.name }}.vsix -p ${{ secrets.VSCE_TOKEN }} || true
