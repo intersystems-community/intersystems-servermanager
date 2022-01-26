@@ -1,4 +1,4 @@
-## 3.1.2022012601 (26-Jan-2022 pre-release)
+## 3.1.2022012602 (26-Jan-2022 pre-release)
 * Update README.
 * Automate pre-release publication to Marketplace.
 
