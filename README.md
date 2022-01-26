@@ -7,9 +7,9 @@ See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-comm
 
 # New in Version 3 - November 2021
 
-We are pleased to publish version 3 of this extension which improves the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). This significant new release has been entered into the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19). If you like it **please vote for it**. Voting closes at midnight EST on Sunday 5th December.
+We are pleased to publish version 3 of this extension which improves the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). This significant new release took part in the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19).
 
-> 2021-12-01: This is currently a **pre-release** and requires VS Code 1.63. Until mid-December (estimated) you will have to use the [Insiders](https://code.visualstudio.com/insiders) build of VS Code. Insiders can be installed alongside the Stable build (currently 1.62.3) and they can run concurrently.
+> 2022-01-26: This is currently a **pre-release**.
 
 > Thanks to [George James Software](https://georgejames.com) for backing this development effort.
 
@@ -17,7 +17,7 @@ We are pleased to publish version 3 of this extension which improves the securit
 
 Since version 2 Server Manager has enabled you to store connection passwords in the native keystore of your workstation's operating system. This was a more secure alternative to you putting them as plaintext in your JSON files. However, the `getServerSpec` function in Server Manager 2's API allowed **any** installed extension to obtain these stored passwords without requiring your permission.
 
-VS Code's Authentication Provider API, introduced in version 1.54 ([February 2021](https://code.visualstudio.com/updates/v1_54#_authentication-provider-api)) is now (version 1.63) mature enough for us to use.
+VS Code's Authentication Provider API, introduced in version 1.54 ([February 2021](https://code.visualstudio.com/updates/v1_54#_authentication-provider-api)) became mature enough in version 1.63 for us to use.
 
 Server Manager 3 does the following:
 

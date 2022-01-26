@@ -1,3 +1,7 @@
+## 3.1.2022012601 (26-Jan-2022 pre-release)
+* Update README.
+* Automate pre-release publication to Marketplace.
+
 ## 3.1.2021122102 (21-Dec-2021 pre-release)
 * Make username case-insensitive in authentication provider.
 
