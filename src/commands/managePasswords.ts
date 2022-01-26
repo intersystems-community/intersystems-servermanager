@@ -1,26 +1,26 @@
-import * as vscode from 'vscode';
-import { extensionId } from '../extension';
-import { Keychain } from '../keychain';
-import { credentialCache } from '../api/getServerSpec';
-import { getServerNames } from '../api/getServerNames';
-import { ServerTreeItem } from '../ui/serverManagerView';
+import * as vscode from "vscode";
+import { getServerNames } from "../api/getServerNames";
+import { credentialCache } from "../api/getServerSpec";
+import { extensionId } from "../extension";
+import { Keychain } from "../keychain";
+import { ServerTreeItem } from "../ui/serverManagerView";
 
 export async function storePassword(treeItem?: ServerTreeItem): Promise<string> {
     if (treeItem && !getServerNames().some((value) => value.name === treeItem?.label)) {
         treeItem = undefined;
     }
     const name = treeItem?.name || await commonPickServer({matchOnDetail: true});
-    let reply = '';
+    let reply = "";
     if (name) {
         await vscode.window
         .showInputBox({
-            password: true,
-            placeHolder: 'Password to store in keychain',
-            prompt: `For connection to InterSystems server '${name}'`,
-            validateInput: (value => {
-                return value.length > 0 ? '' : 'Mandatory field';
-            }),
             ignoreFocusOut: true,
+            password: true,
+            placeHolder: "Password to store in keychain",
+            prompt: `For connection to InterSystems server '${name}'`,
+            validateInput: ((value) => {
+                return value.length > 0 ? "" : "Mandatory field";
+            }),
         })
         .then((password) => {
             if (password) {
@@ -29,7 +29,7 @@ export async function storePassword(treeItem?: ServerTreeItem): Promise<string> 
                 });
                 reply = name;
             }
-        })
+        });
     }
     return reply;
 }
@@ -43,13 +43,13 @@ export async function clearPassword(treeItem?: ServerTreeItem): Promise<string> 
     if (treeItem && !getServerNames().some((value) => value.name === treeItem?.label)) {
         treeItem = undefined;
     }
-    let reply = '';
+    let reply = "";
     const name = treeItem?.name || await commonPickServer({matchOnDetail: true});
     if (name) {
         credentialCache[name] = undefined;
         const keychain = new Keychain(name);
         if (!await keychain.getPassword()) {
-            vscode.window.showWarningMessage(`No password for '${name}' found in keychain.`);          
+            vscode.window.showWarningMessage(`No password for '${name}' found in keychain.`);
         } else if (await keychain.deletePassword()) {
             vscode.window.showInformationMessage(`Password for '${name}' removed from keychain.`);
             reply = name;
@@ -64,7 +64,7 @@ async function commonPickServer(options?: vscode.QuickPickOptions): Promise<stri
     // Deliberately uses its own API to illustrate how other extensions would
     const serverManagerExtension = vscode.extensions.getExtension(extensionId);
     if (!serverManagerExtension) {
-        vscode.window.showErrorMessage(`Extension '${extensionId}' is not installed, or has been disabled.`)
+        vscode.window.showErrorMessage(`Extension '${extensionId}' is not installed, or has been disabled.`);
         return;
     }
     if (!serverManagerExtension.isActive) {

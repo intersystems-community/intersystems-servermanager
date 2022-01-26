@@ -1,23 +1,30 @@
-import * as vscode from 'vscode';
-import { addServer } from './addServer';
-import { getServerNames } from './getServerNames';
+import * as vscode from "vscode";
+import { addServer } from "./addServer";
+import { getServerNames } from "./getServerNames";
 
-export async function pickServer(scope?: vscode.ConfigurationScope, options: vscode.QuickPickOptions = {}): Promise<string | undefined> {
+export async function pickServer(
+    scope?: vscode.ConfigurationScope,
+    options: vscode.QuickPickOptions = {},
+): Promise<string | undefined> {
     const names = getServerNames(scope);
 
-    let qpItems: vscode.QuickPickItem[] = [];
+    const qpItems: vscode.QuickPickItem[] = [];
 
     options.matchOnDescription = options?.matchOnDescription || true;
-    options.placeHolder = options?.placeHolder || 'Pick an InterSystems server';
+    options.placeHolder = options?.placeHolder || "Pick an InterSystems server";
     options.canPickMany = false;
 
-    names.forEach(element => {
-        qpItems.push({label: element.name, description: element.description, detail: options?.matchOnDetail ? element.detail : undefined});
+    names.forEach((element) => {
+        qpItems.push({
+            description: element.description,
+            detail: options?.matchOnDetail ? element.detail : undefined,
+            label: element.name,
+        });
     });
 
     return await new Promise<string | undefined>((resolve, reject) => {
-        var result:string
-        var resolveOnHide = true;
+        let result: string;
+        let resolveOnHide = true;
         const quickPick = vscode.window.createQuickPick();
         quickPick.title = "Choose server or use '+' to add one" ;
         quickPick.placeholder = options.placeHolder;
@@ -25,7 +32,7 @@ export async function pickServer(scope?: vscode.ConfigurationScope, options: vsc
         quickPick.matchOnDetail = options.matchOnDetail || false;
         quickPick.ignoreFocusOut = options.ignoreFocusOut || false;
         quickPick.items = qpItems;
-        const btnAdd: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('add'), tooltip: 'Define New Server' }
+        const btnAdd: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon("add"), tooltip: "Define New Server" };
         quickPick.buttons = [btnAdd];
 
         async function addAndResolve() {
@@ -46,11 +53,11 @@ export async function pickServer(scope?: vscode.ConfigurationScope, options: vsc
             result = items[0].label;
         });
 
-        quickPick.onDidChangeValue(value => {
-            if (value === '+') {
+        quickPick.onDidChangeValue((value) => {
+            if (value === "+") {
                 addAndResolve();
             }
-        })
+        });
 
         quickPick.onDidTriggerButton((button) => {
             if (button === btnAdd) {
@@ -71,7 +78,7 @@ export async function pickServer(scope?: vscode.ConfigurationScope, options: vsc
             }
             quickPick.dispose();
         });
-        
+
         quickPick.show();
     });
 }

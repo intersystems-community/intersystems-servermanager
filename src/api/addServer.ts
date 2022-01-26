@@ -1,14 +1,15 @@
 import * as vscode from "vscode";
-import { JSONServerSpec } from "../extension";
+import { IJSONServerSpec } from "../extension";
 import { getServerNames } from "./getServerNames";
 
 export async function addServer(
-  scope?: vscode.ConfigurationScope
+  scope?: vscode.ConfigurationScope,
 ): Promise<string | undefined> {
   const serverNames = getServerNames(scope);
-  const spec: JSONServerSpec = { webServer: { scheme: "", host: "", port: 0 }};
+  const spec: IJSONServerSpec = { webServer: { scheme: "", host: "", port: 0 }};
   return await vscode.window
     .showInputBox({
+      ignoreFocusOut: true,
       placeHolder: "Name of new server definition",
       validateInput: (value) => {
         if (value === "") {
@@ -22,29 +23,29 @@ export async function addServer(
         }
         return null;
       },
-      ignoreFocusOut: true
     })
     .then(
       async (name): Promise<string | undefined> => {
         if (name) {
           const description = await vscode.window.showInputBox({
+            ignoreFocusOut: true,
             placeHolder: "Optional description",
-            ignoreFocusOut: true
           });
-          if (typeof description !== 'undefined') {
+          if (typeof description !== "undefined") {
             if (description) {
               spec.description = description.trim();
             }
             const host = await vscode.window.showInputBox({
+              ignoreFocusOut: true,
               placeHolder: "Hostname or IP address of web server",
               validateInput: (value) => {
                 return value.trim().length ? undefined : "Required";
               },
-              ignoreFocusOut: true
             });
             if (host) {
               spec.webServer.host = host.trim();
               const portString = await vscode.window.showInputBox({
+                ignoreFocusOut: true,
                 placeHolder: "Port of web server",
                 validateInput: (value) => {
                   const port = +value;
@@ -55,18 +56,17 @@ export async function addServer(
                     ? undefined
                     : "Required, 1-65535";
                 },
-                ignoreFocusOut: true
               });
               if (portString) {
                 spec.webServer.port = +portString;
                 const username = await vscode.window.showInputBox({
+                  ignoreFocusOut: true,
                   placeHolder:
                     "Username",
                   prompt:
                     "Leave empty to be prompted when connecting.",
-                  ignoreFocusOut: true
                   });
-                if (typeof username !== 'undefined') {
+                if (typeof username !== "undefined") {
                   const usernameTrimmed = username.trim();
                   if (usernameTrimmed !== "") {
                     spec.username = usernameTrimmed;
@@ -74,17 +74,17 @@ export async function addServer(
                   const scheme = await vscode.window.showQuickPick(
                     ["http", "https"],
                     {
+                      ignoreFocusOut: true,
                       placeHolder:
                         "Confirm connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.",
-                        ignoreFocusOut: true
-                      }
+                    },
                   );
                   if (scheme) {
                     spec.webServer.scheme = scheme;
                     try {
                       const config = vscode.workspace.getConfiguration(
                         "intersystems",
-                        scope
+                        scope,
                       );
                       // For simplicity we always add to the user-level (aka Global) settings
                       const servers: any =
@@ -95,7 +95,7 @@ export async function addServer(
                       return name;
                     } catch (error) {
                       vscode.window.showErrorMessage(
-                        "Failed to store server '${name}' definition."
+                        "Failed to store server '${name}' definition.",
                       );
                       return undefined;
                     }
@@ -105,6 +105,6 @@ export async function addServer(
             }
           }
         }
-      }
+      },
     );
 }

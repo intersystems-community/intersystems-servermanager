@@ -1,3 +1,13 @@
+## 3.1.2022012601 (26-Jan-2022 pre-release)
+* Update README.
+* Automate pre-release publication to Marketplace.
+
+## 3.1.2021122102 (21-Dec-2021 pre-release)
+* Make username case-insensitive in authentication provider.
+
+## 3.0.0 (27-Nov-2021 pre-release)
+* Implement `intersystems-server-credentials` authentication provider.
+
 ## 2.0.6 (28-Sep-2021)
 * Apply `pathPrefix` correctly (#95, #99).
 * Update vulnerable dependencies.

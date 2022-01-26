@@ -1,7 +1,8 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "2.0.7-SNAPSHOT",
+  "version": "3.1.2022012601",
+  "preview": true,
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
@@ -15,7 +16,8 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.43.0"
+    "vscode": "^1.63.0",
+    "node": "^10.2.0"
   },
   "icon": "images/logo.png",
   "categories": [
@@ -44,7 +46,6 @@
     "lint-fix": "tslint --project tsconfig.json -t verbose --fix"
   },
   "dependencies": {
-    "@types/vscode": "^1.55.0",
     "axios": "^0.24.0",
     "axios-cookiejar-support": "^1.0.1",
     "node-cmd": "^4.0.0",
@@ -64,12 +65,23 @@
   },
   "main": "./out/extension",
   "activationEvents": [
+    "onAuthenticationRequest:intersystems-servermanager-credentials",
     "onView:intersystems-community_servermanager",
     "onCommand:intersystems-community.servermanager.refreshTree",
     "onCommand:intersystems-community.servermanager.addServer",
     "onCommand:intersystems-community.servermanager.storePassword",
     "onCommand:intersystems-community.servermanager.clearPassword",
-    "onCommand:intersystems-community.servermanager.importServers"
+    "onCommand:intersystems-community.servermanager.importServers",
+    "onCommand:intersystems-community.servermanager-credentials.testLogin",
+    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin",
+    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin2",
+    "onCommand:intersystems-community.servermanager-credentials.testScopedLoginWithPreferenceCleared",
+    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin2WithPreferenceCleared",
+    "onCommand:intersystems-community.servermanager-credentials.testPartiallyScopedLogin",
+    "onCommand:intersystems-community.servermanager-credentials.testPartiallyScopedLoginWithPreferenceCleared",
+    "onCommand:intersystems-community.servermanager-credentials.testQuietLogin",
+    "onCommand:intersystems-community.servermanager-credentials.testScopedQuietLogin",
+    "onCommand:intersystems-community.servermanager-credentials.testScopedQuietLogin2"
   ],
   "contributes": {
     "viewsContainers": {
@@ -97,128 +109,158 @@
         "contents": "Use the 'InterSystems Tools: Servers' view to work with your servers.\n[Manage Servers $(tools)](command:workbench.view.extension.intersystems-community_servermanager)"
       }
     ],
-    "configuration": {
-      "title": "InterSystems Server Manager",
-      "properties": {
-        "intersystems.servers": {
-          "type": "object",
-          "description": "InterSystems servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it.",
-          "markdownDescription": "[InterSystems](https://www.intersystems.com) servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
-          "scope": "resource",
-          "default": {
-            "default~iris": {
-              "webServer": {
-                "scheme": "http",
-                "host": "127.0.0.1",
-                "port": 52773
-              },
-              "description": "Connection to local InterSystems IRIS™ installed with default settings."
-            },
-            "default~cache": {
-              "webServer": {
-                "scheme": "http",
-                "host": "127.0.0.1",
-                "port": 57772
-              },
-              "description": "Connection to local InterSystems Caché installed with default settings."
-            },
-            "default~ensemble": {
-              "webServer": {
-                "scheme": "http",
-                "host": "127.0.0.1",
-                "port": 57772
-              },
-              "description": "Connection to local InterSystems Ensemble installed with default settings."
-            },
-            "/default": "default~iris"
-          },
-          "patternProperties": {
-            "^[a-z0-9-_~]+$": {
-              "type": "object",
-              "description": "A server definition, with properties that specify how to connect to it.",
-              "properties": {
+    "configuration": [
+      {
+        "title": "Servers",
+        "properties": {
+          "intersystems.servers": {
+            "type": "object",
+            "description": "InterSystems servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it.",
+            "markdownDescription": "[InterSystems](https://www.intersystems.com) servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
+            "scope": "resource",
+            "default": {
+              "default~iris": {
                 "webServer": {
-                  "type": "object",
-                  "description": "Web server publishing an InterSystems server's web services.",
-                  "properties": {
-                    "scheme": {
-                      "type": "string",
-                      "description": "Protocol used for connections.",
-                      "enum": [
-                        "http",
-                        "https"
-                      ],
-                      "default": "http"
-                    },
-                    "host": {
-                      "type": "string",
-                      "description": "Hostname or IP address of the web server. Often the same as the InterSystems server host.",
-                      "anyOf": [
-                        {
-                          "format": "hostname"
-                        },
-                        {
-                          "format": "ipv4"
-                        },
-                        {
-                          "format": "ipv6"
-                        }
-                      ],
-                      "default": "127.0.0.1"
-                    },
-                    "port": {
-                      "type": "integer",
-                      "description": "TCP port number the web server listens on.",
-                      "minimum": 1,
-                      "maximum": 65535,
-                      "default": 52773
-                    },
-                    "pathPrefix": {
-                      "type": "string",
-                      "description": "Optional prefix for the path to the resource, for example '/dev' or '/vm/test'. Only needed when one web server publishes services on behalf of multiple InterSystems servers.",
-                      "pattern": "^(/[^/]+)*$"
-                    }
-                  },
-                  "required": [
-                    "host",
-                    "port"
-                  ],
-                  "additionalProperties": false
+                  "scheme": "http",
+                  "host": "127.0.0.1",
+                  "port": 52773
                 },
-                "username": {
-                  "type": "string",
-                  "description": "Username to connect as. If not set here it must be provided when connecting."
-                },
-                "password": {
-                  "type": "string",
-                  "description": "Password of username.",
-                  "deprecationMessage": "Storing password in plaintext is not recommended. Instead, use the Command Palette command to store it in your keychain."
-                },
-                "description": {
-                  "type": "string",
-                  "description": "Optional description of the server."
-                }
+                "description": "Connection to local InterSystems IRIS™ installed with default settings."
               },
-              "required": [
-                "webServer"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "properties": {
-            "/default": {
-              "type": "string",
-              "description": "Name of the server to promote to the top of pick lists."
+              "default~cache": {
+                "webServer": {
+                  "scheme": "http",
+                  "host": "127.0.0.1",
+                  "port": 57772
+                },
+                "description": "Connection to local InterSystems Caché installed with default settings."
+              },
+              "default~ensemble": {
+                "webServer": {
+                  "scheme": "http",
+                  "host": "127.0.0.1",
+                  "port": 57772
+                },
+                "description": "Connection to local InterSystems Ensemble installed with default settings."
+              },
+              "/default": "default~iris"
             },
-            "/hideEmbeddedEntries": {
-              "type": "boolean",
-              "description": "Do not append the built-in 'default~*' server definitions to pick lists."
-            }
+            "patternProperties": {
+              "^[a-z0-9-_~]+$": {
+                "type": "object",
+                "description": "A server definition, with properties that specify how to connect to it.",
+                "properties": {
+                  "webServer": {
+                    "type": "object",
+                    "description": "Web server publishing an InterSystems server's web services.",
+                    "properties": {
+                      "scheme": {
+                        "type": "string",
+                        "description": "Protocol used for connections.",
+                        "enum": [
+                          "http",
+                          "https"
+                        ],
+                        "default": "http"
+                      },
+                      "host": {
+                        "type": "string",
+                        "description": "Hostname or IP address of the web server. Often the same as the InterSystems server host.",
+                        "anyOf": [
+                          {
+                            "format": "hostname"
+                          },
+                          {
+                            "format": "ipv4"
+                          },
+                          {
+                            "format": "ipv6"
+                          }
+                        ],
+                        "default": "127.0.0.1"
+                      },
+                      "port": {
+                        "type": "integer",
+                        "description": "TCP port number the web server listens on.",
+                        "minimum": 1,
+                        "maximum": 65535,
+                        "default": 52773
+                      },
+                      "pathPrefix": {
+                        "type": "string",
+                        "description": "Optional prefix for the path to the resource, for example '/dev' or '/vm/test'. Only needed when one web server publishes services on behalf of multiple InterSystems servers.",
+                        "pattern": "^(/[^/]+)*$"
+                      }
+                    },
+                    "required": [
+                      "host",
+                      "port"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "username": {
+                    "type": "string",
+                    "description": "Username to connect as. If not set here it must be provided when connecting."
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Password of username.",
+                    "deprecationMessage": "Storing password in plaintext is not recommended. Instead, use the Command Palette command to store it in your keychain."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Optional description of the server."
+                  }
+                },
+                "required": [
+                  "webServer"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "properties": {
+              "/default": {
+                "type": "string",
+                "description": "Name of the server to promote to the top of pick lists."
+              },
+              "/hideEmbeddedEntries": {
+                "type": "boolean",
+                "description": "Do not append the built-in 'default~*' server definitions to pick lists."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      {
+        "title": "Authentication",
+        "properties": {
+          "intersystemsServerManager.authentication.provider": {
+            "type": "string",
+            "description": "Authentication provider that Server Manager will use for accessing InterSystems servers. This setting also affects the API that Server Manager publishes for use by other extensions.",
+            "enum": ["intersystems-server-credentials", "none"],
+            "enumDescriptions": [
+              "Use Server Manager's embedded 'InterSystems Server Credentials' authentication provider. Server Manager's own API will no longer return credentials that have been stored securely in the workstation's keychain.",
+              "Do not use VS Code's authentication model. Secure credential storage will be handled natively by Server Manager using the workstation's keychain, but Server Manager is unable to restrict which extensions can access those credentials via its API. Only use this if other extensions using the API have not yet been updated to use the authentication provider."
+            ],
+            "default": "intersystems-server-credentials",
+            "scope": "application"
           },
-          "additionalProperties": false
+          "intersystemsServerManager.credentialsProvider.deletePasswordOnSignout": {
+            "type": "string",
+            "description": "Whether to delete an account's stored password after signing out.",
+            "enum": ["ask", "always", "never"],
+            "enumDescriptions": [
+              "Ask each time, after signout has completed.",
+              "Always delete stored password after signing out.",
+              "Retain stored password after signing out."
+            ],
+            "default": "ask",
+            "scope": "application"
+          }
         }
       }
-    },
+    ],
     "commands": [
       {
         "command": "intersystems-community.servermanager.refreshTree",
@@ -278,6 +320,56 @@
         "command": "intersystems-community.servermanager.importServers",
         "category": "InterSystems Server Manager",
         "title": "Import Servers from Windows Registry"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testLogin",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Login"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testScopedLogin",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Scoped Login (iris201 as johnm)"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testScopedLogin2",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Scoped Login (iris201 as johnm2)"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testScopedLoginWithPreferenceCleared",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Scoped Login (iris201 as johnm) With Preference Cleared"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testScopedLogin2WithPreferenceCleared",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Scoped Login (iris201 as johnm2) With Preference Cleared"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testPartiallyScopedLogin",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Partially Scoped Login (iris201)"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testPartiallyScopedLoginWithPreferenceCleared",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Partially Scoped Login (iris201) With Preference Cleared"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testQuietLogin",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Quiet Login"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testScopedQuietLogin",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Scoped Quiet Login"
+      },
+      {
+        "command": "intersystems-community.servermanager-credentials.testScopedQuietLogin2",
+        "category": "InterSystems Server Credentials",
+        "title": "Test Scoped Quiet Login2"
       },
       {
         "command": "intersystems-community.servermanager.setIconRed",
