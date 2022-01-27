@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "3.1.2022012604",
+  "version": "3.1.2022012605",
   "preview": true,
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",

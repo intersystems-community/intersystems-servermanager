@@ -29,7 +29,7 @@ jobs:
       taggedbranch: ${{ steps.find-branch.outputs.taggedbranch }}
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*
       - name: Find which branch the release tag points at
         id: find-branch
         if: github.event_name == 'release' && runner.os == 'Windows'
