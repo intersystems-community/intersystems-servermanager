@@ -26,9 +26,18 @@ jobs:
     outputs:
       name: ${{ steps.set-version.outputs.name }}
       version: ${{ steps.set-version.outputs.version }}
+      taggedbranch: ${{ steps.find-branch.outputs.taggedbranch }}
     steps:
       - uses: actions/checkout@v2
       - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - name: Find which branch the release tag points at
+        id: find-branch
+        if: github.event_name == 'release' && runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -x
+          TAGGEDBRANCH=$(git for-each-ref --points-at=${{github.sha}} --format='%(refname:lstrip=2)' refs/heads/)
+          echo ::set-output name=taggedbranch::$TAGGEDBRANCH
       - name: Set an output
         id: set-version
         if: runner.os == 'Windows'
@@ -100,22 +109,8 @@ jobs:
           asset_path: ${{ needs.build.outputs.name }}.vsix
           asset_name: ${{ needs.build.outputs.name }}.vsix
           asset_content_type: application/zip
-  get_tagged_branch:
-    if: github.event_name == 'release'
-    runs-on: windows-latest
-    needs: build
-    outputs:
-      taggedbranch: ${{ steps.find-branch.outputs.taggedbranch }}
-    steps:
-      - name: Find which branch the release tag points at
-        id: find-branch
-        shell: bash
-        run: |
-          set -x
-          TAGGEDBRANCH=$(git for-each-ref --points-at=${{github.sha}} --format='%(refname:lstrip=2)' refs/heads/)
-          echo ::set-output name=taggedbranch::$TAGGEDBRANCH
   publish:
-    needs: get_tagged_branch
+    needs: build
     if: github.event_name == 'release' && needs.find-branch.outputs.taggedbranch == 'master'
     runs-on: windows-latest
     steps:
