@@ -29,12 +29,15 @@ jobs:
       taggedbranch: ${{ steps.find-branch.outputs.taggedbranch }}
     steps:
       - uses: actions/checkout@v2
-      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: Find which branch the release tag points at
         id: find-branch
         if: github.event_name == 'release' && runner.os == 'Windows'
         shell: bash
         run: |
+          git branch --list | cat
+          git fetch --depth=1 origin +refs/heads/*:refs/heads/*
+          git branch --list -v | cat
           set -x
           TAGGEDBRANCH=$(git for-each-ref --points-at=${{github.sha}} --format='%(refname:lstrip=2)' refs/heads/)
           echo ::set-output name=taggedbranch::$TAGGEDBRANCH
