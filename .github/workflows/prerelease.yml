@@ -35,9 +35,7 @@ jobs:
         if: github.event_name == 'release' && runner.os == 'Windows'
         shell: bash
         run: |
-          git branch --list | cat
           git fetch --depth=1 origin +refs/heads/*:refs/heads/*
-          git branch --list -v | cat
           set -x
           TAGGEDBRANCH=$(git for-each-ref --points-at=${{github.sha}} --format='%(refname:lstrip=2)' refs/heads/)
           echo ::set-output name=taggedbranch::$TAGGEDBRANCH
@@ -116,7 +114,7 @@ jobs:
           asset_content_type: application/zip
   publish:
     needs: build
-    if: github.event_name == 'release' && needs.find-branch.outputs.taggedbranch == 'prerelease'
+    if: github.event_name == 'release' && needs.build.outputs.taggedbranch == 'prerelease'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
