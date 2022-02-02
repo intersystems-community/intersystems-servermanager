@@ -1,3 +1,7 @@
+## 2.0.7 (02-Feb-2022)
+* Also import user-specific connections from Windows registry (#107).
+* Update vulnerable dependencies.
+
 ## 2.0.6 (28-Sep-2021)
 * Apply `pathPrefix` correctly (#95, #99).
 * Update vulnerable dependencies.
