@@ -1,3 +1,6 @@
+## 2.0.8 (28-Mar-2022)
+* Update vulnerable dependencies.
+
 ## 2.0.7 (02-Feb-2022)
 * Also import user-specific connections from Windows registry (#107).
 * Update vulnerable dependencies.
