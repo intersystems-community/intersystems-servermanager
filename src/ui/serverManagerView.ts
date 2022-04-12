@@ -427,10 +427,98 @@ export class NamespaceTreeItem extends SMTreeItem {
             parent: element.parent,
             label: name,
             id,
-            tooltip: `${name} on ${serverName}`
+            tooltip: `${name} on ${serverName}`,
+            getChildren: namespaceFeatures,
+            params: { serverName }
         });
         this.name = name;
         this.contextValue = name === '%SYS' ? 'sysnamespace' : 'namespace';
         this.iconPath = new vscode.ThemeIcon('archive');
+	}
+}
+
+/**
+ * getChildren function returning namespace features (the child nodes of a server),
+ * 
+ * @param element parent
+ * @param params (unused)
+ * @returns feature folders of a namespace.
+ */
+ async function namespaceFeatures(element: NamespaceTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
+    return [new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName)];
+}
+
+export class ProjectsTreeItem extends FeatureTreeItem {
+    public readonly name: string;
+	constructor(
+        element: SMItem,
+        serverName: string
+	) {
+        const parentFolderId = element.parent?.id || '';
+		super({
+            parent: element.parent,
+            label: 'Projects',
+            id: parentFolderId + ':projects',
+            tooltip: `Projects in this namespace`,
+            getChildren: namespaceProjects,
+            params: { serverName, ns: element.label }
+        });
+        this.name = 'Projects';
+        this.contextValue = 'projects';
+        this.iconPath = new vscode.ThemeIcon('library');
+	}
+}
+
+/**
+ * getChildren function returning projects in a server namespace.
+ * 
+ * @param element parent
+ * @param params { serverName }
+ * @returns projects in a server namespace.
+ */
+async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promise<ProjectTreeItem[] | undefined> {
+    const children: ProjectTreeItem[] = [];
+
+    if (params?.serverName && params.ns) {
+        const name: string = params.serverName;
+        const serverSpec = await getServerSpec(name)
+        if (!serverSpec) {
+            return undefined
+        }
+        
+        const response = await makeRESTRequest(
+            "POST",
+            serverSpec,
+            { apiVersion: 1, namespace: params.ns, path: "/action/query" },
+            { query: "SELECT Name, Description FROM %Studio.Project", parameters: [] }
+        );
+        if (response !== undefined) {
+            response.data.result.content.map((project) => {
+                children.push(new ProjectTreeItem({ parent: element, label: name, id: name }, project.Name, project.Description));
+            });
+        }
+    }
+
+    return children;
+}
+
+export class ProjectTreeItem extends SMTreeItem {
+    public readonly name: string;
+	constructor(
+        element: SMItem,
+        name: string,
+        description: string
+	) {
+        const parentFolderId = element.parent?.id || '';
+        const id = parentFolderId + ':' + name;
+		super({
+            parent: element.parent,
+            label: name,
+            id,
+            tooltip: description
+        });
+        this.name = name;
+        this.contextValue = 'project';
+        this.iconPath = new vscode.ThemeIcon('files');
 	}
 }
