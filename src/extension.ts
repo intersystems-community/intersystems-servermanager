@@ -7,7 +7,7 @@ import { getServerNames } from './api/getServerNames';
 import { getServerSpec } from './api/getServerSpec';
 import { storePassword, clearPassword } from './commands/managePasswords';
 import { importFromRegistry } from './commands/importFromRegistry';
-import { ServerManagerView, ServerTreeItem, SMTreeItem } from './ui/serverManagerView';
+import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem } from './ui/serverManagerView';
 import { addServer } from './api/addServer';
 import { getServerSummary } from './api/getServerSummary';
 import { BrowserTarget, getPortalUriWithToken } from './api/getPortalUriWithToken';
@@ -204,7 +204,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    const addWorkspaceFolderAsync = async (readonly: boolean, csp: boolean, namespaceTreeItem?: ServerTreeItem) => {
+    const addWorkspaceFolderAsync = async (readonly: boolean, csp: boolean, namespaceTreeItem?: ServerTreeItem, project?: string) => {
         if (namespaceTreeItem) {
             const pathParts = namespaceTreeItem.id?.split(':');
             if (pathParts && pathParts.length === 4) {
@@ -228,9 +228,10 @@ export function activate(context: vscode.ExtensionContext) {
                         return;
                     }
 
-                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${csp ? '?csp' : ''}`);
+                    const params = [ csp ? "csp" : "", project ? `project=${project}` : ""].filter(e => e != "").join("&");
+                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${params ? `?${params}` : ""}`);
                     if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {                       
-                        const label = `${serverName}:${namespace}${csp ? ' webfiles' : ''}${readonly ? " (read-only)" : ""}`;
+                        const label = `${project ? `${project} - ` : ""}${serverName}:${namespace}${csp ? ' web files' : ''}${readonly && project == undefined ? " (read-only)" : ""}`;
                         const added = vscode.workspace.updateWorkspaceFolders(
                             vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
                             0,
@@ -265,6 +266,18 @@ export function activate(context: vscode.ExtensionContext) {
     
     context.subscriptions.push(
         vscode.commands.registerCommand(`${extensionId}.viewNamespaceWebAppFiles`, async (namespaceTreeItem?: ServerTreeItem) => {await addWorkspaceFolderAsync(true, true, namespaceTreeItem)})
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.editProject`, async (projectTreeItem?: ProjectTreeItem) => {
+            await addWorkspaceFolderAsync(false, false, <NamespaceTreeItem>projectTreeItem?.parent?.parent, projectTreeItem?.name);
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.viewProject`, async (projectTreeItem?: ProjectTreeItem) => {
+            await addWorkspaceFolderAsync(true, false, <NamespaceTreeItem>projectTreeItem?.parent?.parent, projectTreeItem?.name);
+        })
     );
 
     // Listen for relevant configuration changes
