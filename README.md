@@ -1,5 +1,6 @@
 # InterSystems Server Manager
 
+> **Note:** The best way to install and use this extension is by installing the [InterSystems ObjectScript Extension Pack](https://marketplace.visualstudio.com/items?itemName=intersystems-community.objectscript-pack) and following the [documentation here](https://intersystems-community.github.io/vscode-objectscript/).
 
 InterSystems Server Manager is a Visual Studio Code extension for defining connections to [InterSystems](https://www.intersystems.com/) servers. These definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript) for code editing.
 
@@ -11,7 +12,7 @@ We are pleased to publish version 3 of this extension which improves the securit
 
 > 2022-01-26: This is currently a **pre-release**.
 
-> Thanks to [George James Software](https://georgejames.com) for backing this development effort.
+Thanks to [George James Software](https://georgejames.com) for backing this development effort.
 
 ## The Authentication Provider
 
