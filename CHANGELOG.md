@@ -1,3 +1,6 @@
+## 2.0.9 (20-Apr-2022)
+* Add support for server-side projects (#131). 
+
 ## 2.0.8 (28-Mar-2022)
 * Update vulnerable dependencies.
 
