@@ -1,3 +1,6 @@
+## 3.1.2022042001 (20-Apr-2022 pre-release)
+* Add 2.0.8 and 2.0.9 changes.
+
 ## 3.1.2022020201 (02-Feb-2022 pre-release)
 * Update vulnerable dependencies.
 
@@ -10,6 +13,16 @@
 
 ## 3.0.0 (27-Nov-2021 pre-release)
 * Implement `intersystems-server-credentials` authentication provider.
+* 
+## 2.0.9 (20-Apr-2022)
+* Add support for server-side projects (#131). 
+
+## 2.0.8 (28-Mar-2022)
+* Update vulnerable dependencies.
+
+## 2.0.7 (02-Feb-2022)
+* Also import user-specific connections from Windows registry (#107).
+* Update vulnerable dependencies.
 
 ## 2.0.6 (28-Sep-2021)
 * Apply `pathPrefix` correctly (#95, #99).

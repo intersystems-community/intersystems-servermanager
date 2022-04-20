@@ -11,7 +11,7 @@ import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./
 import { importFromRegistry } from "./commands/importFromRegistry";
 import { clearPassword, storePassword } from "./commands/managePasswords";
 import { cookieJar } from "./makeRESTRequest";
-import { ServerManagerView, ServerTreeItem, SMTreeItem } from "./ui/serverManagerView";
+import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem } from "./ui/serverManagerView";
 
 export const extensionId = "intersystems-community.servermanager";
 export let globalState: vscode.Memento;
@@ -345,7 +345,7 @@ export function activate(context: vscode.ExtensionContext) {
         }),
     );
 
-    const addWorkspaceFolderAsync = async (readonly: boolean, csp: boolean, namespaceTreeItem?: ServerTreeItem) => {
+    const addWorkspaceFolderAsync = async (readonly: boolean, csp: boolean, namespaceTreeItem?: ServerTreeItem, project?: string) => {
         if (namespaceTreeItem) {
             const pathParts = namespaceTreeItem.id?.split(":");
             if (pathParts && pathParts.length === 4) {
@@ -368,11 +368,10 @@ export function activate(context: vscode.ExtensionContext) {
                         return;
                     }
 
-                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${csp ? "?csp" : ""}`);
-                    if ((vscode.workspace.workspaceFolders || [])
-                        .filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString())
-                        .length === 0) {
-                        const label = `${serverName}:${namespace}${csp ? " webfiles" : ""}${readonly ? " (read-only)" : ""}`;
+                    const params = [ csp ? "csp" : "", project ? `project=${project}` : ""].filter(e => e != "").join("&");
+                    const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${params ? `?${params}` : ""}`);
+                    if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {
+                        const label = `${project ? `${project} - ` : ""}${serverName}:${namespace}${csp ? ' web files' : ''}${readonly && project == undefined ? " (read-only)" : ""}`;
                         const added = vscode.workspace.updateWorkspaceFolders(
                             vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
                             0,
@@ -418,6 +417,18 @@ export function activate(context: vscode.ExtensionContext) {
         async (namespaceTreeItem?: ServerTreeItem) => {
             await addWorkspaceFolderAsync(true, true, namespaceTreeItem);
         }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.editProject`, async (projectTreeItem?: ProjectTreeItem) => {
+            await addWorkspaceFolderAsync(false, false, <NamespaceTreeItem>projectTreeItem?.parent?.parent, projectTreeItem?.name);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.viewProject`, async (projectTreeItem?: ProjectTreeItem) => {
+            await addWorkspaceFolderAsync(true, false, <NamespaceTreeItem>projectTreeItem?.parent?.parent, projectTreeItem?.name);
+        })
     );
 
     // Listen for relevant configuration changes
