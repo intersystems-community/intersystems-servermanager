@@ -3,7 +3,9 @@
 import axios, { AxiosResponse } from 'axios';
 import axiosCookieJarSupport from 'axios-cookiejar-support';
 import tough = require('tough-cookie');
+import { workspace } from 'vscode';
 import { ServerSpec } from './extension';
+import * as https from 'https';
 
 axiosCookieJarSupport(axios);
 
@@ -20,13 +22,16 @@ export interface AtelierRESTEndpoint {
 
 /**
  * Make a REST request to an InterSystems server.
- * 
+ *
  * @param method The REST method.
  * @param server The server to send the request to.
  * @param endpoint Optional endpoint object. If omitted the request will be to /api/atelier/
  * @param data Optional request data. Usually passed for POST requests.
  */
  export async function makeRESTRequest(method: "HEAD"|"GET"|"POST", server: ServerSpec, endpoint?: AtelierRESTEndpoint, data?: any): Promise<AxiosResponse | undefined> {
+
+	// Create the HTTPS agent
+	const httpsAgent = new https.Agent({ rejectUnauthorized: workspace.getConfiguration("http").get("proxyStrictSSL") });
 
 	// Build the URL
 	var url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
@@ -46,6 +51,7 @@ export interface AtelierRESTEndpoint {
             // There is a data payload
             respdata = await axios.request(
                 {
+                    httpsAgent,
                     method: method,
                     url: encodeURI(url),
                     data: data,
@@ -64,6 +70,7 @@ export interface AtelierRESTEndpoint {
 
                 respdata = await axios.request(
                     {
+                        httpsAgent,
                         method: method,
                         url: encodeURI(url),
                         data: data,
@@ -84,6 +91,7 @@ export interface AtelierRESTEndpoint {
             // No data payload
             respdata = await axios.request(
                 {
+                    httpsAgent,
                     method: method,
                     url: encodeURI(url),
                     withCredentials: true,
@@ -98,6 +106,7 @@ export interface AtelierRESTEndpoint {
 
                 respdata = await axios.request(
                     {
+                        httpsAgent,
                         method: method,
                         url: encodeURI(url),
                         auth: {
