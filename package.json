@@ -84,6 +84,12 @@
     "onCommand:intersystems-community.servermanager-credentials.testScopedQuietLogin2"
   ],
   "contributes": {
+    "authentication": [
+      {
+        "id": "intersystems-servermanager-credentials",
+        "label": "InterSystems Server Credentials"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
