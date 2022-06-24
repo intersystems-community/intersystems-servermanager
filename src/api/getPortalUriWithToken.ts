@@ -24,7 +24,7 @@ export async function getPortalUriWithToken(target: BrowserTarget, name: string,
         let token = allTokens[target].get(name) || '';
 
         // Revalidate and extend existing token, or obtain a new one
-        const response = await makeRESTRequest("POST", spec, { apiVersion: 1, namespace: '%SYS', path:'/action/query' }, { query: 'select %Atelier_v1_Utils.General_GetCSPToken(?, ?) token', parameters: [PORTAL_HOME, token]});
+        const response = await makeRESTRequest("POST", spec, { apiVersion: 1, namespace: 'USER', path:'/action/query' }, { query: 'select %Atelier_v1_Utils.General_GetCSPToken(?, ?) token', parameters: [PORTAL_HOME, token]});
 
         if (!response) {
             // User will have to enter credentials
