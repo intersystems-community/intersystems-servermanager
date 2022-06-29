@@ -1,3 +1,8 @@
+## 2.0.10 (29-Jun-2022)
+* Accept self-signed certificates if `http.proxyStrictSSL` is set to `false` (#137).
+* Notify when SQL GRANT will be necessary in order to display list of server-side projects (#140).
+* Reuse session-cached username if server definition lacks one (#141).
+
 ## 2.0.9 (20-Apr-2022)
 * Add support for server-side projects (#131). 
 
