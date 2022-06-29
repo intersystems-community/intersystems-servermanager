@@ -545,6 +545,16 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promi
             { query: "SELECT Name, Description FROM %Studio.Project", parameters: [] }
         );
         if (response !== undefined) {
+            if (response.data.result.content === undefined) {
+                let message;
+                if (response.data.status?.errors[0]?.code === 5540) {
+                    message = `To allow user '${serverSpec.username}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO ${serverSpec.username}`;
+                } else {
+                    message = response.data.status.summary;
+                }
+                vscode.window.showErrorMessage(message);
+                return undefined;
+            }
             response.data.result.content.map((project) => {
                 children.push(new ProjectTreeItem({ parent: element, label: name, id: name }, project.Name, project.Description));
             });

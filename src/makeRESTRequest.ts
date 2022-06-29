@@ -3,6 +3,7 @@
 
 import axios, { AxiosResponse } from "axios";
 import axiosCookieJarSupport from "axios-cookiejar-support";
+import * as https from "https";
 import tough = require("tough-cookie");
 import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
@@ -36,8 +37,11 @@ export async function makeRESTRequest(
     data?: any,
     ): Promise<AxiosResponse | undefined> {
 
-    // Build the URL
-    let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
+	// Create the HTTPS agent
+	const httpsAgent = new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") });
+
+	// Build the URL
+	let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
     const pathPrefix = server.webServer.pathPrefix;
     if (pathPrefix && pathPrefix !== "") {
         url += pathPrefix;
@@ -54,6 +58,7 @@ export async function makeRESTRequest(
             // There is a data payload
             respdata = await axios.request(
                 {
+                    httpsAgent,
                     data,
                     headers: {
                         "Content-Type": "application/json",
@@ -74,6 +79,7 @@ export async function makeRESTRequest(
                     // Either we had no cookies or they expired, so resend the request with basic auth
                     respdata = await axios.request(
                         {
+                            httpsAgent,
                             auth: {
                                 password: server.password,
                                 username: server.username,
@@ -110,6 +116,7 @@ export async function makeRESTRequest(
                     // Either we had no cookies or they expired, so resend the request with basic auth
                     respdata = await axios.request(
                         {
+                            httpsAgent,
                             auth: {
                                 password: server.password,
                                 username: server.username,
