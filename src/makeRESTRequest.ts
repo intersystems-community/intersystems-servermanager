@@ -100,6 +100,7 @@ export async function makeRESTRequest(
             // No data payload
             respdata = await axios.request(
                 {
+                    httpsAgent,
                     jar: cookieJar,
                     method,
                     url: encodeURI(url),
