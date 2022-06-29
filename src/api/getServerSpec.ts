@@ -42,7 +42,12 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
     }
     else {
 
-        // Obtain a username (including blank to try connecting anonymously)
+        // Use cached username if appropriate
+        if (!server.username && credentialCache[name]) {
+          server.username = credentialCache[name].username;
+        }
+
+        // Prompt for a username if necessary (including blank to try connecting anonymously)
         if (!server.username) {
             await vscode.window
             .showInputBox({
