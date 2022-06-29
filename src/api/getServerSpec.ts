@@ -53,7 +53,12 @@ export async function getServerSpec(
         server.password = undefined;
     } else {
 
-        // Obtain a username (including blank to try connecting anonymously)
+        // Use cached username if appropriate
+        if (!server.username && !useOurAuthProvider && credentialCache[name]) {
+          server.username = credentialCache[name].username;
+        }
+
+        // Prompt for a username if necessary (including blank to try connecting anonymously)
         if (!server.username && !useOurAuthProvider) {
             await vscode.window
             .showInputBox({
