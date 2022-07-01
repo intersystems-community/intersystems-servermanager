@@ -9,7 +9,7 @@ import { getServerSummary } from "./api/getServerSummary";
 import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { importFromRegistry } from "./commands/importFromRegistry";
-import { clearPassword, storePassword } from "./commands/managePasswords";
+import { clearPassword, migratePasswords, storePassword } from "./commands/managePasswords";
 import { cookieJar } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem } from "./ui/serverManagerView";
 
@@ -267,6 +267,11 @@ export function activate(context: vscode.ExtensionContext) {
                     _onDidChangePassword.fire(name);
                 }
             });
+        }),
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand(`${extensionId}.migratePasswords`, async () => {
+            await migratePasswords(context.secrets);
         }),
     );
     context.subscriptions.push(

@@ -71,6 +71,7 @@
     "onCommand:intersystems-community.servermanager.addServer",
     "onCommand:intersystems-community.servermanager.storePassword",
     "onCommand:intersystems-community.servermanager.clearPassword",
+    "onCommand:intersystems-community.servermanager.migratePasswords",
     "onCommand:intersystems-community.servermanager.importServers",
     "onCommand:intersystems-community.servermanager-credentials.testLogin",
     "onCommand:intersystems-community.servermanager-credentials.testScopedLogin",
@@ -324,6 +325,11 @@
         "title": "Clear Password from Keychain"
       },
       {
+        "command": "intersystems-community.servermanager.migratePasswords",
+        "category": "InterSystems Server Manager",
+        "title": "Migrate Legacy Passwords"
+      },
+      {
         "command": "intersystems-community.servermanager.importServers",
         "category": "InterSystems Server Manager",
         "title": "Import Servers from Windows Registry"
@@ -478,6 +484,18 @@
         {
           "command": "intersystems-community.servermanager.importServers",
           "when": "isWindows"
+        },
+        {
+          "command": "intersystems-community.servermanager.migratePasswords",
+          "when": "config.intersystemsServerManager.authentication.provider == intersystems-server-credentials"
+        },
+        {
+          "command": "intersystems-community.servermanager.storePassword",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.clearPassword",
+          "when": "false"
         },
         {
           "command": "intersystems-community.servermanager.addToStarred",
@@ -644,12 +662,12 @@
         },
         {
           "command": "intersystems-community.servermanager.storePassword",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./ && config.intersystemsServerManager.authentication.provider != intersystems-server-credentials",
           "group": "2_password@10"
         },
         {
           "command": "intersystems-community.servermanager.clearPassword",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./ && config.intersystemsServerManager.authentication.provider != intersystems-server-credentials",
           "group": "2_password@20"
         }
       ]

@@ -18,11 +18,16 @@ export interface IKeytar {
     getPassword: typeof keytarType["getPassword"];
     setPassword: typeof keytarType["setPassword"];
     deletePassword: typeof keytarType["deletePassword"];
+    findCredentials: typeof keytarType["findCredentials"];
+}
+
+function serviceId(): string {
+  return `${vscode.env.uriScheme}-${extensionId}:password`;
 }
 
 export class Keychain {
+
     private keytar: IKeytar;
-    private serviceId: string;
     private accountId: string;
 
     constructor(connectionName: string) {
@@ -32,13 +37,12 @@ export class Keychain {
         }
 
         this.keytar = keytar;
-        this.serviceId = `${vscode.env.uriScheme}-${extensionId}:password`;
         this.accountId = connectionName;
     }
 
     public async setPassword(password: string): Promise<void> {
         try {
-            return await this.keytar.setPassword(this.serviceId, this.accountId, password);
+            return await this.keytar.setPassword(serviceId(), this.accountId, password);
         } catch (e) {
             // Ignore
             await vscode.window.showErrorMessage(
@@ -50,7 +54,7 @@ export class Keychain {
 
     public async getPassword(): Promise<string | null | undefined> {
         try {
-            return await this.keytar.getPassword(this.serviceId, this.accountId);
+            return await this.keytar.getPassword(serviceId(), this.accountId);
         } catch (e) {
             // Ignore
             logger.error(`Getting password failed: ${e}`);
@@ -60,11 +64,27 @@ export class Keychain {
 
     public async deletePassword(): Promise<boolean | undefined> {
         try {
-            return await this.keytar.deletePassword(this.serviceId, this.accountId);
+            return await this.keytar.deletePassword(serviceId(), this.accountId);
         } catch (e) {
             // Ignore
             logger.error(`Deleting password failed: ${e}`);
             return Promise.resolve(undefined);
         }
+    }
+
+    public static async findCredentials(): Promise<{account: string; password: string}[]> {
+      console.log(serviceId());
+      const keytar = getKeytar();
+      try {
+        if (!keytar) {
+            throw new Error("System keychain unavailable");
+        }
+        return await keytar.findCredentials(serviceId());
+      } catch (e) {
+          // Ignore
+          logger.error(`Finding credentials failed: ${e}`);
+          return Promise.resolve([]);
+      }
+
     }
 }
