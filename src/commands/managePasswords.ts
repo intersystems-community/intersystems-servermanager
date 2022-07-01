@@ -61,17 +61,23 @@ export async function clearPassword(treeItem?: ServerTreeItem): Promise<string> 
     return reply;
 }
 
+interface IMigratePasswordItem extends vscode.QuickPickItem {
+    serverName: string;
+    userName: string;
+    password: string;
+};
+
 export async function migratePasswords(secretStorage: vscode.SecretStorage): Promise<void> {
     const credentials = await Keychain.findCredentials();
-    console.log(credentials);
     if (credentials.length === 0) {
-        vscode.window.showInformationMessage('No legacy passwords found');
+        vscode.window.showInformationMessage('No legacy stored passwords found.');
     } else {
 
         // Collect only those for which server definition exists with a username
         // and no credentials yet stored in our SecretStorage
-        const migratableCredentials = (await Promise.all(
-            credentials.map(async (item) => {
+        const migratableCredentials: IMigratePasswordItem[] = [];
+        (await Promise.all(
+            credentials.map(async (item): Promise<IMigratePasswordItem | undefined> => {
                 const serverName = item.account;
                 const username: string | undefined = vscode.workspace.getConfiguration("intersystems.servers." + serverName).get("username");
                 if (!username) {
@@ -82,33 +88,48 @@ export async function migratePasswords(secretStorage: vscode.SecretStorage): Pro
                 }
                 const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, username);
                 const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-                return (await secretStorage.get(credentialKey) ? {...item, username} : undefined);
+                return (await secretStorage.get(credentialKey) ? undefined : {label: `${serverName} (${username})`, picked: true, serverName, userName: username, password: item.password});
             })
             ))
-            .filter((item) => item);
+            .forEach((item) => {
+                if (item) {
+                  migratableCredentials.push(item);
+                }
+            });
         if (migratableCredentials.length === 0) {
-            vscode.window.showInformationMessage('No legacy passwords found for servers whose definitions specify a username');
+            const message = 'No remaining legacy stored passwords are eligible for migration.';
+            const detail = 'They are either for servers with a password already stored in the new format, or for servers whose definition does not specify a username.'
+            await vscode.window.showWarningMessage(message,
+                {modal: true, detail},
+                //{title: "OK", isCloseAffordance: true}
+            );
         } else {
-            const disqualified = credentials.length - migratableCredentials.length;
-            const detail = disqualified > 0 ? `${disqualified} other ${disqualified > 1 ? "passwords" : "password"} ignored because associated server is no longer defined, or has no username set, or already has a password in the new keystore.` : "";
-            const message = `Migrate ${migratableCredentials.length} legacy stored ${migratableCredentials.length > 1 ? "passwords" : "password"}?`;
-            switch (await vscode.window.showInformationMessage(message, {modal: true, detail}, "Yes", "No")) {
-                case undefined:
-                    return;
-
-                case "Yes":
-                    vscode.window.showInformationMessage('TODO migration');
-                    break;
-
-                default:
-                    break;
+            const choices = await vscode.window.showQuickPick<IMigratePasswordItem>(migratableCredentials,
+                {   canPickMany: true,
+                    title: "Migrate Server Manager legacy stored passwords",
+                    placeHolder: "Select connections whose passwords you want to migrate"
+                }
+            )
+            if (!choices) {
+                return;
+            } else if (choices.length > 0) {
+                await Promise.all(choices.map(async (item) => {
+                    const sessionId = ServerManagerAuthenticationProvider.sessionId(item.serverName, item.userName);
+                    const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+                    return secretStorage.store(credentialKey, item.password);
+                }));
+                vscode.window.showInformationMessage(`Migrated ${choices.length} ${choices.length > 1 ? "passwords" : "password"}.`);
             }
         }
         const detail = "Do this to tidy up your keystore once you have migrated passwords and will not be reverting to an earlier Server Manager.";
-        if (await vscode.window.showInformationMessage(`Delete all legacy stored passwords?`, {modal: true, detail}, "Yes", "No") === "Yes") {
-            vscode.window.showInformationMessage('TODO deletion');
+        if ((await vscode.window.showInformationMessage(`Delete all legacy stored passwords?`, {modal: true, detail}, {title: "Yes"}, {title: "No", isCloseAffordance: true}))?.title === "Yes") {
+            await Promise.all(credentials.map(async (item) => {
+                const keychain = new Keychain(item.account);
+                return keychain.deletePassword()
+            }));
+            vscode.window.showInformationMessage(`Deleted ${credentials.length} ${credentials.length > 1 ? "passwords" : "password"}.`);
         }
-}
+    }
     return;
 }
 
