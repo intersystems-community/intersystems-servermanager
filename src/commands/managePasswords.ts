@@ -96,12 +96,12 @@ export async function migratePasswords(secretStorage: vscode.SecretStorage): Pro
                   migratableCredentials.push(item);
                 }
             });
+
         if (migratableCredentials.length === 0) {
             const message = 'No remaining legacy stored passwords are eligible for migration.';
             const detail = 'They are either for servers with a password already stored in the new format, or for servers whose definition does not specify a username.'
             await vscode.window.showWarningMessage(message,
-                {modal: true, detail},
-                //{title: "OK", isCloseAffordance: true}
+                {modal: true, detail}
             );
         } else {
             const choices = await vscode.window.showQuickPick<IMigratePasswordItem>(migratableCredentials,
