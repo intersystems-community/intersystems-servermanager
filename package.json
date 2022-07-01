@@ -644,12 +644,12 @@
         },
         {
           "command": "intersystems-community.servermanager.storePassword",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./ && config.intersystemsServerManager.authentication.provider != intersystems-server-credentials",
           "group": "2_password@10"
         },
         {
           "command": "intersystems-community.servermanager.clearPassword",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./ && config.intersystemsServerManager.authentication.provider != intersystems-server-credentials",
           "group": "2_password@20"
         }
       ]
