@@ -332,7 +332,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand(`${extensionId}.importServers`, async () => {
-            await importFromRegistry();
+            await importFromRegistry(context.secrets);
             view.refreshTree();
         }),
     );

@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
-import { Keychain } from "../keychain";
+import { ServerManagerAuthenticationProvider } from "../authenticationProvider";
 
 // To avoid overhead querying the registry, cache responses (each time the command is run)
 const regQueryCache = new Map<string, any>();
 
-export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
+export async function importFromRegistry(secretStorage: vscode.SecretStorage, scope?: vscode.ConfigurationScope) {
   const config = vscode.workspace.getConfiguration("intersystems", scope);
   const serverDefinitions: any = config.get("servers");
 
@@ -48,7 +48,7 @@ export async function importFromRegistry(scope?: vscode.ConfigurationScope) {
       vscode.window.showInformationMessage("Cancelled server import.");
       return;
     }
-    await promptForPasswords(serverDefinitions, newServerNames);
+    await promptForPasswords(secretStorage, serverDefinitions, newServerNames);
     await config.update(`servers`, serverDefinitions, vscode.ConfigurationTarget.Global)
       .then(() => {
         return vscode.window.showInformationMessage("Server import completed.");
@@ -73,7 +73,7 @@ async function loadRegistryData(
   const fullPaths: string[] = [];
   fullPaths.push("HKEY_CURRENT_USER\\SOFTWARE" + subFolder);
   fullPaths.push("HKEY_LOCAL_MACHINE\\SOFTWARE" + subFolder);
-  fullPaths.push("HKEY_LOCAL_MACHINE\\WOW6432Node\\SOFTWARE" + subFolder);
+  fullPaths.push("HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node" + subFolder);
   const existingUserNames: string[] = [];
   let overwriteCount = 0;
   for (const fullPath of fullPaths) {
@@ -204,7 +204,7 @@ async function promptForUsernames(serverDefinitions: any, serversMissingUsername
   return true;
 }
 
-async function promptForPasswords(serverDefinitions: any, newServerNames: string[]): Promise<void> {
+async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDefinitions: any, newServerNames: string[]): Promise<void> {
   let reusePassword;
   let password: string | undefined = "";
   const promptServerNames = new Array();
@@ -253,7 +253,10 @@ async function promptForPasswords(serverDefinitions: any, newServerNames: string
     }
 
     if ((password !== "") && (password !== undefined)) {
-      await new Keychain(serverName).setPassword(password).then(() => {
+      const username = serverDefinitions[serverName].username;
+      const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, username);
+      const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+      await secretStorage.store(credentialKey, password).then(() => {
           vscode.window.showInformationMessage(`Password for '${serverName}' stored in keychain.`);
       });
     }
