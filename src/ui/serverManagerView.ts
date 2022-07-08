@@ -29,7 +29,7 @@ export class ServerManagerView {
         this._globalState = context.globalState;
         const treeDataProvider = new SMNodeProvider();
         this._treeDataProvider = treeDataProvider;
-        
+
         const treeView = vscode.window.createTreeView('intersystems-community_servermanager', { treeDataProvider, showCollapseAll: true })
 		context.subscriptions.push(treeView);
         treeDataProvider.view = treeView;
@@ -157,9 +157,9 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
                     await this.view.reveal(this._firstRevealItem, {select: false, expand: 1});
                     this._firstRevealDone = true;
                     }
-        
+
             }, 20);
-    
+
             return children;
 		}
         else {
@@ -221,7 +221,7 @@ function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
             return new ServerTreeItem({ label: serverName.name, id:serverName.name, parent: treeItem }, serverName);
         })
     }
-    
+
     getAllServers(params.sorted).map((server) => children.push(server));
     return children;
 }
@@ -312,7 +312,7 @@ export class ServerTreeItem extends SMTreeItem {
 
 /**
  * getChildren function returning server features (the child nodes of a server),
- * 
+ *
  * @param element parent
  * @param params (unused)
  * @returns feature folders of a server.
@@ -326,7 +326,7 @@ export class ServerTreeItem extends SMTreeItem {
         if (!serverSpec) {
             return undefined
         }
-        
+
         const response = await makeRESTRequest("HEAD", serverSpec)
         if (!response) {
             children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
@@ -384,7 +384,7 @@ export class NamespacesTreeItem extends FeatureTreeItem {
 
 /**
  * getChildren function returning namespaces of a server,
- * 
+ *
  * @param element parent
  * @param params (unused)
  * @returns namespaces of a server.
@@ -398,7 +398,7 @@ export class NamespacesTreeItem extends FeatureTreeItem {
         if (!serverSpec) {
             return undefined
         }
-        
+
         const response = await makeRESTRequest("GET", serverSpec)
         if (!response) {
             children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
@@ -439,7 +439,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 
 /**
  * getChildren function returning namespace features (the child nodes of a server),
- * 
+ *
  * @param element parent
  * @param params (unused)
  * @returns feature folders of a namespace.
@@ -471,7 +471,7 @@ export class ProjectsTreeItem extends FeatureTreeItem {
 
 /**
  * getChildren function returning projects in a server namespace.
- * 
+ *
  * @param element parent
  * @param params { serverName }
  * @returns projects in a server namespace.
@@ -485,7 +485,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promi
         if (!serverSpec) {
             return undefined
         }
-        
+
         const response = await makeRESTRequest(
             "POST",
             serverSpec,
@@ -496,7 +496,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promi
             if (response.data.result.content === undefined) {
                 let message;
                 if (response.data.status?.errors[0]?.code === 5540) {
-                    message = `To allow user '${serverSpec.username}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO ${serverSpec.username}`;
+                    message = `To allow user '${serverSpec.username}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${serverSpec.username}"`;
                 } else {
                     message = response.data.status.summary;
                 }
