@@ -142,7 +142,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
                             }
                             // Resolve the promise and tidy up
                             resolve(enteredPassword);
-                            inputBox.hide();
                             inputBox.dispose();
                         }
 
@@ -150,9 +149,18 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
                             // We only added the one button, which stores the password
                             done(this.secretStorage);
                         });
+
                         inputBox.onDidAccept(() => {
+                            // User pressed Enter
                             done();
                         });
+
+                        inputBox.onDidHide(() => {
+                            // User pressed Escape
+                            resolve(undefined);
+                            inputBox.dispose();
+                        });
+
                         inputBox.show();
                     });
                 };
