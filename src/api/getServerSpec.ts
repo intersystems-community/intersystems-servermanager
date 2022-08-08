@@ -12,7 +12,7 @@ export let credentialCache = new Map<string, CredentialSet>();
 
 /**
  * Get a server specification.
- * 
+ *
  * @param name The name.
  * @param scope The settings scope to use for the lookup.
  * @param flushCredentialCache Flush the session's cache of credentials obtained from keystore and/or user prompting.
@@ -67,7 +67,7 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
                 server.password = '';
             }
         }
-        
+
         // Obtain password from session cache or keychain unless trying to connect anonymously
         if (server.username && !server.password) {
             if (credentialCache[name] && credentialCache[name].username === server.username) {
@@ -86,7 +86,7 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
                     credentialCache[name] = {username: server.username, password: password};
                 }
             }
-            
+
         }
         if (server.username && !server.password) {
             const doInputBox = async (): Promise<string | undefined> => {
@@ -100,23 +100,32 @@ export async function getServerSpec(name: string, scope?: vscode.ConfigurationSc
                     inputBox.buttons = [{ iconPath: new vscode.ThemeIcon('key'), tooltip: 'Store Password in Keychain' }]
 
                     async function done(store: boolean) {
-                        // File the password and return it
+                        // Optionally file the password, then return it
+                        const password = inputBox.value;
                         if (store) {
-                            await filePassword(name, inputBox.value)
+                            await filePassword(name, password)
                         }
                         // Resolve the promise and tidy up
-                        resolve(inputBox.value);
-                        inputBox.hide();
+                        resolve(password);
                         inputBox.dispose();
                     }
 
                     inputBox.onDidTriggerButton((button) => {
-                        // We only added one button  
+                        // We only added one button, and user clicked it
                         done(true);
                     });
+
                     inputBox.onDidAccept(() => {
+                        // User pressed Enter
                         done(false);
                     });
+
+                    inputBox.onDidHide(() => {
+                        // User pressed Escape
+                        resolve(undefined);
+                        inputBox.dispose();
+                    });
+
                     inputBox.show();
                 })
             };
