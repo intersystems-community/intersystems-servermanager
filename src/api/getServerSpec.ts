@@ -114,23 +114,32 @@ export async function getServerSpec(
                     ];
 
                     async function done(store: boolean) {
-                        // File the password and return it
+                        // Optionally file the password, then return it
+                        const password = inputBox.value;
                         if (store) {
-                            await filePassword(name, inputBox.value);
+                            await filePassword(name, password)
                         }
                         // Resolve the promise and tidy up
-                        resolve(inputBox.value);
-                        inputBox.hide();
+                        resolve(password);
                         inputBox.dispose();
                     }
 
                     inputBox.onDidTriggerButton((button) => {
-                        // We only added one button
+                        // We only added one button, and user clicked it
                         done(true);
                     });
+
                     inputBox.onDidAccept(() => {
+                        // User pressed Enter
                         done(false);
                     });
+
+                    inputBox.onDidHide(() => {
+                        // User pressed Escape
+                        resolve(undefined);
+                        inputBox.dispose();
+                    });
+
                     inputBox.show();
                 });
             };

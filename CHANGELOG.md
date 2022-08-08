@@ -1,3 +1,6 @@
+## 3.1.2022080801 (08-Aug-2022 pre-release)
+* Add 2.0.11 changes.
+
 ## 3.1.2022062901 (29-Jun-2022 pre-release)
 * Add 2.0.10 changes.
 
@@ -17,6 +20,10 @@
 ## 3.0.0 (27-Nov-2021 pre-release)
 * Implement `intersystems-server-credentials` authentication provider.
 * 
+## 2.0.11 (08-Aug-2022)
+* Fix hang when user presses Escape on password prompt (#154).
+* Doublequote username in SQL GRANT statement recommendation (#151).
+
 ## 2.0.10 (29-Jun-2022)
 * Accept self-signed certificates if `http.proxyStrictSSL` is set to `false` (#137).
 * Notify when SQL GRANT will be necessary in order to display list of server-side projects (#140).
