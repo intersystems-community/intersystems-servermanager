@@ -8,6 +8,7 @@ import tough = require("tough-cookie");
 import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { IServerSpec } from "./extension";
+import logger from "./logger";
 
 axiosCookieJarSupport(axios);
 
@@ -134,6 +135,7 @@ export async function makeRESTRequest(
         return respdata;
     } catch (error) {
         console.log(error);
+        logger.error(`${method} ${url} failed: ${error.message} (${error.code})`);
         return undefined;
     }
 }
