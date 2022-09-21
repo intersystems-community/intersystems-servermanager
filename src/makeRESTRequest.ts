@@ -14,7 +14,7 @@ axiosCookieJarSupport(axios);
 /**
  * Cookie jar for REST requests to InterSystems servers.
  */
-export const cookieJar: tough.CookieJar = new tough.CookieJar();
+export const cookieJars = new Map<string, tough.CookieJar>();
 
 export interface IAtelierRESTEndpoint {
     apiVersion: number;
@@ -39,6 +39,13 @@ export async function makeRESTRequest(
 
 	// Create the HTTPS agent
 	const httpsAgent = new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") });
+
+  const cookieUsername = server.username || '';
+  let cookieJar = cookieJars.get(cookieUsername);
+  if (!cookieJar) {
+    cookieJar =new tough.CookieJar();
+    cookieJars.set(cookieUsername, cookieJar);
+  }
 
 	// Build the URL
 	let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
