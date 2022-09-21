@@ -382,7 +382,7 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
             children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
             credentialCache[name] = undefined;
         } else {
-            children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name));
+            children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec.username || 'UnknownUser'));
         }
     }
     return children;
@@ -418,6 +418,7 @@ export class NamespacesTreeItem extends FeatureTreeItem {
     constructor(
         element: ISMItem,
         serverName: string,
+        username: string
     ) {
         const parentFolderId = element.parent?.id || "";
         super({
@@ -426,7 +427,7 @@ export class NamespacesTreeItem extends FeatureTreeItem {
             label: "Namespaces",
             params: { serverName },
             parent: element.parent,
-            tooltip: `Namespaces you can access`,
+            tooltip: `Namespaces '${username}' can access`,
         });
         this.name = "Namespaces";
         this.contextValue = "namespaces";
