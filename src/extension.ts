@@ -10,7 +10,7 @@ import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { importFromRegistry } from "./commands/importFromRegistry";
 import { clearPassword, migratePasswords, storePassword } from "./commands/managePasswords";
-import { cookieJar } from "./makeRESTRequest";
+import { cookieJars } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem } from "./ui/serverManagerView";
 
 export const extensionId = "intersystems-community.servermanager";
@@ -68,7 +68,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.authentication.onDidChangeSessions((e) => {
             if (e.provider.id === AUTHENTICATION_PROVIDER) {
-                cookieJar.removeAllCookiesSync();
+                cookieJars.forEach((cookieJar) => {
+                    cookieJar.removeAllCookiesSync();
+                });
             }
         }),
     );
