@@ -72,17 +72,7 @@
     "onCommand:intersystems-community.servermanager.storePassword",
     "onCommand:intersystems-community.servermanager.clearPassword",
     "onCommand:intersystems-community.servermanager.migratePasswords",
-    "onCommand:intersystems-community.servermanager.importServers",
-    "onCommand:intersystems-community.servermanager-credentials.testLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin2",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedLoginWithPreferenceCleared",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin2WithPreferenceCleared",
-    "onCommand:intersystems-community.servermanager-credentials.testPartiallyScopedLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testPartiallyScopedLoginWithPreferenceCleared",
-    "onCommand:intersystems-community.servermanager-credentials.testQuietLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedQuietLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedQuietLogin2"
+    "onCommand:intersystems-community.servermanager.importServers"
   ],
   "contributes": {
     "viewsContainers": {
@@ -333,56 +323,6 @@
         "command": "intersystems-community.servermanager.importServers",
         "category": "InterSystems Server Manager",
         "title": "Import Servers from Windows Registry"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Login"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Login (iris201 as johnm)"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedLogin2",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Login (iris201 as johnm2)"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedLoginWithPreferenceCleared",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Login (iris201 as johnm) With Preference Cleared"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedLogin2WithPreferenceCleared",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Login (iris201 as johnm2) With Preference Cleared"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testPartiallyScopedLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Partially Scoped Login (iris201)"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testPartiallyScopedLoginWithPreferenceCleared",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Partially Scoped Login (iris201) With Preference Cleared"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testQuietLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Quiet Login"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedQuietLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Quiet Login"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedQuietLogin2",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Quiet Login2"
       },
       {
         "command": "intersystems-community.servermanager.setIconRed",
