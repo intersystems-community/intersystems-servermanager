@@ -183,8 +183,7 @@ export async function logout(serverName: string) {
 
   // Make the request but don't do anything with the response or any errors
   try {
-      let respdata: AxiosResponse;
-      respdata = await axios.request(
+      await axios.request(
           {
               httpsAgent,
               jar: cookieJar,
