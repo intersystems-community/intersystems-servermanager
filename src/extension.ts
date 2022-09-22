@@ -10,7 +10,7 @@ import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { importFromRegistry } from "./commands/importFromRegistry";
 import { clearPassword, migratePasswords, storePassword } from "./commands/managePasswords";
-import { cookieJars } from "./makeRESTRequest";
+import { logout, serverSessions } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem } from "./ui/serverManagerView";
 
 export const extensionId = "intersystems-community.servermanager";
@@ -64,12 +64,24 @@ export function activate(context: vscode.ExtensionContext) {
     const view = new ServerManagerView(context);
 
     // Ensure cookies do not survive an account sign-out
-    // Undesirably indiscriminate - see https://github.com/microsoft/vscode/issues/137931
     context.subscriptions.push(
         vscode.authentication.onDidChangeSessions((e) => {
             if (e.provider.id === AUTHENTICATION_PROVIDER) {
-                cookieJars.forEach((cookieJar) => {
-                    cookieJar.removeAllCookiesSync();
+                serverSessions.forEach(async (serverSession) => {
+
+                  // Still logged in with the authentication provider?
+                    const scopes = [serverSession.serverName, serverSession.username.toLowerCase()];
+                    const session = await vscode.authentication.getSession(
+                        AUTHENTICATION_PROVIDER,
+                        scopes,
+                        { silent: true },
+                    );
+
+                    // If not, try to log out on the server, then remove our record of its cookies
+                    if (!session) {
+                        await logout(serverSession.serverName);
+                        serverSession.cookieJar.removeAllCookiesSync();
+                    }
                 });
             }
         }),
