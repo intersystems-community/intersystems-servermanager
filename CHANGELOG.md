@@ -1,4 +1,10 @@
+## 3.1.2022092601 (26-Sep-2022 pre-release)
+* Correctly handle concurrent connections to same server using different credentials (#160).
+* Remove authentication provider test commands (#159).
+
 ## 3.1.2022080801 (08-Aug-2022 pre-release)
+* Implement `Migrate Legacy Passwords` command (#146).
+* Make connection import from Windows registry set passwords in new storage (#147).
 * Add 2.0.11 changes.
 
 ## 3.1.2022062901 (29-Jun-2022 pre-release)
