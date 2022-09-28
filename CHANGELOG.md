@@ -1,4 +1,4 @@
-## 3.1.2022092601 (26-Sep-2022 pre-release)
+## 3.1.2022092801 (28-Sep-2022 pre-release)
 * Correctly handle concurrent connections to same server using different credentials (#160).
 * Remove authentication provider test commands (#159).
 
