@@ -3,26 +3,26 @@ import { before } from "mocha";
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
-import { window, extensions } from "vscode";
+import { extensions, window } from "vscode";
 import { extensionId } from "../../extension";
 
 suite("Extension Test Suite", () => {
-  suiteSetup(async function () {
-    // make sure extension is activated
-    const ext = extensions.getExtension(extensionId);
-    if (ext) {
-      await ext.activate();
-    } else {
-      assert.fail("Extension not found");
-    }
-  });
+	suiteSetup(async () => {
+		// make sure extension is activated
+		const ext = extensions.getExtension(extensionId);
+		if (ext) {
+			await ext.activate();
+		} else {
+			assert.fail("Extension not found");
+		}
+	});
 
-  before(() => {
-    window.showInformationMessage("Start all tests.");
-  });
+	before(() => {
+		window.showInformationMessage("Start all tests.");
+	});
 
-  test("Extension started", () => {
-    assert.ok("All good");
-  });
+	test("Extension started", () => {
+		assert.ok("All good");
+	});
 
 });

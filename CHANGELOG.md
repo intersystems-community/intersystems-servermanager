@@ -1,3 +1,7 @@
+## 3.2.0 (03-Oct-2022)
+* Implement `intersystems-server-credentials` authentication provider.
+* Implement `Migrate Legacy Passwords` command (#146).
+
 ## 2.0.11 (08-Aug-2022)
 * Fix hang when user presses Escape on password prompt (#154).
 * Doublequote username in SQL GRANT statement recommendation (#151).
