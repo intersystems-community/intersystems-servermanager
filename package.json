@@ -2,7 +2,6 @@
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
   "version": "3.2.0-SNAPSHOT",
-  "preview": true,
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
