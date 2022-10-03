@@ -10,8 +10,6 @@ See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-comm
 
 We are pleased to publish version 3.2 of this extension. This replaces version 2, improving the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). Version 3 was originally created for the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19) and made available as a [pre-release](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions).
 
-> 2022-09-28: This is currently a 3.1 **pre-release** version undergoing final field testing.
-
 Thanks to [George James Software](https://georgejames.com) for backing this development effort.
 
 ## The Authentication Provider

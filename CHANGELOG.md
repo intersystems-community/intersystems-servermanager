@@ -1,31 +1,7 @@
-## 3.1.2022092801 (28-Sep-2022 pre-release)
-* Correctly handle concurrent connections to same server using different credentials (#160).
-* Remove authentication provider test commands (#159).
-
-## 3.1.2022080801 (08-Aug-2022 pre-release)
-* Implement `Migrate Legacy Passwords` command (#146).
-* Make connection import from Windows registry set passwords in new storage (#147).
-* Add 2.0.11 changes.
-
-## 3.1.2022062901 (29-Jun-2022 pre-release)
-* Add 2.0.10 changes.
-
-## 3.1.2022042001 (20-Apr-2022 pre-release)
-* Add 2.0.8 and 2.0.9 changes.
-
-## 3.1.2022020201 (02-Feb-2022 pre-release)
-* Update vulnerable dependencies.
-
-## 3.1.2022012701 (27-Jan-2022 pre-release)
-* Update README.
-* Automate pre-release publication to Marketplace.
-
-## 3.1.2021122102 (21-Dec-2021 pre-release)
-* Make username case-insensitive in authentication provider.
-
-## 3.0.0 (27-Nov-2021 pre-release)
+## 3.2.0 (03-Oct-2022)
 * Implement `intersystems-server-credentials` authentication provider.
-* 
+* Implement `Migrate Legacy Passwords` command (#146).
+
 ## 2.0.11 (08-Aug-2022)
 * Fix hang when user presses Escape on password prompt (#154).
 * Doublequote username in SQL GRANT statement recommendation (#151).
