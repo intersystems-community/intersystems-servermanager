@@ -127,9 +127,6 @@ jobs:
         id: set-version
         shell: bash
         run: |
-          # REMOVE BELOW AFTER TESTING
-          exit 1
-          # REMOVE ABOVE AFTER TESTING
           VERSION=${{ needs.build.outputs.version }}
           NEXT_VERSION=`echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.`
           tmp=$(mktemp)
