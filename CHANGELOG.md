@@ -1,3 +1,6 @@
+## 3.2.1 (04-Oct-2022)
+* Fix publishing failure.
+
 ## 3.2.0 (03-Oct-2022)
 * Implement `intersystems-server-credentials` authentication provider.
 * Implement `Migrate Legacy Passwords` command (#146).
