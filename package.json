@@ -195,7 +195,7 @@
                   "password": {
                     "type": "string",
                     "description": "Password of username.",
-                    "deprecationMessage": "Storing password in plaintext is not recommended. Delete this property and instead use the 'key' button to save password when prompted for it by 'InterSystems Server Credentials'."
+                    "deprecationMessage": "Storing password in plaintext is not recommended. Consider deleting this property, then use 'key' button to save password when prompted for it by 'InterSystems Server Credentials'."
                   },
                   "description": {
                     "type": "string",
