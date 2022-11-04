@@ -220,7 +220,11 @@ Embedded entries (built-in default ones) are demoted to the end of the list, or 
 
 ## Information for VS Code Extension Developers - How To Leverage Server Manager
 
-An extension XYZ needing to connect to InterSystems servers can define Server Manager as a dependency in its `package.json` like this:
+The NPM package [`@intersystems-community/intersystems-servermanager`](https://www.npmjs.com/package/@intersystems-community/intersystems-servermanager) defines the types used by the API which this extension exports. It also declares some constants.
+
+An extension XYZ needing to connect to InterSystems servers should include `"@intersystems-community/intersystems-servermanager": "latest"` in the `"devDependencies"` object in its `package.json`.
+
+It might also define Server Manager as a dependency in its `package.json` like this:
 
 ```json
   "extensionDependencies": [
@@ -228,17 +232,20 @@ An extension XYZ needing to connect to InterSystems servers can define Server Ma
   ],
 ```
 
-Alternatively the `activate` method of XYZ can detect whether the extension is already available, then offer to install it if necessary:
+Alternatively the `activate` method of XYZ can detect whether the extension is already available, then offer to install it if not:
 
 ```ts
-  const extId = 'intersystems-community.servermanager';
-  let extension = vscode.extensions.getExtension(extId);
+  import * as serverManager from '@intersystems-community/intersystems-servermanager';
+```
+...
+```ts
+  let extension = vscode.extensions.getExtension(serverManager.EXTENSION_ID);
   if (!extension) {
 	// Optionally ask user for permission
 	// ...
 
-	await vscode.commands.executeCommand('workbench.extensions.installExtension', extId);
-	extension = vscode.extensions.getExtension(extId);
+	await vscode.commands.executeCommand('workbench.extensions.installExtension', serverManager.EXTENSION_ID);
+	extension = vscode.extensions.getExtension(serverManager.EXTENSION_ID);
   }
   if (!extension.isActive) {
     await extension.activate();
@@ -250,7 +257,7 @@ XYZ can then use the extension's API to obtain the properties of a named server 
 ```ts
   const serverManagerApi = extension.exports;
   if (serverManagerApi && serverManagerApi.getServerSpec) { // defensive coding
-	const serverSpec = await serverManagerApi.getServerSpec(serverName);
+	const serverSpec: serverManager.IServerSpec | undefined = await serverManagerApi.getServerSpec(serverName);
   }
 ```
 
@@ -259,12 +266,11 @@ The `username` and `password` properties will only be present if defined in the 
 To obtain the password with which to connect, use code like this which will also prompt for a username if absent:
 
 ```ts
-  const AUTHENTICATION_PROVIDER = 'intersystems-server-credentials';
   if (typeof serverSpec.password === 'undefined') {
     const scopes = [serverSpec.name, serverSpec.username || ''];
-    let session = await vscode.authentication.getSession(AUTHENTICATION_PROVIDER, scopes, { silent: true });
+    let session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { silent: true });
     if (!session) {
-      session = await vscode.authentication.getSession(AUTHENTICATION_PROVIDER, scopes, { createIfNone: true });
+      session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { createIfNone: true });
     }
     if (session) {
       serverSpec.username = session.scopes[1];
@@ -276,13 +282,13 @@ To obtain the password with which to connect, use code like this which will also
 To offer the user a quickpick of servers:
 
 ```ts
-  const serverName = await serverManagerApi.pickServer();
+  const serverName: string = await serverManagerApi.pickServer();
 ```
 
 To obtain an array of server names:
 
 ```ts
-  const allServerNames = await serverManagerApi.getServerNames();
+  const allServerNames: serverManager.IServerName[] = await serverManagerApi.getServerNames();
 ```
 For up-to-date details of the API, including result types and available parameters, review the source code of the extension's `activate` method [here](https://github.com/intersystems-community/intersystems-servermanager/blob/master/src/extension.ts).
 

@@ -50,6 +50,7 @@
     "tough-cookie": "^4.0.0"
   },
   "devDependencies": {
+    "@intersystems-community/intersystems-servermanager": "latest",
     "@types/vscode": "^1.63.0",
     "@types/glob": "^7.1.1",
     "@types/keytar": "^4.4.2",

@@ -1,6 +1,7 @@
 "use strict";
 
 import * as vscode from "vscode";
+import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
 import { BrowserTarget, getPortalUriWithToken } from "./api/getPortalUriWithToken";
 import { getServerNames } from "./api/getServerNames";
@@ -15,34 +16,6 @@ import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, 
 
 export const extensionId = "intersystems-community.servermanager";
 export let globalState: vscode.Memento;
-
-export interface IServerName {
-	name: string;
-	description: string;
-	detail: string;
-}
-
-export interface IWebServerSpec {
-	scheme?: string;
-	host: string;
-	port: number;
-	pathPrefix?: string;
-}
-
-export interface IServerSpec {
-	name: string;
-	webServer: IWebServerSpec;
-	username?: string;
-	password?: string;
-	description?: string;
-}
-
-export interface IJSONServerSpec {
-	webServer: IWebServerSpec;
-	username?: string;
-	password?: string;
-	description?: string;
-}
 
 export function activate(context: vscode.ExtensionContext) {
 

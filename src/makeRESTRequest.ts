@@ -7,7 +7,7 @@ import * as https from "https";
 import tough = require("tough-cookie");
 import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
-import { IServerSpec } from "./extension";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { getServerSpec } from "./api/getServerSpec";
 
 axiosCookieJarSupport(axios);
