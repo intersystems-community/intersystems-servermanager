@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
 import { credentialCache, getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
-import { IServerName } from "../extension";
+import { IServerName } from "@intersystems-community/intersystems-servermanager";
 import { makeRESTRequest } from "../makeRESTRequest";
 
 const SETTINGS_VERSION = "v1";

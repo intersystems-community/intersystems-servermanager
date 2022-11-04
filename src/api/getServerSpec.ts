@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "../authenticationProvider";
 import { filePassword } from "../commands/managePasswords";
-import { IServerSpec } from "../extension";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { Keychain } from "../keychain";
 
 interface ICredentialSet {

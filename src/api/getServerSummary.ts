@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IServerName, IServerSpec } from "../extension";
+import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export function getServerSummary(name: string, scope?: vscode.ConfigurationScope): IServerName | undefined {
 	const server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name);

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IJSONServerSpec } from "../extension";
+import { IJSONServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { getServerNames } from "./getServerNames";
 
 export async function addServer(

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IServerName } from "../extension";
+import { IServerName } from "@intersystems-community/intersystems-servermanager";
 import { serverDetail } from "./getServerSummary";
 
 export function getServerNames(scope?: vscode.ConfigurationScope, sorted?: boolean): IServerName[] {
