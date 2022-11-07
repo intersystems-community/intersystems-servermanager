@@ -6,6 +6,10 @@ Package defining the interfaces used in the API that is published by the `inters
 
 # Changelog
 
+### v3.0.4
+
+- Export constants correctly.
+
 ### v3.0.0
 
 - First release, numbered to align with the first published version of Server Manager 3.

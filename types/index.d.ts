@@ -1,5 +1,5 @@
-export declare const EXTENSION_ID = 'intersystems-community.servermanager';
-export declare const AUTHENTICATION_PROVIDER = 'intersystems-server-credentials';
+export const EXTENSION_ID: string;
+export const AUTHENTICATION_PROVIDER: string;
 
 export interface IServerName {
 	name: string;
