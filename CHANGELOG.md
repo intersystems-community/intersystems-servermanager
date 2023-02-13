@@ -1,3 +1,9 @@
+## 3.2.2 (13-Feb-2023)
+* Improve deprecation message for `password` property (#164).
+* Use `@intersystems-community/intersystems-servermanager` NPM package, and document how to do this (#166, #167).
+* Update on Open VSX Registry.
+* Update vulnerable dependencies.
+
 ## 3.2.1 (04-Oct-2022)
 * Fix publishing failure.
 
