@@ -19,6 +19,7 @@ export interface IJSONServerSpec {
 	username?: string;
 	password?: string;
 	description?: string;
+	pathPrefix?: string;
 }
 
 export interface IServerSpec extends IJSONServerSpec {
