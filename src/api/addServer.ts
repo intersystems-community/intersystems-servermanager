@@ -67,8 +67,8 @@ export async function addServer(
 								if (typeof prefix !== "undefined") {
 									if (prefix) {
 										var pathPrefix = prefix.trim();
-										if (pathPrefix.charAt(0) !== '/') {
-											pathPrefix = '/' + pathPrefix;
+										if (pathPrefix.charAt(0) !== "/") {
+											pathPrefix = "/" + pathPrefix;
 										}
 										spec.webServer.pathPrefix = pathPrefix;
 									}
