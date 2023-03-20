@@ -59,6 +59,21 @@ export async function addServer(
 							});
 							if (portString) {
 								spec.webServer.port = +portString;
+								const prefix = await vscode.window.showInputBox({
+									ignoreFocusOut: true,
+									placeHolder:
+										"Optional path prefix of instance",
+								});
+								if (typeof prefix !== "undefined") {
+									if (prefix) {
+										var pathPrefix = prefix.trim();
+										if (pathPrefix.charAt(0) !== "/") {
+											pathPrefix = "/" + pathPrefix;
+										}
+										spec.webServer.pathPrefix = pathPrefix;
+									}
+								}
+
 								const username = await vscode.window.showInputBox({
 									ignoreFocusOut: true,
 									placeHolder:
