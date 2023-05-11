@@ -378,7 +378,7 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 		}
 
 		const response = await makeRESTRequest("HEAD", serverSpec);
-		if (!response) {
+		if (!response || response.status !== 200) {
 			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
 			credentialCache[name] = undefined;
 		} else {
@@ -453,7 +453,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 		}
 
 		const response = await makeRESTRequest("GET", serverSpec);
-		if (!response) {
+		if (!response || response.status !== 200) {
 			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
 			credentialCache[params.serverName] = undefined;
 		} else {
