@@ -12,7 +12,7 @@ import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./
 import { importFromRegistry } from "./commands/importFromRegistry";
 import { clearPassword, migratePasswords, storePassword } from "./commands/managePasswords";
 import { logout, serverSessions } from "./makeRESTRequest";
-import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem } from "./ui/serverManagerView";
+import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
 
 export const extensionId = "intersystems-community.servermanager";
 export let globalState: vscode.Memento;
@@ -221,7 +221,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 	);
 
-	const addWorkspaceFolderAsync = async (readonly: boolean, csp: boolean, namespaceTreeItem?: ServerTreeItem, project?: string) => {
+	const addWorkspaceFolderAsync = async (readonly: boolean, csp: boolean, namespaceTreeItem?: ServerTreeItem, project?: string, webApp?: string) => {
 		if (namespaceTreeItem) {
 			const pathParts = namespaceTreeItem.id?.split(":");
 			if (pathParts && pathParts.length === 4) {
@@ -245,7 +245,7 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 
 					const params = [csp ? "csp" : "", project ? `project=${project}` : ""].filter(e => e != "").join("&");
-					const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}/${params ? `?${params}` : ""}`);
+					const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}${csp && webApp ? webApp : "/"}${params ? `?${params}` : ""}`);
 					if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {
 						const label = `${project ? `${project} - ` : ""}${serverName}:${namespace}${csp ? ' web files' : ''}${readonly && project == undefined ? " (read-only)" : ""}`;
 						const added = vscode.workspace.updateWorkspaceFolders(
@@ -304,6 +304,18 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.viewProject`, async (projectTreeItem?: ProjectTreeItem) => {
 			await addWorkspaceFolderAsync(true, false, <NamespaceTreeItem>projectTreeItem?.parent?.parent, projectTreeItem?.name);
+		})
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.editWebApp`, async (webAppTreeItem?: WebAppTreeItem) => {
+			await addWorkspaceFolderAsync(false, true, <NamespaceTreeItem>webAppTreeItem?.parent?.parent, undefined, webAppTreeItem?.name);
+		})
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.viewWebApp`, async (webAppTreeItem?: WebAppTreeItem) => {
+			await addWorkspaceFolderAsync(true, true, <NamespaceTreeItem>webAppTreeItem?.parent?.parent, undefined, webAppTreeItem?.name);
 		})
 	);
 

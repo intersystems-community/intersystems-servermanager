@@ -381,6 +381,16 @@
         "command": "intersystems-community.servermanager.viewProject",
         "title": "View Code in Project",
         "icon": "$(eye)"
+      },
+      {
+        "command": "intersystems-community.servermanager.editWebApp",
+        "title": "Edit Files in Web Application",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "intersystems-community.servermanager.viewWebApp",
+        "title": "View Files in Web Application",
+        "icon": "$(eye)"
       }
     ],
     "submenus": [
@@ -508,6 +518,14 @@
         {
           "command": "intersystems-community.servermanager.viewProject",
           "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.editWebApp",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewWebApp",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -573,6 +591,16 @@
         {
           "command": "intersystems-community.servermanager.viewProject",
           "when": "view == intersystems-community_servermanager && viewItem == project",
+          "group": "inline@20"
+        },
+        {
+          "command": "intersystems-community.servermanager.editWebApp",
+          "when": "view == intersystems-community_servermanager && viewItem == webapp",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewWebApp",
+          "when": "view == intersystems-community_servermanager && viewItem == webapp",
           "group": "inline@20"
         },
         {

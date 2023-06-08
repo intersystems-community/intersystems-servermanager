@@ -498,7 +498,10 @@ export class NamespaceTreeItem extends SMTreeItem {
  * @returns feature folders of a namespace.
  */
 async function namespaceFeatures(element: NamespaceTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
-	return [new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName)];
+	return [
+		new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName),
+		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName)
+	];
 }
 
 export class ProjectsTreeItem extends FeatureTreeItem {
@@ -583,5 +586,78 @@ export class ProjectTreeItem extends SMTreeItem {
 		this.name = name;
 		this.contextValue = 'project';
 		this.iconPath = new vscode.ThemeIcon('files');
+	}
+}
+
+export class WebAppsTreeItem extends FeatureTreeItem {
+	public readonly name: string;
+	constructor(
+		element: ISMItem,
+		serverName: string
+	) {
+		const parentFolderId = element.parent?.id || '';
+		super({
+			parent: element.parent,
+			label: 'Web Applications',
+			id: parentFolderId + ':webapps',
+			tooltip: `Web Applications in this namespace`,
+			getChildren: namespaceWebApps,
+			params: { serverName, ns: element.label }
+		});
+		this.name = 'Web Applications';
+		this.contextValue = 'webapps';
+		this.iconPath = new vscode.ThemeIcon('library');
+	}
+}
+
+/**
+ * getChildren function returning web applications in a server namespace.
+ *
+ * @param element parent
+ * @param params { serverName }
+ * @returns web applications in a server namespace.
+ */
+async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promise<WebAppTreeItem[] | undefined> {
+	const children: ProjectTreeItem[] = [];
+
+	if (params?.serverName && params.ns) {
+		const name: string = params.serverName;
+		const serverSpec = await getServerSpec(name)
+		if (!serverSpec) {
+			return undefined
+		}
+
+		const response = await makeRESTRequest(
+			"GET",
+			serverSpec,
+			{ apiVersion: 1, namespace: "%SYS", path: `/cspapps/${params.ns}` }
+		);
+		if (response !== undefined) {
+			if (response.data.result.content === undefined) {
+				vscode.window.showErrorMessage(response.data.status.summary);
+				return undefined;
+			}
+			response.data.result.content.map((webapp: string) => {
+				children.push(new WebAppTreeItem({ parent: element, label: name, id: name }, webapp));
+			});
+		}
+	}
+
+	return children;
+}
+
+export class WebAppTreeItem extends SMTreeItem {
+	public readonly name: string;
+	constructor(element: ISMItem, name: string) {
+		const parentFolderId = element.parent?.id || '';
+		const id = parentFolderId + ':' + name;
+		super({
+			parent: element.parent,
+			label: name,
+			id
+		});
+		this.name = name;
+		this.contextValue = 'webapp';
+		this.iconPath = new vscode.ThemeIcon('file-code');
 	}
 }
