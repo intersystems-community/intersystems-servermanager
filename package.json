@@ -61,7 +61,7 @@
     "mocha": "^9.2.2",
     "ts-loader": "^9.4.2",
     "tslint": "^5.20.1",
-    "typescript": "^3.8.3"
+    "typescript": "^4.4.3"
   },
   "main": "./out/extension",
   "activationEvents": [
