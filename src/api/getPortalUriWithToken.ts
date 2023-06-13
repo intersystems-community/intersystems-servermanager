@@ -11,13 +11,15 @@ export enum BrowserTarget {
 
 const allTokens = [new Map<string, string>(), new Map<string, string>()];
 
+const simpleBrowserCompatible = new Map<string, boolean>();
+
 export async function getPortalUriWithToken(
 	target: BrowserTarget,
 	name: string,
+	page = "/csp/sys/UtilHome.csp",
+	namespace = "%SYS",
 	scope?: vscode.ConfigurationScope,
 ): Promise<Uri | undefined> {
-
-	const PORTAL_HOME = "/csp/sys/UtilHome.csp";
 
 	// Use our own API so that the Recent folder updates with our activity
 	const myApi = vscode.extensions.getExtension(extensionId)?.exports;
@@ -32,8 +34,8 @@ export async function getPortalUriWithToken(
 		const response = await makeRESTRequest(
 			"POST",
 			spec,
-			{ apiVersion: 1, namespace: "%SYS", path: "/action/query" },
-			{ query: "select %Atelier_v1_Utils.General_GetCSPToken(?, ?) token", parameters: [PORTAL_HOME, token] },
+			{ apiVersion: 1, namespace, path: "/action/query" },
+			{ query: "select %Atelier_v1_Utils.General_GetCSPToken(?, ?) token", parameters: [page, token] },
 		);
 
 		if (!response) {
@@ -45,9 +47,35 @@ export async function getPortalUriWithToken(
 			allTokens[target].set(name, token);
 		}
 
-		const webServer = spec.webServer;
-		const queryString = token ? `CSPCHD=${encodeURIComponent(token)}` : "";
+		if (target === BrowserTarget.SIMPLE && !simpleBrowserCompatible.has(name)) {
+			// Check that the portal webapps have all been altered so they don't require session cookie support, which Simple Browser cannot provide
+			const response = await makeRESTRequest(
+				"POST",
+				spec,
+				{ apiVersion: 1, namespace: "%SYS", path: "/action/query" },
+				{ query: "SELECT Name FROM Security.Applications WHERE {fn CONCAT(Name, '/')} %STARTSWITH '/csp/sys/' AND UseCookies = 2" },
+			);
+			if (response) {
+				const appsRequiringCookie = (response.data?.result?.content as any[]).map((row) => {
+					return row.Name as string;
+				});
+				if (appsRequiringCookie.length > 0) {
+					await vscode.window.showWarningMessage(`Portal web apps cannot be used in the Simple Browser tab if their 'UseCookies' property is set to 'Always' (the default). To resolve this, use Portal's security section to change it to 'Autodetect' in these apps: ${appsRequiringCookie.join(", ")}`, { modal: true });
+					return;
+				}
+				else {
+					simpleBrowserCompatible.set(name, true);
+				}
+			}
+			else {
+				vscode.window.showWarningMessage(`Unable to check the Portal web apps for compatibility with Simple Browser.`);
+				simpleBrowserCompatible.set(name, true);
+			}
+		}
 
-		return vscode.Uri.parse(`${webServer.scheme}://${webServer.host}:${webServer.port}${webServer.pathPrefix}${PORTAL_HOME}?${queryString}`, true);
+		const webServer = spec.webServer;
+		const queryString = `$NAMESPACE=${encodeURIComponent(namespace)}${token ? `&CSPCHD=${encodeURIComponent(token)}` : ""}`;
+
+		return vscode.Uri.parse(`${webServer.scheme}://${webServer.host}:${webServer.port}${webServer.pathPrefix}${page}?${queryString}`, true);
 	}
 }

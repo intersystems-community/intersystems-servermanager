@@ -15,7 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.63.0"
+    "vscode": "^1.75.0"
   },
   "icon": "images/logo.png",
   "categories": [
@@ -51,7 +51,7 @@
   },
   "devDependencies": {
     "@intersystems-community/intersystems-servermanager": "latest",
-    "@types/vscode": "^1.63.0",
+    "@types/vscode": "^1.75.0",
     "@types/glob": "^7.1.1",
     "@types/keytar": "^4.4.2",
     "@types/mocha": "^9.0.0",
@@ -65,14 +65,7 @@
   },
   "main": "./out/extension",
   "activationEvents": [
-    "onAuthenticationRequest:intersystems-servermanager-credentials",
-    "onView:intersystems-community_servermanager",
-    "onCommand:intersystems-community.servermanager.refreshTree",
-    "onCommand:intersystems-community.servermanager.addServer",
-    "onCommand:intersystems-community.servermanager.storePassword",
-    "onCommand:intersystems-community.servermanager.clearPassword",
-    "onCommand:intersystems-community.servermanager.migratePasswords",
-    "onCommand:intersystems-community.servermanager.importServers"
+    "onAuthenticationRequest:intersystems-servermanager-credentials"
   ],
   "contributes": {
     "viewsContainers": {
@@ -293,6 +286,16 @@
         "icon": "$(tools)"
       },
       {
+        "command": "intersystems-community.servermanager.openPortalExplorerTab",
+        "title": "Open Management Portal's Class Utilities in Tab",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+        "title": "Open in External Browser",
+        "icon": "$(link-external)"
+      },
+      {
         "command": "intersystems-community.servermanager.retryServer",
         "title": "Refresh",
         "icon": "$(refresh)"
@@ -464,6 +467,14 @@
           "when": "false"
         },
         {
+          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExplorerTab",
+          "when": "false"
+        },
+        {
           "command": "intersystems-community.servermanager.retryServer",
           "when": "false"
         },
@@ -612,6 +623,12 @@
           "command": "intersystems-community.servermanager.openPortalExternal",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "inline@90"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExplorerTab",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "inline@80",
+          "alt": "intersystems-community.servermanager.openPortalExplorerExternal"
         },
         {
           "command": "intersystems-community.servermanager.retryServer",
