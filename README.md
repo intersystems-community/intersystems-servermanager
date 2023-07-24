@@ -6,6 +6,16 @@ InterSystems Server Manager is a Visual Studio Code extension for defining conne
 
 See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for changes in each release.
 
+# New in Version 3.4 - July 2023
+
+- The sequence of prompts displayed when creating a new server definition now includes one where you can optionally enter the `pathPrefix` that is necessary when a single web server is providing REST connectivity to multiple InterSystems servers.
+
+- A new "Web Applications" tree within each namespace node provides a convenient way to create a workspace folder in which to edit web application files.
+
+> We have removed support for version 2's password storage mechanism. If you have been using the `"intersystemsServerManager.authentication.provider": "none"` setting this will no longer have any effect and your connections will behave as though no passwords have been stored. You can migrate stored passwords by downgrading to Server Manager 3.2 and running the `Migrate Passwords` command.
+> 
+>  VS Code 1.82 (August 2023) is scheduled to drop support for the keytar package used by the v2 mechanism, so you should perform v2 password migration before upgrading to that version.
+
 # New in Version 3.2 - October 2022
 
 We are pleased to publish version 3.2 of this extension. This replaces version 2, improving the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). Version 3 was originally created for the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19).
