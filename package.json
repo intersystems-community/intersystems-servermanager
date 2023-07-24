@@ -15,7 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.63.0"
+    "vscode": "^1.75.0"
   },
   "icon": "images/logo.png",
   "categories": [
@@ -51,28 +51,20 @@
   },
   "devDependencies": {
     "@intersystems-community/intersystems-servermanager": "latest",
-    "@types/vscode": "^1.63.0",
+    "@types/vscode": "^1.75.0",
     "@types/glob": "^7.1.1",
-    "@types/keytar": "^4.4.2",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^8.10.60",
+    "@types/node": "^14.18.0",
     "@vscode/test-electron": "^2.1.5",
     "glob": "^7.1.6",
     "mocha": "^9.2.2",
     "ts-loader": "^9.4.2",
     "tslint": "^5.20.1",
-    "typescript": "^3.8.3"
+    "typescript": "^4.4.3"
   },
   "main": "./out/extension",
   "activationEvents": [
-    "onAuthenticationRequest:intersystems-servermanager-credentials",
-    "onView:intersystems-community_servermanager",
-    "onCommand:intersystems-community.servermanager.refreshTree",
-    "onCommand:intersystems-community.servermanager.addServer",
-    "onCommand:intersystems-community.servermanager.storePassword",
-    "onCommand:intersystems-community.servermanager.clearPassword",
-    "onCommand:intersystems-community.servermanager.migratePasswords",
-    "onCommand:intersystems-community.servermanager.importServers"
+    "onAuthenticationRequest:intersystems-servermanager-credentials"
   ],
   "contributes": {
     "viewsContainers": {
@@ -226,20 +218,6 @@
       {
         "title": "Authentication",
         "properties": {
-          "intersystemsServerManager.authentication.provider": {
-            "type": "string",
-            "description": "Authentication provider that Server Manager will use for accessing InterSystems servers. This setting also affects the API that Server Manager publishes for use by other extensions.",
-            "enum": [
-              "intersystems-server-credentials",
-              "none"
-            ],
-            "enumDescriptions": [
-              "Use Server Manager's embedded 'InterSystems Server Credentials' authentication provider. Server Manager's own API will no longer return credentials that have been stored securely in the workstation's keychain.",
-              "Do not use VS Code's authentication model. Secure credential storage will be handled natively by Server Manager using the workstation's keychain, but Server Manager is unable to restrict which extensions can access those credentials via its API. Only use this if other extensions using the API have not yet been updated to use the authentication provider."
-            ],
-            "default": "intersystems-server-credentials",
-            "scope": "application"
-          },
           "intersystemsServerManager.credentialsProvider.deletePasswordOnSignout": {
             "type": "string",
             "description": "Whether to delete an account's stored password after signing out.",
@@ -302,22 +280,6 @@
         "category": "InterSystems Server Manager",
         "title": "Edit Settings",
         "icon": "$(edit)"
-      },
-      {
-        "command": "intersystems-community.servermanager.storePassword",
-        "category": "InterSystems Server Manager",
-        "title": "Store Password in Keychain",
-        "icon": "$(key)"
-      },
-      {
-        "command": "intersystems-community.servermanager.clearPassword",
-        "category": "InterSystems Server Manager",
-        "title": "Clear Password from Keychain"
-      },
-      {
-        "command": "intersystems-community.servermanager.migratePasswords",
-        "category": "InterSystems Server Manager",
-        "title": "Migrate Legacy Passwords"
       },
       {
         "command": "intersystems-community.servermanager.importServers",
@@ -434,18 +396,6 @@
         {
           "command": "intersystems-community.servermanager.importServers",
           "when": "isWindows"
-        },
-        {
-          "command": "intersystems-community.servermanager.migratePasswords",
-          "when": "config.intersystemsServerManager.authentication.provider == intersystems-server-credentials"
-        },
-        {
-          "command": "intersystems-community.servermanager.storePassword",
-          "when": "false"
-        },
-        {
-          "command": "intersystems-community.servermanager.clearPassword",
-          "when": "false"
         },
         {
           "command": "intersystems-community.servermanager.addToStarred",
@@ -627,16 +577,6 @@
           "command": "intersystems-community.servermanager.editSettings",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "1_edit@20"
-        },
-        {
-          "command": "intersystems-community.servermanager.storePassword",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./ && config.intersystemsServerManager.authentication.provider != intersystems-server-credentials",
-          "group": "2_password@10"
-        },
-        {
-          "command": "intersystems-community.servermanager.clearPassword",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./ && config.intersystemsServerManager.authentication.provider != intersystems-server-credentials",
-          "group": "2_password@20"
         }
       ]
     }
