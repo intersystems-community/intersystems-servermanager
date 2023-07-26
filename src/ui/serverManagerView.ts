@@ -379,7 +379,7 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 
 		const response = await makeRESTRequest("HEAD", serverSpec);
 		if (!response || response.status !== 200) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
 			credentialCache[name] = undefined;
 		} else {
 			children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec.username || 'UnknownUser'));
@@ -397,14 +397,14 @@ export class OfflineTreeItem extends FeatureTreeItem {
 	public readonly name: string;
 	constructor(
 		element: ISMItem,
-		serverName: string,
+		username: string,
 	) {
 		const parentFolderId = element.parent?.id || "";
 		super({
 			id: parentFolderId + ":offline",
 			label: `Unavailable at ${new Date().toLocaleTimeString()}`,
 			parent: element.parent,
-			tooltip: `Server could not be reached`,
+			tooltip: `Server could not be accessed by '${username}'`,
 		});
 		this.name = "offline";
 		this.contextValue = "offline";
@@ -454,7 +454,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 
 		const response = await makeRESTRequest("GET", serverSpec);
 		if (!response || response.status !== 200) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, element.name));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
 			credentialCache[params.serverName] = undefined;
 		} else {
 			response.data.result.content.namespaces.map((namespace) => {
