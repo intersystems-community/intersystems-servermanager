@@ -38,6 +38,10 @@ export async function getServerSpec(
 	server.webServer.scheme = server.webServer.scheme || "http";
 	server.webServer.port = server.webServer.port || (server.webServer.scheme === "https" ? 443 : 80);
 	server.webServer.pathPrefix = server.webServer.pathPrefix || "";
+	if (server.superServer) {
+		// Fall back to default if appropriate
+		server.superServer.host = server.superServer.host || server.webServer.host;
+	}
 
 
 	// When authentication provider is being used we should only have a password if it came from the deprecated

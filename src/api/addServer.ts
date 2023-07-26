@@ -110,7 +110,7 @@ export async function addServer(
 											return name;
 										} catch (error) {
 											vscode.window.showErrorMessage(
-												"Failed to store server '${name}' definition.",
+												`Failed to store server '${name}' definition. Does your settings.json file contain a JSON syntax error?`,
 											);
 											return undefined;
 										}
