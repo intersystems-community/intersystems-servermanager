@@ -14,7 +14,7 @@ export class ServerManagerAuthenticationSession implements AuthenticationSession
 		const canonicalUserName = userName.toLowerCase();
 		this.id = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
 		this.accessToken = password;
-		this.account = { id: canonicalUserName, label: `${userName} on ${serverName}` };
+		this.account = { id: `${serverName}/${canonicalUserName}`, label: `${userName} on ${serverName}` };
 		this.scopes = [serverName, canonicalUserName];
 	}
 }
