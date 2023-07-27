@@ -181,6 +181,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			this._sessions[index] = session;
 			changed.push(session);
 		} else {
+			// No point re-sorting here because onDidChangeSessions always appends added items to the provider's entries in the Accounts menu
 			this._sessions.push(session);
 			added.push(session);
 		}
@@ -278,7 +279,20 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				const accessToken = await this._secretStorage.get(credentialKey);
 				return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
 			}),
-		)).filter((session) => session.accessToken);
+		)).filter((session) => session.accessToken).sort((a, b) => {
+			const aUserNameLowercase = a.userName.toLowerCase();
+			const bUserNameLowercase = b.userName.toLowerCase();
+			if (aUserNameLowercase < bUserNameLowercase) {
+				return -1;
+			}
+			if (aUserNameLowercase > bUserNameLowercase) {
+				return 1;
+			}
+			if (a.serverName < b.serverName) {
+				return -1;
+			}
+			return 1;
+		});
 	}
 
 	private async _storeStrippedSessions() {
