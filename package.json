@@ -303,13 +303,8 @@
         "icon": "$(tools)"
       },
       {
-        "command": "intersystems-community.servermanager.openPortalExplorerTab",
-        "title": "Open Management Portal's Class Utilities in Tab",
-        "icon": "$(tools)"
-      },
-      {
         "command": "intersystems-community.servermanager.openPortalExplorerExternal",
-        "title": "Open in External Browser",
+        "title": "Open Management Portal Here in External Browser",
         "icon": "$(link-external)"
       },
       {
@@ -457,10 +452,6 @@
         },
         {
           "command": "intersystems-community.servermanager.openPortalExplorerExternal",
-          "when": "false"
-        },
-        {
-          "command": "intersystems-community.servermanager.openPortalExplorerTab",
           "when": "false"
         },
         {
@@ -614,10 +605,9 @@
           "group": "inline@90"
         },
         {
-          "command": "intersystems-community.servermanager.openPortalExplorerTab",
+          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
           "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
-          "group": "inline@80",
-          "alt": "intersystems-community.servermanager.openPortalExplorerExternal"
+          "group": "inline@80"
         },
         {
           "command": "intersystems-community.servermanager.retryServer",

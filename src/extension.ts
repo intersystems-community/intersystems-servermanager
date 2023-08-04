@@ -129,25 +129,6 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 	);
 	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.openPortalExplorerTab`, (namespaceTreeItem?: NamespaceTreeItem) => {
-			if (namespaceTreeItem) {
-				const pathParts = namespaceTreeItem.id?.split(":");
-				if (pathParts && pathParts.length === 4) {
-					const serverName = pathParts[1];
-					const namespace = pathParts[3];
-					getPortalUriWithToken(BrowserTarget.SIMPLE, serverName, "/csp/sys/exp/%2525CSP.UI.Portal.ClassList.zen", namespace).then((uriWithToken) => {
-						if (uriWithToken) {
-							//
-							// It is essential to pass skipEncoding=true when converting the uri to a string,
-							// otherwise the querystring's & and = get encoded.
-							vscode.commands.executeCommand("simpleBrowser.show", uriWithToken.toString(true));
-						}
-					});
-				}
-			}
-		}),
-	);
-	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.editSettings`, (server?: ServerTreeItem) => {
 			// Until there's a dedicated settings editor the best we can do is jump to the right section
 			vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${extensionId}`);
