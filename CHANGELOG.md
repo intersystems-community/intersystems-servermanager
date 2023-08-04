@@ -1,3 +1,16 @@
+## 3.4.1 (27-Jul-2023)
+* Treat same username on different servers as distinct accounts (#194).
+* Sort our entries in the Accounts menu.
+* Show username on tooltip of tree node that reports a connection problem.
+* Extend `intersystems.servers` objects to support optional `superServer` information (#182).
+* Update documentation link in README.
+
+## 3.4.0 (24-Jul-2023)
+* Add `pathPrefix` to new server setup prompts (#175). Thanks to @yannip1234.
+* Add "Web Applications" tree under namespaces (#184).
+* Remove support for `"intersystemsServerManager.authentication.provider": "none"` setting (#190).
+* Update vulnerable dependencies.
+
 ## 3.2.2 (13-Feb-2023)
 * Improve deprecation message for `password` property (#164).
 * Use `@intersystems-community/intersystems-servermanager` NPM package, and document how to do this (#166, #167).

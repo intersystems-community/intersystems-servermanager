@@ -14,8 +14,14 @@ export interface IWebServerSpec {
 	pathPrefix?: string;
 }
 
+export interface ISuperServerSpec {
+	host?: string;
+	port: number;
+}
+
 export interface IJSONServerSpec {
 	webServer: IWebServerSpec;
+	superServer?: ISuperServerSpec;
 	username?: string;
 	password?: string;
 	description?: string;

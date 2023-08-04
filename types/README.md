@@ -6,6 +6,10 @@ Package defining the interfaces used in the API that is published by the `inters
 
 # Changelog
 
+### v3.4.1
+
+- Add optional `superServer` object.
+
 ### v3.0.4
 
 - Export constants correctly.

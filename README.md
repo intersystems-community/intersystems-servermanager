@@ -1,34 +1,30 @@
 # InterSystems Server Manager
 
-> **Note:** The best way to install and use this extension is by installing the [InterSystems ObjectScript Extension Pack](https://marketplace.visualstudio.com/items?itemName=intersystems-community.objectscript-pack) and following the [documentation here](https://intersystems-community.github.io/vscode-objectscript/).
+> **Note:** The best way to install and use this extension is by installing the [InterSystems ObjectScript Extension Pack](https://marketplace.visualstudio.com/items?itemName=intersystems-community.objectscript-pack) and following the [documentation here](https://docs.intersystems.com/components/csp/docbook/DocBook.UI.Page.cls?KEY=GVSCO).
 
 InterSystems Server Manager is a Visual Studio Code extension for defining connections to [InterSystems](https://www.intersystems.com/) servers. These definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript) for code editing. The [Launch WebTerminals](https://marketplace.visualstudio.com/items?itemName=georgejames.webterminal-vscode) extension is another.
 
 See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for changes in each release.
 
+# New in Version 3.4 - July 2023
+
+- The sequence of prompts displayed when creating a new server definition now includes one where you can optionally enter the `pathPrefix` that is necessary when a single web server is providing REST connectivity to multiple InterSystems servers.
+
+- A new "Web Applications" tree within each namespace node provides a convenient way to create a workspace folder in which to edit web application files.
+
+> We have removed support for version 2's password storage mechanism. If you have been using the `"intersystemsServerManager.authentication.provider": "none"` setting this will no longer have any effect and your connections will behave as though no passwords have been stored. You can migrate stored passwords by downgrading to Server Manager 3.2 and running the `Migrate Passwords` command.
+> 
+>  VS Code 1.82 (August 2023) is scheduled to drop support for the keytar package used by the v2 mechanism, so you should perform v2 password migration before upgrading to that version.
+
 # New in Version 3.2 - October 2022
 
-We are pleased to publish version 3.2 of this extension. This replaces version 2, improving the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). Version 3 was originally created for the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19) and made available as a [pre-release](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions).
+We are pleased to publish version 3.2 of this extension. This replaces version 2, improving the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). Version 3 was originally created for the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19).
 
 Thanks to [George James Software](https://georgejames.com) for backing this development effort.
 
 ## The Authentication Provider
 
-Beginning with version 2, Server Manager has enabled you to store connection passwords in the native keystore of your workstation's operating system. This provided a more secure alternative to keeping them as plaintext in your JSON files. However, the `getServerSpec` function in Server Manager 2's API allowed **any** installed extension to obtain these stored passwords without requiring your consent.
-
-VS Code's Authentication Provider API (`vscode.authentication`), introduced in version 1.54 ([February 2021](https://code.visualstudio.com/updates/v1_54#_authentication-provider-api)) became mature enough in version 1.63 for us to use.
-
-Server Manager 3 does the following:
-
-1. Implements an authentication provider called 'intersystems-server-credentials'.
-2. Uses this authentication provider when accessing servers from its own [Server Tree](#the-server-tree).
-3. No longer returns passwords to callers of `getServerSpec` unless insecurely stored in JSON.
-
-> Items #2 and #3 have implications regarding backward compatibility. An interim [legacy mode](#legacy-mode) is available to help with the transition from Server Manager 2, but it may be removed in a future release.
-
-### Migrating Passwords
-
-If you previously used Server Manager 2 to store passwords you can run the command `Migrate Legacy Passwords` from Command Palette to migrate these. At the end of the migration procedure you will be given the option to delete the old copies. For best security we recommend you do this, but if you want to delay that step until after you are confident you won't want to revert to version 2, decline password deletion initially and re-run the migration later. Your Server Manager 3 passwords will not be overwritten.
+Server Manager implements an authentication provider called 'intersystems-server-credentials', and uses this authentication provider when accessing servers from its own [Server Tree](#the-server-tree).
 
 ### Signing In
 
@@ -44,7 +40,7 @@ If you proceed, or if this step was skipped because your server definition inclu
 
 ![Enter password](images/README/authenticationProvider-password.png)
 
-If you click the 'key' button at the upper right corner of the dialog after typing your password it will be saved securely in your workstation keychain, from where the 'InterSystems Server Credentials' authentication provider will be able to retrieve it after you restart VS Code.
+By clicking the 'key' button at the upper right corner of the dialog after typing your password you can save it securely in your workstation's operating system keychain, from where the 'InterSystems Server Credentials' authentication provider will be able to retrieve it after you restart VS Code.
 
 If instead you press 'Enter' the password will be available only until you restart VS Code.
 
@@ -58,7 +54,7 @@ When another extension first asks to use an InterSystems Server Credentials acco
 
 ### Managing Signed In Accounts
 
-You can use the menu of VS Code's Accounts icon in the activity bar to manage your signed in accounts:
+You can use the menu of VS Code's Accounts icon in the activity bar to manage your signed-in accounts:
 
 ![Manage account](images/README/authenticationProvider-signedIn.png)
 
@@ -94,7 +90,6 @@ In this tree you can:
 - Tag favorite servers.
 - Set icon colors.
 - Focus on recently used connections.
-- Manage stored passwords.
 - Add new servers, and edit existing ones.
 
 In common with the rest of VS Code, Server Manager stores your connection settings in JSON files. VS Code settings are arranged in a hierarchy that you can learn more about [here](https://code.visualstudio.com/docs/getstarted/settings).
@@ -111,7 +106,7 @@ On Windows, Server Manager can create connection entries for all connections you
 
 The server definition is added to your [user-level](https://code.visualstudio.com/docs/getstarted/settings) `settings.json` file and also appears at the top of the 'Recent' folder.
 
-Optionally use its context menu to store the password for the username you entered when defining the server. You can also set the color of the server icon.
+Optionally use its context menu to set the color of the server icon.
 
 The 'star' button that appears when you hover over the row lets you add the server to the `Favorites` list at the top of the tree.
 
@@ -128,11 +123,11 @@ Learn more about `isfs` and `isfs-readonly` folders in the [InterSystems ObjectS
 
 ## The 'Current' Folder
 
-When you have a folder or a workspace (including a multi-root one) open in VS Code, the Server Manager displays a 'Current' node at the start of its tree if your workspace references any server defined in Server Manager. The linking happens automatically if you added workspace folders from Server Manager as described above. If you are using the client-side mode of working, your `objectscript.conn` setting needs to use the `server` property.
+When you have a folder or a workspace (including a multi-root one) open in VS Code, Server Manager displays a 'Current' node at the start of its tree if your workspace references any server defined in Server Manager. The linking happens automatically if you added workspace folders from Server Manager as described above. If you are using the client-side mode of working, your `objectscript.conn` setting needs to use the `server` property.
 
 ## Launching Management Portal
 
-When you hover over a server entry in the tree, two command buttons let you launch InterSystems Management Portal.
+When you hover over a server entry in the tree two command buttons let you launch InterSystems Management Portal.
 
 The first button uses VS Code's Simple Browser feature, which creates a tab alongside any documents you may have open. The second button opens Portal in your workstation's default web browser.
 
@@ -195,14 +190,6 @@ A set of embedded servers with names beginning `default~` will appear at the end
 ---
 
 ## Technical Notes
-
-### Legacy Mode
-
-Server Manager 3 makes changes which may degrade the user experience relative to version 2. To revert, make this user-level setting:
-```json
-"intersystemsServerManager.authentication.provider": "none"
-```
-Please only use this as a short term measure until extensions that use the Server Manager `getServerSpec` API get updated to use the 'intersystems-server-credentials' authentication provider. The setting may be removed in a future release.
 
 ### Colors, Favorites and Recents
 

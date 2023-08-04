@@ -10,7 +10,6 @@ import { getServerSummary } from "./api/getServerSummary";
 import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { importFromRegistry } from "./commands/importFromRegistry";
-import { clearPassword, migratePasswords, storePassword } from "./commands/managePasswords";
 import { logout, serverSessions } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
 
@@ -152,31 +151,6 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(`${extensionId}.editSettings`, (server?: ServerTreeItem) => {
 			// Until there's a dedicated settings editor the best we can do is jump to the right section
 			vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${extensionId}`);
-		}),
-	);
-	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.storePassword`, (server?: ServerTreeItem) => {
-			storePassword(server)
-				.then((name) => {
-					if (name && name.length > 0) {
-						_onDidChangePassword.fire(name);
-					}
-				});
-		}),
-	);
-	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.clearPassword`, (server?: ServerTreeItem) => {
-			clearPassword(server)
-				.then((name) => {
-					if (name && name.length > 0) {
-						_onDidChangePassword.fire(name);
-					}
-				});
-		}),
-	);
-	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.migratePasswords`, async () => {
-			await migratePasswords(context.secrets);
 		}),
 	);
 	context.subscriptions.push(
