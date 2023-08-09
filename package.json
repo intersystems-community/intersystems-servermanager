@@ -303,6 +303,11 @@
         "icon": "$(tools)"
       },
       {
+        "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+        "title": "Open Management Portal Here in External Browser",
+        "icon": "$(link-external)"
+      },
+      {
         "command": "intersystems-community.servermanager.retryServer",
         "title": "Refresh",
         "icon": "$(refresh)"
@@ -443,6 +448,10 @@
         },
         {
           "command": "intersystems-community.servermanager.openPortalTab",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
           "when": "false"
         },
         {
@@ -594,6 +603,11 @@
           "command": "intersystems-community.servermanager.openPortalExternal",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "inline@90"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "inline@80"
         },
         {
           "command": "intersystems-community.servermanager.retryServer",
