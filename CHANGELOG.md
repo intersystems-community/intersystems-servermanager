@@ -1,3 +1,9 @@
+## 3.4.2 (10-Aug-2023)
+* Add shortcut to Explorer section of Portal at namespace level (#185).
+* Remove embedded default server definitions and the associated `/hideEmbedded` setting (#203).
+* Add context information with which namespace action contributors can discover server API version (#206).
+* Fix some documentation links.
+
 ## 3.4.1 (27-Jul-2023)
 * Treat same username on different servers as distinct accounts (#194).
 * Sort our entries in the Accounts menu.
