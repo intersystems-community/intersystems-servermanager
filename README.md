@@ -174,8 +174,7 @@ In this example two connections have been defined:
 		},
 		"description": "My local IRIS instance"
 	},
-	"/default": "my-local",
-	"/hideEmbeddedEntries": true
+	"/default": "my-local"
 }
 ```
 
@@ -184,8 +183,6 @@ The JSON editor offers the usual [IntelliSense](https://code.visualstudio.com/do
 Notice how you can add a `description` property to each connection. This will be shown in the hover in Server Manager's tree, and alongside the entry if a server quickpick is used.
 
 Servers are displayed in the quickpick in the order they are defined in the JSON file. The exception is that if a server name is set as the value of the `/default` property (see example above) it will be shown first in the list.
-
-A set of embedded servers with names beginning `default~` will appear at the end of the lists unless you add the property `"/hideEmbeddedEntries": true` to your `intersystems.server` object to hide them (see above).
 
 ---
 
@@ -197,11 +194,9 @@ These features use VS Code's extension-private global state storage. Data is not
 
 ### The 'All Servers' Folder
 
-The `All Servers` tree respects the optional `/default` and `/hideEmbeddedEntries` settings in the `intersystems.servers` JSON.
+The `All Servers` tree respects the optional `/default` setting in the `intersystems.servers` JSON.
 
 If a server has been named in `/default` it is promoted to the top of the list, which is otherwise presented in alphabetical order.
-
-Embedded entries (built-in default ones) are demoted to the end of the list, or omitted completely if `/hideEmbeddedEntries` is true.
 
 ---
 
