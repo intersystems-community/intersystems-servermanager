@@ -26,7 +26,8 @@ export async function getServerSpec(
 	if (flushCredentialCache) {
 		credentialCache[name] = undefined;
 	}
-	let server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name);
+	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
+	let server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) || legacyEmbeddedServer(name);
 
 	// Unknown server
 	if (!server) {
@@ -51,3 +52,43 @@ export async function getServerSpec(
 	}
 	return server;
 }
+
+/**
+ * If name is one of the embedded server definitions we previously (pre-3.4.2) specified in the "default" section of the "intersystems.servers"
+ * object spec in package.json then return what getConfiguration() would have returned.
+ *
+ * @param name The name.
+ * @returns Server specification or undefined.
+ */
+export function legacyEmbeddedServer(name: string): IServerSpec | undefined {
+	return {
+		"default~iris": {
+			"name": "default~iris",
+			"webServer": {
+				"scheme": "http",
+				"host": "127.0.0.1",
+				"port": 52773
+			},
+			"description": "Connection to local InterSystems IRIS™ installed with default settings."
+		},
+		"default~cache": {
+			"name": "default~cache",
+			"webServer": {
+				"scheme": "http",
+				"host": "127.0.0.1",
+				"port": 57772
+			},
+			"description": "Connection to local InterSystems Caché installed with default settings."
+		},
+		"default~ensemble": {
+			"name": "default~ensemble",
+			"webServer": {
+				"scheme": "http",
+				"host": "127.0.0.1",
+				"port": 57772
+			},
+			"description": "Connection to local InterSystems Ensemble installed with default settings."
+		}
+	}[name];
+}
+

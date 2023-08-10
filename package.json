@@ -101,33 +101,6 @@
             "description": "InterSystems servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it.",
             "markdownDescription": "[InterSystems](https://www.intersystems.com) servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
             "scope": "resource",
-            "default": {
-              "default~iris": {
-                "webServer": {
-                  "scheme": "http",
-                  "host": "127.0.0.1",
-                  "port": 52773
-                },
-                "description": "Connection to local InterSystems IRIS™ installed with default settings."
-              },
-              "default~cache": {
-                "webServer": {
-                  "scheme": "http",
-                  "host": "127.0.0.1",
-                  "port": 57772
-                },
-                "description": "Connection to local InterSystems Caché installed with default settings."
-              },
-              "default~ensemble": {
-                "webServer": {
-                  "scheme": "http",
-                  "host": "127.0.0.1",
-                  "port": 57772
-                },
-                "description": "Connection to local InterSystems Ensemble installed with default settings."
-              },
-              "/default": "default~iris"
-            },
             "patternProperties": {
               "^[a-z0-9-_~]+$": {
                 "type": "object",
@@ -237,10 +210,6 @@
               "/default": {
                 "type": "string",
                 "description": "Name of the server to promote to the top of pick lists."
-              },
-              "/hideEmbeddedEntries": {
-                "type": "boolean",
-                "description": "Do not append the built-in 'default~*' server definitions to pick lists."
               }
             },
             "additionalProperties": false
