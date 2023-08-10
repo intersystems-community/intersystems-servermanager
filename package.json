@@ -545,22 +545,22 @@
         },
         {
           "command": "intersystems-community.servermanager.editProject",
-          "when": "view == intersystems-community_servermanager && viewItem == project",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /project$/",
           "group": "inline@10"
         },
         {
           "command": "intersystems-community.servermanager.viewProject",
-          "when": "view == intersystems-community_servermanager && viewItem == project",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /project$/",
           "group": "inline@20"
         },
         {
           "command": "intersystems-community.servermanager.editWebApp",
-          "when": "view == intersystems-community_servermanager && viewItem == webapp",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /webapp$/",
           "group": "inline@10"
         },
         {
           "command": "intersystems-community.servermanager.viewWebApp",
-          "when": "view == intersystems-community_servermanager && viewItem == webapp",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /webapp$/",
           "group": "inline@20"
         },
         {

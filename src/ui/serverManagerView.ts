@@ -457,8 +457,9 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
 			credentialCache[params.serverName] = undefined;
 		} else {
+			const serverApiVersion = response.data.result.content.api;
 			response.data.result.content.namespaces.map((namespace) => {
-				children.push(new NamespaceTreeItem({ parent: element, label: name, id: name }, namespace, name));
+				children.push(new NamespaceTreeItem({ parent: element, label: name, id: name }, namespace, name, serverApiVersion));
 			});
 		}
 	}
@@ -473,6 +474,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 		element: ISMItem,
 		name: string,
 		serverName: string,
+		serverApiVersion: number
 	) {
 		const parentFolderId = element.parent?.id || "";
 		const id = parentFolderId + ":" + name;
@@ -482,10 +484,10 @@ export class NamespaceTreeItem extends SMTreeItem {
 			parent: element.parent,
 			tooltip: `${name} on ${serverName}`,
 			getChildren: namespaceFeatures,
-			params: { serverName }
+			params: { serverName, serverApiVersion }
 		});
 		this.name = name;
-		this.contextValue = name === "%SYS" ? "sysnamespace" : "namespace";
+		this.contextValue = `${serverApiVersion.toString()}/${name === "%SYS" ? "sysnamespace" : "namespace"}`;
 		this.iconPath = new vscode.ThemeIcon("archive");
 	}
 }
@@ -499,8 +501,8 @@ export class NamespaceTreeItem extends SMTreeItem {
  */
 async function namespaceFeatures(element: NamespaceTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
 	return [
-		new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName),
-		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName)
+		new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName, params.serverApiVersion),
+		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName, params.serverApiVersion)
 	];
 }
 
@@ -508,7 +510,8 @@ export class ProjectsTreeItem extends FeatureTreeItem {
 	public readonly name: string;
 	constructor(
 		element: ISMItem,
-		serverName: string
+		serverName: string,
+		serverApiVersion: number
 	) {
 		const parentFolderId = element.parent?.id || '';
 		super({
@@ -517,10 +520,10 @@ export class ProjectsTreeItem extends FeatureTreeItem {
 			id: parentFolderId + ':projects',
 			tooltip: `Projects in this namespace`,
 			getChildren: namespaceProjects,
-			params: { serverName, ns: element.label }
+			params: { serverName, serverApiVersion, ns: element.label }
 		});
 		this.name = 'Projects';
-		this.contextValue = 'projects';
+		this.contextValue = serverApiVersion.toString() + '/projects';
 		this.iconPath = new vscode.ThemeIcon('library');
 	}
 }
@@ -560,7 +563,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promi
 				return undefined;
 			}
 			response.data.result.content.map((project) => {
-				children.push(new ProjectTreeItem({ parent: element, label: name, id: name }, project.Name, project.Description));
+				children.push(new ProjectTreeItem({ parent: element, label: name, id: name }, project.Name, project.Description, params.serverApiVersion));
 			});
 		}
 	}
@@ -573,7 +576,8 @@ export class ProjectTreeItem extends SMTreeItem {
 	constructor(
 		element: ISMItem,
 		name: string,
-		description: string
+		description: string,
+		serverApiVersion: number
 	) {
 		const parentFolderId = element.parent?.id || '';
 		const id = parentFolderId + ':' + name;
@@ -584,7 +588,7 @@ export class ProjectTreeItem extends SMTreeItem {
 			tooltip: description
 		});
 		this.name = name;
-		this.contextValue = 'project';
+		this.contextValue = serverApiVersion.toString() + '/project';
 		this.iconPath = new vscode.ThemeIcon('files');
 	}
 }
@@ -593,7 +597,8 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 	public readonly name: string;
 	constructor(
 		element: ISMItem,
-		serverName: string
+		serverName: string,
+		serverApiVersion: number
 	) {
 		const parentFolderId = element.parent?.id || '';
 		super({
@@ -602,10 +607,10 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 			id: parentFolderId + ':webapps',
 			tooltip: `Web Applications in this namespace`,
 			getChildren: namespaceWebApps,
-			params: { serverName, ns: element.label }
+			params: { serverName, serverApiVersion, ns: element.label }
 		});
 		this.name = 'Web Applications';
-		this.contextValue = 'webapps';
+		this.contextValue = serverApiVersion.toString() + '/webapps';
 		this.iconPath = new vscode.ThemeIcon('library');
 	}
 }
@@ -638,7 +643,7 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promis
 				return undefined;
 			}
 			response.data.result.content.map((webapp: string) => {
-				children.push(new WebAppTreeItem({ parent: element, label: name, id: name }, webapp));
+				children.push(new WebAppTreeItem({ parent: element, label: name, id: name }, webapp, params.serverApiVersion));
 			});
 		}
 	}
@@ -648,7 +653,7 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promis
 
 export class WebAppTreeItem extends SMTreeItem {
 	public readonly name: string;
-	constructor(element: ISMItem, name: string) {
+	constructor(element: ISMItem, name: string, serverApiVersion: number) {
 		const parentFolderId = element.parent?.id || '';
 		const id = parentFolderId + ':' + name;
 		super({
@@ -657,7 +662,7 @@ export class WebAppTreeItem extends SMTreeItem {
 			id
 		});
 		this.name = name;
-		this.contextValue = 'webapp';
+		this.contextValue = serverApiVersion.toString() + '/webapp';
 		this.iconPath = new vscode.ThemeIcon('file-code');
 	}
 }
