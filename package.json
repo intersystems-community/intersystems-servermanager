@@ -253,12 +253,12 @@
       },
       {
         "command": "intersystems-community.servermanager.addToStarred",
-        "title": "Add to Starred",
+        "title": "Add to Favorites",
         "icon": "$(star-full)"
       },
       {
         "command": "intersystems-community.servermanager.removeFromStarred",
-        "title": "Remove from Starred",
+        "title": "Remove from Favorites",
         "icon": "$(star-empty)"
       },
       {
