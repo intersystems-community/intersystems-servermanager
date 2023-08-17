@@ -262,6 +262,10 @@
         "icon": "$(star-empty)"
       },
       {
+        "command": "intersystems-community.servermanager.removeFromRecent",
+        "title": "Remove from Recent"
+      },
+      {
         "command": "intersystems-community.servermanager.openPortalExternal",
         "title": "Open Management Portal in External Browser",
         "icon": "$(link-external)"
@@ -409,6 +413,10 @@
         },
         {
           "command": "intersystems-community.servermanager.removeFromStarred",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.removeFromRecent",
           "when": "false"
         },
         {
@@ -592,6 +600,11 @@
           "command": "intersystems-community.servermanager.editSettings",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "1_edit@20"
+        },
+        {
+          "command": "intersystems-community.servermanager.removeFromRecent",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /^recent.server./",
+          "group": "2_manage@10"
         }
       ]
     }

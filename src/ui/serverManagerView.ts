@@ -63,6 +63,12 @@ export class ServerManagerView {
 		}
 	}
 
+	public async removeFromRecents(name: string) {
+		recentsArray = recentsArray.filter((n) => n !== name);
+		this.refreshTree();
+		await this._globalState.update(StorageIds.recents, recentsArray);
+	}
+
 	public async addToFavorites(name: string) {
 		if (!favoritesMap.has(name)) {
 			favoritesMap.set(name, null);
