@@ -88,6 +88,13 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 	);
 	context.subscriptions.push(
+		vscode.commands.registerCommand(`${extensionId}.removeFromRecent`, async (server?: ServerTreeItem) => {
+			if (server?.name) {
+				await view.removeFromRecents(server.name);
+			}
+		}),
+	);
+	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.openPortalExternal`, (server?: ServerTreeItem) => {
 			if (server?.contextValue?.match(/\.server\./) && server.name) {
 				getPortalUriWithToken(BrowserTarget.EXTERNAL, server.name).then((uriWithToken) => {
