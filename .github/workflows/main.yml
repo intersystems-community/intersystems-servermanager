@@ -97,9 +97,6 @@ jobs:
           prerelease: ${{ github.event_name != 'release' }}
           token: ${{ secrets.GITHUB_TOKEN }}
           files: ${{ needs.build.outputs.name }}.vsix
-          body: |
-            Changes in this release
-            ${{ needs.build.outputs.changelog }}
   publish:
     needs: build
     if: github.event_name == 'release' && needs.build.outputs.taggedbranch == 'master'
@@ -126,7 +123,7 @@ jobs:
           git add package.json
           git commit -m 'auto bump version with release'
           jq --arg version "$VERSION" '.version = $version' package.json > "$tmp" && mv "$tmp" package.json
-          jq '.enableProposedApi = false' package.json > "$tmp" && mv "$tmp" package.json
+          jq 'del(.enableProposedApi,.enabledApiProposals)' package.json > "$tmp" && mv "$tmp" package.json
           npm install
           git push
       - name: Build package

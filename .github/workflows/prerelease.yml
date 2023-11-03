@@ -99,9 +99,6 @@ jobs:
           prerelease: ${{ github.event_name != 'release' }}
           token: ${{ secrets.GITHUB_TOKEN }}
           files: ${{ needs.build.outputs.name }}.vsix
-          body: |
-            Changes in this pre-release
-            ${{ needs.build.outputs.changelog }}
   publish:
     needs: build
     if: github.event_name == 'release' && needs.build.outputs.taggedbranch == 'prerelease'
