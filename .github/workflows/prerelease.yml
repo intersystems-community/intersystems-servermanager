@@ -28,7 +28,7 @@ jobs:
       version: ${{ steps.set-version.outputs.version }}
       taggedbranch: ${{ steps.find-branch.outputs.taggedbranch }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: Find which branch the release tag points at
         id: find-branch
@@ -62,20 +62,20 @@ jobs:
           echo $VERSION > .version
           echo $NAME > .name
       - name: Use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 18
       - run: npm install
       - run: npm run compile
       - name: npm test
-        uses: GabrielBB/xvfb-action@v1.0
+        uses: coactions/setup-xvfb@v1
         with:
           run: npm run test
       - name: Build pre-release package
         if: runner.os == 'Windows'
         run: |
           npx vsce package --pre-release -o ${{ steps.set-version.outputs.name }}.vsix --githubBranch prerelease
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: (runner.os == 'Windows') && (github.event_name != 'release')
         with:
           name: ${{ steps.set-version.outputs.name }}.vsix
@@ -85,46 +85,36 @@ jobs:
     runs-on: windows-latest
     needs: build
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build.outputs.name }}.vsix
       - name: Create Pre-Release
         id: create_release
-        uses: actions/create-release@v1
-        if: runner.os == 'Windows'
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ needs.build.outputs.version }}
           release_name: v${{ needs.build.outputs.version }}
           prerelease: ${{ github.event_name != 'release' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: ${{ needs.build.outputs.name }}.vsix
           body: |
             Changes in this pre-release
             ${{ needs.build.outputs.changelog }}
-      - name: Upload Pre-Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        if: runner.os == 'Windows'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ needs.build.outputs.name }}.vsix
-          asset_name: ${{ needs.build.outputs.name }}.vsix
-          asset_content_type: application/zip
   publish:
     needs: build
     if: github.event_name == 'release' && needs.build.outputs.taggedbranch == 'prerelease'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: prerelease
           token: ${{ secrets.TOKEN }}
       - name: Use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 18
       - name: Prepare pre-release build
         id: set-version
         shell: bash
@@ -146,15 +136,11 @@ jobs:
           npx vsce package --pre-release -o ${{ needs.build.outputs.name }}.vsix --githubBranch prerelease
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        if: runner.os == 'Windows'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ needs.build.outputs.name }}.vsix
-          asset_name: ${{ needs.build.outputs.name }}.vsix
-          asset_content_type: application/zip
+          tag_name: ${{ github.event.release.tag_name }}
+          files: ${{ needs.build.outputs.name }}.vsix
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to VSCode Marketplace
         shell: bash
         run: |
