@@ -12,9 +12,9 @@
   "tasks": [
     {
       "type": "npm",
-      "script": "watch",
+      "script": "webpack-dev",
       "presentation": {
-        "reveal": "always"
+        "reveal": "never"
       },
       "group": {
         "isDefault": true,
