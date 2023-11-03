@@ -8,9 +8,6 @@ const path = require('path');
 const config = {
   mode: 'none', // this leaves the source code as close as possible to the original (when packaging we set this to 'production')
   target: 'node', // extensions run in a node context
-  node: {
-    __dirname: false // leave the __dirname-behaviour intact
-  },
 
   entry: './src/extension.ts', // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/
   output: {
