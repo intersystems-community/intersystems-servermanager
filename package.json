@@ -48,7 +48,7 @@
     "lint-fix": "tslint --project tsconfig.json -t verbose --fix"
   },
   "dependencies": {
-    "axios": "^1.6.3",
+    "axios": "^1.6.4",
     "node-cmd": "^5.0.0"
   },
   "devDependencies": {
