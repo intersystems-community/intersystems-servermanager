@@ -86,14 +86,27 @@ export async function addServer(
 									if (usernameTrimmed !== "") {
 										spec.username = usernameTrimmed;
 									}
-									const scheme = await vscode.window.showQuickPick(
-										["http", "https"],
-										{
-											ignoreFocusOut: true,
-											placeHolder:
-												"Confirm connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.",
-										},
-									);
+									const scheme = await new Promise<string | undefined>((resolve) => {
+										let result: string;
+										const quickPick = vscode.window.createQuickPick();
+										quickPick.placeholder = "Confirm connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.";
+										quickPick.ignoreFocusOut = true;
+										quickPick.items = [{ label: "http" }, { label: "https" }];
+										quickPick.activeItems = [quickPick.items[spec.webServer.port == 443 ? 1 : 0]];
+										quickPick.onDidChangeSelection((items) => {
+											result = items[0].label;
+										});
+										quickPick.onDidAccept(() => {
+											resolve(result);
+											quickPick.hide();
+											quickPick.dispose();
+										});
+										quickPick.onDidHide(() => {
+											resolve(undefined);
+											quickPick.dispose();
+										});
+										quickPick.show();
+									});
 									if (scheme) {
 										spec.webServer.scheme = scheme;
 										try {
