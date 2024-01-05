@@ -2,20 +2,16 @@
 //  https://github.com/intersystems/language-server/blob/bdeea88d1900a3aff35d5ac373436899f3904a7e/server/src/server.ts
 
 import axios, { AxiosResponse } from "axios";
-import axiosCookieJarSupport from "axios-cookiejar-support";
 import * as https from "https";
-import tough = require("tough-cookie");
 import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { getServerSpec } from "./api/getServerSpec";
 
-axiosCookieJarSupport(axios);
-
 export interface IServerSession {
 	serverName: string;
 	username: string;
-	cookieJar: tough.CookieJar;
+	cookies: string[];
 }
 
 export const serverSessions = new Map<string, IServerSession>();
@@ -24,6 +20,23 @@ export interface IAtelierRESTEndpoint {
 	apiVersion: number;
 	namespace: string;
 	path: string;
+}
+
+function updateCookies(oldCookies: string[], newCookies: string[]): string[] {
+	newCookies.forEach((cookie) => {
+		const [cookieName] = cookie.split("=");
+		const index = oldCookies.findIndex((el) => el.startsWith(cookieName));
+		if (index >= 0) {
+			oldCookies[index] = cookie;
+		} else {
+			oldCookies.push(cookie);
+		}
+	});
+	return oldCookies;
+}
+
+function getCookies(server: IServerSpec): string[] {
+	return serverSessions.get(server.name)?.cookies ?? [];
 }
 
 /**
@@ -44,10 +57,8 @@ export async function makeRESTRequest(
 	// Create the HTTPS agent
 	const httpsAgent = new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") });
 
-	let cookieJar = serverSessions.get(server.name)?.cookieJar;
-	if (!cookieJar) {
-		cookieJar = new tough.CookieJar();
-	}
+	// Get the cookies
+	let cookies: string[] = getCookies(server);
 
 	// Build the URL
 	let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
@@ -60,7 +71,7 @@ export async function makeRESTRequest(
 		url += "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
 	}
 
-	// Make the request (SASchema support removed)
+	// Make the request
 	try {
 		let respdata: AxiosResponse;
 		if (data !== undefined) {
@@ -71,8 +82,8 @@ export async function makeRESTRequest(
 					data,
 					headers: {
 						"Content-Type": "application/json",
+						"Cookie": cookies.join(" ")
 					},
-					jar: cookieJar,
 					method,
 					url: encodeURI(url),
 					validateStatus: (status) => {
@@ -97,7 +108,6 @@ export async function makeRESTRequest(
 							headers: {
 								"Content-Type": "application/json",
 							},
-							jar: cookieJar,
 							method,
 							url: encodeURI(url),
 							withCredentials: true,
@@ -110,8 +120,10 @@ export async function makeRESTRequest(
 			respdata = await axios.request(
 				{
 					httpsAgent,
-					jar: cookieJar,
 					method,
+					headers: {
+						"Cookie": cookies.join(" ")
+					},
 					url: encodeURI(url),
 					validateStatus: (status) => {
 						return status < 500;
@@ -131,7 +143,6 @@ export async function makeRESTRequest(
 								password: server.password,
 								username: server.username,
 							},
-							jar: cookieJar,
 							method,
 							url: encodeURI(url),
 							withCredentials: true,
@@ -141,9 +152,15 @@ export async function makeRESTRequest(
 			}
 		}
 
-		// Only store the session for a serverName the first time because subsequent requests to a server with no username defined must not lose initially-recorded username
-		if (!serverSessions.get(server.name)) {
-			serverSessions.set(server.name, { serverName: server.name, username: server.username || '', cookieJar })
+		cookies = updateCookies(cookies, respdata.headers['set-cookie'] || []);
+
+		// Only store the session for a serverName the first time because subsequent requests
+		// to a server with no username defined must not lose initially-recorded username
+		const session = serverSessions.get(server.name);
+		if (!session) {
+			serverSessions.set(server.name, { serverName: server.name, username: server.username || '', cookies });
+		} else {
+			serverSessions.set(server.name, { ...session, cookies });
 		}
 		return respdata;
 	} catch (error) {
@@ -165,13 +182,11 @@ export async function logout(serverName: string) {
 		return;
 	}
 
-	const cookieJar = serverSessions.get(server.name)?.cookieJar;
-	if (!cookieJar) {
-		return;
-	}
-
 	// Create the HTTPS agent
 	const httpsAgent = new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") });
+
+	// Get the cookies
+	let cookies: string[] = getCookies(server);
 
 	// Build the URL
 	let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
@@ -186,8 +201,10 @@ export async function logout(serverName: string) {
 		await axios.request(
 			{
 				httpsAgent,
-				jar: cookieJar,
 				method: "HEAD",
+				headers: {
+					"Cookie": cookies.join(" ")
+				},
 				url: encodeURI(url),
 				validateStatus: (status) => {
 					return status < 500;

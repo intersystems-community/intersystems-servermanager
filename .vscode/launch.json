@@ -11,12 +11,11 @@
         "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceRoot}"
       ],
-      "stopOnEntry": false,
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/out/**/*.js"
+        "${workspaceRoot}/dist/**/*.js"
       ],
-      "preLaunchTask": "npm: watch"
+      "preLaunchTask": "npm: webpack"
     },
     {
       "name": "Launch Extension",
@@ -26,12 +25,11 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceRoot}"
       ],
-      "stopOnEntry": false,
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/out/**/*.js"
+        "${workspaceRoot}/dist/**/*.js"
       ],
-      "preLaunchTask": "npm: watch"
+      "preLaunchTask": "npm: webpack"
     },
     {
       "name": "Extension Tests",
@@ -45,7 +43,7 @@
       "outFiles": [
         "${workspaceFolder}/out/test/**/*.js"
       ],
-      "preLaunchTask": "npm: compile"
+      "preLaunchTask": "npm: test-compile"
     }
   ]
 }

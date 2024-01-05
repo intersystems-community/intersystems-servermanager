@@ -28,7 +28,7 @@ jobs:
       version: ${{ steps.set-version.outputs.version }}
       taggedbranch: ${{ steps.find-branch.outputs.taggedbranch }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: Find which branch the release tag points at
         id: find-branch
@@ -38,7 +38,7 @@ jobs:
           git fetch --depth=1 origin +refs/heads/*:refs/heads/*
           set -x
           TAGGEDBRANCH=$(git for-each-ref --points-at=${{github.sha}} --format='%(refname:lstrip=2)' refs/heads/)
-          echo ::set-output name=taggedbranch::$TAGGEDBRANCH
+          echo "taggedbranch=$TAGGEDBRANCH" >> $GITHUB_OUTPUT
       - name: Set an output
         id: set-version
         if: runner.os == 'Windows'
@@ -49,33 +49,33 @@ jobs:
           [ $GITHUB_EVENT_NAME == 'release' ] && VERSION=${{ github.event.release.tag_name }} && VERSION=${VERSION/v/}
           CHANGELOG=$(cat CHANGELOG.md | sed -n "/## \[${VERSION}\]/,/## /p" | sed '/^$/d;1d;$d')
           CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
-          echo ::set-output name=changelog::$CHANGELOG
+          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
           git tag -l | cat
           [ $GITHUB_EVENT_NAME == 'push' ] && VERSION+=-beta && VERSION+=.$(($(git tag -l "v$VERSION.*" | sort -nt. -k4 2>/dev/null | tail -1 | cut -d. -f4)+1))
           [ $GITHUB_EVENT_NAME == 'pull_request' ] && VERSION+=-dev.${{ github.event.pull_request.number }}
-          echo ::set-output name=version::$VERSION
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           NAME=$(jq -r '.name' package.json)-$VERSION
-          echo ::set-output name=name::$NAME
+          echo "name=$NAME" >> $GITHUB_OUTPUT
           tmp=$(mktemp)
           jq --arg version "$VERSION" '.version = $version' package.json > "$tmp" && mv "$tmp" package.json
           mkdir dist
           echo $VERSION > .version
           echo $NAME > .name
       - name: Use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 18
       - run: npm install
       - run: npm run compile
       - name: npm test
-        uses: GabrielBB/xvfb-action@v1.0
+        uses: coactions/setup-xvfb@v1
         with:
           run: npm run test
       - name: Build package
         if: runner.os == 'Windows'
         run: |
           npx vsce package -o ${{ steps.set-version.outputs.name }}.vsix
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: (runner.os == 'Windows') && (github.event_name != 'release')
         with:
           name: ${{ steps.set-version.outputs.name }}.vsix
@@ -85,44 +85,31 @@ jobs:
     runs-on: windows-latest
     needs: build
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build.outputs.name }}.vsix
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.build.outputs.version }}
           release_name: v${{ needs.build.outputs.version }}
           prerelease: ${{ github.event_name != 'release' }}
-          body: |
-            Changes in this release
-            ${{ needs.build.outputs.changelog }}
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ needs.build.outputs.name }}.vsix
-          asset_name: ${{ needs.build.outputs.name }}.vsix
-          asset_content_type: application/zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: ${{ needs.build.outputs.name }}.vsix
   publish:
     needs: build
     if: github.event_name == 'release' && needs.build.outputs.taggedbranch == 'master'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: master
           token: ${{ secrets.TOKEN }}
       - name: Use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 18
       - name: Prepare build
         id: set-version
         shell: bash
@@ -136,7 +123,7 @@ jobs:
           git add package.json
           git commit -m 'auto bump version with release'
           jq --arg version "$VERSION" '.version = $version' package.json > "$tmp" && mv "$tmp" package.json
-          jq '.enableProposedApi = false' package.json > "$tmp" && mv "$tmp" package.json
+          jq 'del(.enableProposedApi,.enabledApiProposals)' package.json > "$tmp" && mv "$tmp" package.json
           npm install
           git push
       - name: Build package
@@ -144,14 +131,11 @@ jobs:
           npx vsce package -o ${{ needs.build.outputs.name }}.vsix
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ needs.build.outputs.name }}.vsix
-          asset_name: ${{ needs.build.outputs.name }}.vsix
-          asset_content_type: application/zip
+          tag_name: ${{ github.event.release.tag_name }}
+          files: ${{ needs.build.outputs.name }}.vsix
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to VSCode Marketplace
         shell: bash
         run: |

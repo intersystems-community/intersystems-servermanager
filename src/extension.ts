@@ -52,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
 					// If not, try to log out on the server, then remove our record of its cookies
 					if (!session) {
 						await logout(serverSession.serverName);
-						serverSession.cookieJar.removeAllCookiesSync();
+						serverSession.cookies = [];
 					}
 				});
 			}
