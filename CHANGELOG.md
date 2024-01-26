@@ -1,3 +1,13 @@
+## 3.6.0 (29-Jan-2024)
+* Change "Starred" to "Favorites" in command titles (#210).
+* Add 'Remove from Recent' to context menu of Recent entry (#213).
+* Rename and change logo of View Container (#216):
+  * Changed the icon from the toolbox to the ISC logo
+  * Changed the name from `InterSystems Tools` to `InterSystems`
+  * Webpack'ed extension.
+  * Updated vulnerable dependencies.
+* Default Connection Type picker to https if port 443 was specified (#219).
+
 ## 3.4.2 (10-Aug-2023)
 * Add shortcut to Explorer section of Portal at namespace level (#185).
 * Remove embedded default server definitions and the associated `/hideEmbedded` setting (#203).
