@@ -1,3 +1,7 @@
+## 3.6.1 (30-May-2024)
+* Don't attempt to open the Management Portal in the Simple Browser for IRIS 2024.1+ (#223).
+* Updated dependencies.
+
 ## 3.6.0 (29-Jan-2024)
 * Change "Starred" to "Favorites" in command titles (#210).
 * Add 'Remove from Recent' to context menu of Recent entry (#213).
