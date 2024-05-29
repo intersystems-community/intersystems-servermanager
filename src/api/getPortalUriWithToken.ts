@@ -49,7 +49,7 @@ export async function getPortalUriWithToken(
 					simpleBrowserCompatible.set(name, false);
 				}
 				else if (appsRequiringCookie.length > 1) {
-					vscode.window.showWarningMessage(`Portal web apps cannot be used in the Simple Browser tab if their 'UseCookies' property is set to 'Always' (the default). To resolve this, use Portal's security section to change it to 'Autodetect' in these apps: ${appsRequiringCookie.join(", ")}`, { modal: true });
+					vscode.window.showWarningMessage(`Portal web apps cannot be used in the Simple Browser tab if their 'UseCookies' property is set to 'Always' (the default). To resolve this, use Portal's security section to change it to 'Autodetect' in these apps: ${appsRequiringCookie.slice(0, -1).join(", ")}`, { modal: true });
 				}
 				else {
 					simpleBrowserCompatible.set(name, true);
