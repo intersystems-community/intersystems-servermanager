@@ -121,7 +121,7 @@ jobs:
           git config --global user.email 'bot@users.noreply.github.com'
           jq --arg version "${NEXT_VERSION}-SNAPSHOT" '.version = $version' package.json > "$tmp" && mv "$tmp" package.json
           git add package.json
-          git commit -m 'auto bump version with release'
+          git commit -m 'auto bump version with release [skip ci]'
           jq --arg version "$VERSION" '.version = $version' package.json > "$tmp" && mv "$tmp" package.json
           jq 'del(.enableProposedApi,.enabledApiProposals)' package.json > "$tmp" && mv "$tmp" package.json
           npm install
