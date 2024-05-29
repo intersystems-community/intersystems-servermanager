@@ -272,17 +272,12 @@
       },
       {
         "command": "intersystems-community.servermanager.openPortalExternal",
-        "title": "Open Management Portal in External Browser",
+        "title": "Open Management Portal",
         "icon": "$(link-external)"
       },
       {
-        "command": "intersystems-community.servermanager.openPortalTab",
-        "title": "Open Management Portal in Tab",
-        "icon": "$(tools)"
-      },
-      {
         "command": "intersystems-community.servermanager.openPortalExplorerExternal",
-        "title": "Open Management Portal Here in External Browser",
+        "title": "Open Management Portal Here",
         "icon": "$(link-external)"
       },
       {
@@ -429,10 +424,6 @@
           "when": "false"
         },
         {
-          "command": "intersystems-community.servermanager.openPortalTab",
-          "when": "false"
-        },
-        {
           "command": "intersystems-community.servermanager.openPortalExplorerExternal",
           "when": "false"
         },
@@ -575,11 +566,6 @@
           "command": "intersystems-community.servermanager.viewWebApp",
           "when": "view == intersystems-community_servermanager && viewItem =~ /webapp$/",
           "group": "inline@20"
-        },
-        {
-          "command": "intersystems-community.servermanager.openPortalTab",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "inline@80"
         },
         {
           "command": "intersystems-community.servermanager.openPortalExternal",

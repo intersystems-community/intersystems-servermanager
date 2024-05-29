@@ -3,7 +3,7 @@
 import * as vscode from "vscode";
 import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
-import { BrowserTarget, getPortalUriWithToken } from "./api/getPortalUriWithToken";
+import { getPortalUriWithToken } from "./api/getPortalUriWithToken";
 import { getServerNames } from "./api/getServerNames";
 import { getServerSpec } from "./api/getServerSpec";
 import { getServerSummary } from "./api/getServerSummary";
@@ -97,23 +97,9 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.openPortalExternal`, (server?: ServerTreeItem) => {
 			if (server?.contextValue?.match(/\.server\./) && server.name) {
-				getPortalUriWithToken(BrowserTarget.EXTERNAL, server.name).then((uriWithToken) => {
+				getPortalUriWithToken(server.name).then((uriWithToken) => {
 					if (uriWithToken) {
 						vscode.env.openExternal(uriWithToken);
-					}
-				});
-			}
-		}),
-	);
-	context.subscriptions.push(
-		vscode.commands.registerCommand(`${extensionId}.openPortalTab`, (server?: ServerTreeItem) => {
-			if (server?.contextValue?.match(/\.server\./) && server.name) {
-				getPortalUriWithToken(BrowserTarget.SIMPLE, server.name).then((uriWithToken) => {
-					if (uriWithToken) {
-						//
-						// It is essential to pass skipEncoding=true when converting the uri to a string,
-						// otherwise the querystring's & and = get encoded.
-						vscode.commands.executeCommand("simpleBrowser.show", uriWithToken.toString(true));
 					}
 				});
 			}
@@ -126,7 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
 				if (pathParts && pathParts.length === 4) {
 					const serverName = pathParts[1];
 					const namespace = pathParts[3];
-					getPortalUriWithToken(BrowserTarget.EXTERNAL, serverName, "/csp/sys/exp/%25CSP.UI.Portal.ClassList.zen", namespace).then((uriWithToken) => {
+					getPortalUriWithToken(serverName, "/csp/sys/exp/%25CSP.UI.Portal.ClassList.zen", namespace).then((uriWithToken) => {
 						if (uriWithToken) {
 							vscode.env.openExternal(uriWithToken);
 						}
