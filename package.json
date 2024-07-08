@@ -104,7 +104,7 @@
           "intersystems.servers": {
             "type": "object",
             "description": "InterSystems servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it.",
-            "markdownDescription": "[InterSystems](https://www.intersystems.com) servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
+            "markdownDescription": "[InterSystems](https://www.intersystems.com) servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain lowercase characters 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
             "scope": "resource",
             "patternProperties": {
               "^[a-z0-9-_~]+$": {
