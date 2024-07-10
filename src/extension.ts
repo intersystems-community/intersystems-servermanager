@@ -153,7 +153,7 @@ export function activate(context: vscode.ExtensionContext) {
 						const commentStart = line.indexOf("//");
 						if (match && (commentStart == -1 || match.index < commentStart)) {
 							const cursorPos = new vscode.Position(i, match.index + 1);
-							editor.revealRange(new vscode.Range(cursorPos, cursorPos));
+							editor.revealRange(new vscode.Range(cursorPos, cursorPos), vscode.TextEditorRevealType.InCenter);
 							editor.selection = new vscode.Selection(cursorPos, cursorPos);
 							break;
 						}
