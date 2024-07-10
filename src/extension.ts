@@ -137,8 +137,36 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	context.subscriptions.push(
 		vscode.commands.registerCommand(`${extensionId}.editSettings`, (server?: ServerTreeItem) => {
-			// Until there's a dedicated settings editor the best we can do is jump to the right section
-			vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${extensionId}`);
+			// Attempt to open the correct JSON file
+			server = server instanceof ServerTreeItem ? server : undefined;
+			const servers = vscode.workspace.getConfiguration("intersystems").inspect<{ [key: string]: any }>("servers");
+			const revealServers = (): void => {
+				// Find the start of the server settings block
+				const editor = vscode.window.activeTextEditor;
+				if (editor && (editor.document.uri.path.endsWith("/settings.json") || editor.document.uri.path.endsWith(".code-workspace"))) {
+					for (let i = 0; i < editor.document.lineCount; i++) {
+						const line = editor.document.lineAt(i).text;
+						const hasServersDef = line.indexOf("\"intersystems.servers\"");
+						const hasComment = line.indexOf("//");
+						if (hasServersDef > -1 && (hasComment == -1 || hasServersDef < hasComment)) {
+							const range = new vscode.Range(i, hasServersDef, i, hasServersDef + 22);
+							editor.revealRange(range);
+							editor.selection = new vscode.Selection(range.start, range.end);
+							break;
+						}
+					}
+				}
+			};
+			if (server && servers?.workspaceValue?.hasOwnProperty(server.name)) {
+				// Open the workspace settings file
+				vscode.commands.executeCommand("workbench.action.openWorkspaceSettingsFile").then(revealServers);
+			} else if (server && servers?.globalValue?.hasOwnProperty(server.name)) {
+				// Open the user settings.json
+				vscode.commands.executeCommand("workbench.action.openSettingsJson").then(revealServers);
+			} else {
+				// Just show the UI
+				vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${extensionId}`);
+			}
 		}),
 	);
 	context.subscriptions.push(
