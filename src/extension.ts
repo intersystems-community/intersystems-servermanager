@@ -140,18 +140,21 @@ export function activate(context: vscode.ExtensionContext) {
 			// Attempt to open the correct JSON file
 			server = server instanceof ServerTreeItem ? server : undefined;
 			const servers = vscode.workspace.getConfiguration("intersystems").inspect<{ [key: string]: any }>("servers");
-			const revealServers = (): void => {
-				// Find the start of the server settings block
+			const openJSONArg = { revealSetting: { key: "intersystems.servers" } };
+			const revealServer = (): void => {
+				// Find the start of the server's settings block
 				const editor = vscode.window.activeTextEditor;
+				const regex = new RegExp(`"${server?.name}"\\s*:`);
 				if (editor && (editor.document.uri.path.endsWith("/settings.json") || editor.document.uri.path.endsWith(".code-workspace"))) {
-					for (let i = 0; i < editor.document.lineCount; i++) {
+					// The cursor is currently at "|intersystems.servers", so start our scan from there
+					for (let i = editor.selection.start.line; i < editor.document.lineCount; i++) {
 						const line = editor.document.lineAt(i).text;
-						const hasServersDef = line.indexOf("\"intersystems.servers\"");
-						const hasComment = line.indexOf("//");
-						if (hasServersDef > -1 && (hasComment == -1 || hasServersDef < hasComment)) {
-							const range = new vscode.Range(i, hasServersDef, i, hasServersDef + 22);
-							editor.revealRange(range);
-							editor.selection = new vscode.Selection(range.start, range.end);
+						const match = regex.exec(line);
+						const commentStart = line.indexOf("//");
+						if (match && (commentStart == -1 || match.index < commentStart)) {
+							const cursorPos = new vscode.Position(i, match.index + 1);
+							editor.revealRange(new vscode.Range(cursorPos, cursorPos));
+							editor.selection = new vscode.Selection(cursorPos, cursorPos);
 							break;
 						}
 					}
@@ -159,10 +162,10 @@ export function activate(context: vscode.ExtensionContext) {
 			};
 			if (server && servers?.workspaceValue?.hasOwnProperty(server.name)) {
 				// Open the workspace settings file
-				vscode.commands.executeCommand("workbench.action.openWorkspaceSettingsFile").then(revealServers);
+				vscode.commands.executeCommand("workbench.action.openWorkspaceSettingsFile", openJSONArg).then(revealServer);
 			} else if (server && servers?.globalValue?.hasOwnProperty(server.name)) {
 				// Open the user settings.json
-				vscode.commands.executeCommand("workbench.action.openSettingsJson").then(revealServers);
+				vscode.commands.executeCommand("workbench.action.openSettingsJson", openJSONArg).then(revealServer);
 			} else {
 				// Just show the UI
 				vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${extensionId}`);
