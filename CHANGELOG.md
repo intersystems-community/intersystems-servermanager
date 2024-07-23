@@ -1,3 +1,7 @@
+## 3.6.2 (23-Jul-2024)
+* Helpstring for intersystems.servers object incorrectly stated that uppercase letters are accepted (#229).
+* `Edit Settings` command now opens JSON file instead of Settings UI (#230).
+
 ## 3.6.1 (30-May-2024)
 * Don't attempt to open the Management Portal in the Simple Browser for IRIS 2024.1+ (#223).
 * Updated dependencies.
