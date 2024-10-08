@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
-import { credentialCache, getServerSpec } from "../api/getServerSpec";
+import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
 import { IServerName } from "@intersystems-community/intersystems-servermanager";
 import { makeRESTRequest } from "../makeRESTRequest";
@@ -386,7 +386,6 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 		const response = await makeRESTRequest("HEAD", serverSpec);
 		if (!response || response.status !== 200) {
 			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
-			credentialCache[name] = undefined;
 		} else {
 			children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec.username || 'UnknownUser'));
 		}
@@ -461,7 +460,6 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 		const response = await makeRESTRequest("GET", serverSpec);
 		if (!response || response.status !== 200) {
 			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
-			credentialCache[params.serverName] = undefined;
 		} else {
 			const serverApiVersion = response.data.result.content.api;
 			response.data.result.content.namespaces.map((namespace) => {

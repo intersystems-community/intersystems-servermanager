@@ -176,7 +176,7 @@ export async function makeRESTRequest(
  */
 export async function logout(serverName: string) {
 
-	const server = await getServerSpec(serverName, undefined, false, true);
+	const server = await getServerSpec(serverName, undefined);
 
 	if (!server) {
 		return;

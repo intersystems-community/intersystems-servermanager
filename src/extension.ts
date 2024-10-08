@@ -254,7 +254,7 @@ export function activate(context: vscode.ExtensionContext) {
 			if (pathParts && pathParts.length === 4) {
 				const serverName = pathParts[1];
 				const namespace = pathParts[3];
-				const serverSpec = await getServerSpec(serverName, undefined, undefined, true);
+				const serverSpec = await getServerSpec(serverName);
 				if (serverSpec) {
 					const ISFS_ID = "intersystems-community.vscode-objectscript";
 					const isfsExtension = vscode.extensions.getExtension(ISFS_ID);
@@ -379,18 +379,18 @@ export function activate(context: vscode.ExtensionContext) {
 		/**
 		 * Get specification for the named server.
 		 *
-		 * If the `"intersystemsServerManager.authentication.provider"` setting is "intersystems-server-credentials":
-		 *  - the returned object will not contain `password`. To get this:
+		 *  The returned object will not contain `password`. To get that:
 		 * ```
-		 *      const session = await vscode.authentication.getSession('intersystems-server-credentials', [serverSpec.name, serverSpec.username]);
+		 *      const session: vscode.AuthenticationSession = await vscode.authentication.getSession('intersystems-server-credentials', [serverSpec.name, serverSpec.username]);
 		 * ```
 		 *    The `accessToken` property of the returned [`AuthenticationSession`](https://code.visualstudio.com/api/references/vscode-api#AuthenticationSession) is the password.
-		 *  - `flushCredentialsCache` param will be ignored;
-		 *  - `noCredentials` property of `options` param has no effect;
+		 *
+		 *  The `flushCredentialsCache` param is obsolete and has no effect;
+		 *  The `noCredentials` property of `options` param is obsolete and has no effect;
 		 *
 		 * @param name Name of the server, used as the key into the 'intersystems.servers' settings object
 		 * @param scope Settings scope to look in.
-		 * @param flushCredentialCache If passed as true, flush extension's credential cache.
+		 * @param flushCredentialCache Obsolete, has no effect.
 		 * @param options
 		 * @returns { IServerSpec } Server specification object.
 		 */
@@ -398,9 +398,9 @@ export function activate(context: vscode.ExtensionContext) {
 			name: string,
 			scope?: vscode.ConfigurationScope,
 			flushCredentialCache: boolean = false,
-			options?: { hideFromRecents?: boolean, noCredentials?: boolean },
+			options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
 		): Promise<IServerSpec | undefined> {
-			const spec = await getServerSpec(name, scope, flushCredentialCache, options?.noCredentials);
+			const spec = await getServerSpec(name, scope);
 			if (spec && !options?.hideFromRecents) {
 				await view.addToRecents(name);
 			}
