@@ -14,6 +14,8 @@ import {
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState } from "./extension";
+import { getServerSpec } from "./api/getServerSpec";
+import { makeRESTRequest } from "./makeRESTRequest";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -35,6 +37,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	private readonly _secretStorage;
 
 	private _sessions: ServerManagerAuthenticationSession[] = [];
+	private _checkedSessions: ServerManagerAuthenticationSession[] = [];
 
 	private _serverManagerExtension = extensions.getExtension("intersystems-community.servermanager");
 
@@ -52,7 +55,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		this._initializedDisposable?.dispose();
 	}
 
-	// This function is called first when `vscode.authentication.getSessions` is called.
+	// This function is called first when `vscode.authentication.getSession` is called.
 	public async getSessions(scopes: string[] = []): Promise<readonly AuthenticationSession[]> {
 		await this._ensureInitialized();
 		let sessions = this._sessions;
@@ -61,7 +64,11 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		for (let index = 0; index < scopes.length; index++) {
 			sessions = sessions.filter((session) => session.scopes[index] === scopes[index].toLowerCase());
 		}
-		return sessions;
+
+		if (sessions.length === 1) {
+			sessions = sessions.filter(async (session) => await this._isStillValid(session));
+		}
+		return sessions || [];
 	}
 
 	// This function is called after `this.getSessions` is called, and only when:
@@ -104,9 +111,17 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-		const existingSession = this._sessions.find((s) => s.id === sessionId);
+		let existingSession = this._sessions.find((s) => s.id === sessionId);
 		if (existingSession) {
-			return existingSession;
+			if (this._checkedSessions.find((s) => s.id === sessionId)) {
+				return existingSession;
+			}
+
+			// Check if the session is still valid
+			if (await this._isStillValid(existingSession)) {
+				this._checkedSessions.push(existingSession);
+				return existingSession;
+			}
 		}
 
 		let password: string | undefined = "";
@@ -190,25 +205,52 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return session;
 	}
 
+	private async _isStillValid(session: ServerManagerAuthenticationSession): Promise<boolean> {
+		if (this._checkedSessions.find((s) => s.id === session.id)) {
+			return true;
+		}
+		const serverSpec = await getServerSpec(session.serverName);
+		if (serverSpec) {
+			serverSpec.username = session.userName;
+			serverSpec.password = session.accessToken;
+			const response = await makeRESTRequest("HEAD", serverSpec);
+			if (response?.status !== 200) {
+				this._removeSession(session.id, true);
+				return false;
+			}
+		}
+		this._checkedSessions.push(session);
+		return true;
+	}
+
 	// This function is called when the end user signs out of the account.
 	public async removeSession(sessionId: string): Promise<void> {
+		this._removeSession(sessionId);
+	}
+
+	private async _removeSession(sessionId: string, alwaysDeletePassword = false): Promise<void> {
 		const index = this._sessions.findIndex((item) => item.id === sessionId);
 		const session = this._sessions[index];
 
-		let deletePassword = false;
 		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-		if (await this.secretStorage.get(credentialKey)) {
-			const passwordOption = workspace.getConfiguration("intersystemsServerManager.credentialsProvider")
-				.get<string>("deletePasswordOnSignout", "ask");
-			deletePassword = (passwordOption === "always");
-			if (passwordOption === "ask") {
-				const choice = await window.showWarningMessage(
-					`Do you want to keep the password or delete it?`,
-					{ detail: `The ${AUTHENTICATION_PROVIDER_LABEL} account you signed out (${session.account.label}) is currently storing its password securely on your workstation.`, modal: true },
-					{ title: "Keep", isCloseAffordance: true },
-					{ title: "Delete", isCloseAffordance: false },
-				);
-				deletePassword = (choice?.title === "Delete");
+		let deletePassword = false;
+		const hasStoredPassword = await this.secretStorage.get(credentialKey) !== undefined;
+		if (alwaysDeletePassword) {
+			deletePassword = hasStoredPassword;
+		} else {
+			if (hasStoredPassword) {
+				const passwordOption = workspace.getConfiguration("intersystemsServerManager.credentialsProvider")
+					.get<string>("deletePasswordOnSignout", "ask");
+				deletePassword = (passwordOption === "always");
+				if (passwordOption === "ask") {
+					const choice = await window.showWarningMessage(
+						`Do you want to keep the password or delete it?`,
+						{ detail: `The ${AUTHENTICATION_PROVIDER_LABEL} account you signed out (${session.account.label}) is currently storing its password securely on your workstation.`, modal: true },
+						{ title: "Keep", isCloseAffordance: true },
+						{ title: "Delete", isCloseAffordance: false },
+					);
+					deletePassword = (choice?.title === "Delete");
+				}
 			}
 		}
 		if (deletePassword) {
