@@ -75,7 +75,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           npx vsce package -o ${{ steps.set-version.outputs.name }}.vsix
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.4.2
         if: (runner.os == 'Windows') && (github.event_name != 'release')
         with:
           name: ${{ steps.set-version.outputs.name }}.vsix
