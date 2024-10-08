@@ -66,7 +66,9 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 
 		if (sessions.length === 1) {
-			sessions = sessions.filter(async (session) => await this._isStillValid(session));
+			if (!(await this._isStillValid(sessions[0]))) {
+				sessions = [];
+			}
 		}
 		return sessions || [];
 	}
@@ -214,8 +216,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			serverSpec.username = session.userName;
 			serverSpec.password = session.accessToken;
 			const response = await makeRESTRequest("HEAD", serverSpec);
-			if (response?.status !== 200) {
-				this._removeSession(session.id, true);
+			if (response?.status === 401) {
+				await this._removeSession(session.id, true);
 				return false;
 			}
 		}

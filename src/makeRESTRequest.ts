@@ -165,7 +165,7 @@ export async function makeRESTRequest(
 		return respdata;
 	} catch (error) {
 		console.log(error);
-		return undefined;
+		return error.response;
 	}
 }
 
