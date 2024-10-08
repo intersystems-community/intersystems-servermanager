@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
-import { credentialCache, getServerSpec } from "../api/getServerSpec";
+import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
 import { IServerName } from "@intersystems-community/intersystems-servermanager";
 import { makeRESTRequest } from "../makeRESTRequest";
@@ -383,10 +383,14 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 			return undefined;
 		}
 
-		const response = await makeRESTRequest("HEAD", serverSpec);
-		if (!response || response.status !== 200) {
+		let response = await makeRESTRequest("HEAD", serverSpec);
+		if (response?.status === 401) {
+			// Authentication error, so retry in case first attempt cleared a no-longer-valid stored password
+			serverSpec.password = undefined;
+			response = await makeRESTRequest("HEAD", serverSpec);
+		}
+		if (response?.status !== 200) {
 			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
-			credentialCache[name] = undefined;
 		} else {
 			children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec.username || 'UnknownUser'));
 		}
@@ -459,12 +463,11 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 		}
 
 		const response = await makeRESTRequest("GET", serverSpec);
-		if (!response || response.status !== 200) {
+		if (response?.status !== 200) {
 			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
-			credentialCache[params.serverName] = undefined;
 		} else {
 			const serverApiVersion = response.data.result.content.api;
-			response.data.result.content.namespaces.map((namespace) => {
+			response.data.result.content.namespaces.map((namespace: string) => {
 				children.push(new NamespaceTreeItem({ parent: element, label: name, id: name }, namespace, name, serverApiVersion));
 			});
 		}
@@ -557,7 +560,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promi
 			{ apiVersion: 1, namespace: params.ns, path: "/action/query" },
 			{ query: "SELECT Name, Description FROM %Studio.Project", parameters: [] }
 		);
-		if (response !== undefined) {
+		if (response?.status === 200) {
 			if (response.data.result.content === undefined) {
 				let message;
 				if (response.data.status?.errors[0]?.code === 5540) {
@@ -643,7 +646,7 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promis
 			serverSpec,
 			{ apiVersion: 1, namespace: "%SYS", path: `/cspapps/${params.ns}` }
 		);
-		if (response !== undefined) {
+		if (response?.status === 200) {
 			if (response.data.result.content === undefined) {
 				vscode.window.showErrorMessage(response.data.status.summary);
 				return undefined;

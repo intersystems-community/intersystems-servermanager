@@ -1,31 +1,17 @@
 import * as vscode from "vscode";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
-interface ICredentialSet {
-	username: string;
-	password: string;
-}
-
-export let credentialCache = new Map<string, ICredentialSet>();
-
 /**
  * Get a server specification.
  *
  * @param name The name.
  * @param scope The settings scope to use for the lookup.
- * @param flushCredentialCache Flush the session's cache of credentials obtained from keystore and/or user prompting.
- * @param noCredentials Set username and password as undefined; do not fetch credentials from anywhere.
  * @returns Server specification or undefined.
  */
 export async function getServerSpec(
 	name: string,
 	scope?: vscode.ConfigurationScope,
-	flushCredentialCache: boolean = false,
-	noCredentials: boolean = false,
 ): Promise<IServerSpec | undefined> {
-	if (flushCredentialCache) {
-		credentialCache[name] = undefined;
-	}
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
 	let server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) || legacyEmbeddedServer(name);
 
