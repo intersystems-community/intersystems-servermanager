@@ -6,6 +6,9 @@ InterSystems Server Manager is a Visual Studio Code extension for defining conne
 
 See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for changes in each release.
 
+# New in Version 3.6 - Date TBC
+TODO
+
 # New in Version 3.4 - July 2023
 
 - The sequence of prompts displayed when creating a new server definition now includes one where you can optionally enter the `pathPrefix` that is necessary when a single web server is providing REST connectivity to multiple InterSystems servers.
