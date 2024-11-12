@@ -6,6 +6,10 @@ Package defining the interfaces used in the API that is published by the `inters
 
 # Changelog
 
+### v3.8.0
+
+- Add function signatures, including `getAccount` which was introduced in Server Manager 3.8.0.
+
 ### v3.4.1
 
 - Add optional `superServer` object.
