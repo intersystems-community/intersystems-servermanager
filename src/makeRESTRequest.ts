@@ -7,6 +7,7 @@ import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { getServerSpec } from "./api/getServerSpec";
+import { getAccountFromParts } from "./extension";
 
 export interface IServerSession {
 	serverName: string;
@@ -221,16 +222,17 @@ async function resolveCredentials(serverSpec: IServerSpec) {
 	// This arises if setting says to use authentication provider
 	if (typeof serverSpec.password === "undefined") {
 		const scopes = [serverSpec.name, (serverSpec.username || "").toLowerCase()];
+		const account = getAccountFromParts(serverSpec.name, serverSpec.username);
 		let session = await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
 			scopes,
-			{ silent: true },
+			{ silent: true, account },
 		);
 		if (!session) {
 			session = await vscode.authentication.getSession(
 				AUTHENTICATION_PROVIDER,
 				scopes,
-				{ createIfNone: true },
+				{ createIfNone: true, account },
 			);
 		}
 		if (session) {
