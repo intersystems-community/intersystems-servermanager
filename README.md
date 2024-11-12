@@ -6,8 +6,12 @@ InterSystems Server Manager is a Visual Studio Code extension for defining conne
 
 See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for changes in each release.
 
-# New in Version 3.6 - Date TBC
-TODO
+# New in Version 3.8 - November 2024
+- Updated the authentication provider to resolve overprompting caused by a VS Code 1.93 change.
+- Added a new function (`getAccount`) to the API surface as a helper for extensions leveraging the authentication provider.
+
+# New in Version 3.6 - January 2024
+The view container was renamed and given a new icon as part of work integrating the ObjectScript extension's views with it.
 
 # New in Version 3.4 - July 2023
 
@@ -207,7 +211,7 @@ If a server has been named in `/default` it is promoted to the top of the list, 
 
 The NPM package [`@intersystems-community/intersystems-servermanager`](https://www.npmjs.com/package/@intersystems-community/intersystems-servermanager) defines the types used by the API which this extension exports. It also declares some constants.
 
-An extension XYZ needing to connect to InterSystems servers should include `"@intersystems-community/intersystems-servermanager": "latest"` in the `"devDependencies"` object in its `package.json`.
+An extension XYZ needing to connect to InterSystems servers should include `"@intersystems-community/intersystems-servermanager": "^3.8.0"` in the `"devDependencies"` object in its `package.json`.
 
 It might also define Server Manager as a dependency in its `package.json` like this:
 
@@ -240,7 +244,7 @@ Alternatively the `activate` method of XYZ can detect whether the extension is a
 XYZ can then use the extension's API to obtain the properties of a named server definition:
 
 ```ts
-  const serverManagerApi = extension.exports;
+  const serverManagerApi: serverManager.ServerManagerAPI = extension.exports;
   if (serverManagerApi && serverManagerApi.getServerSpec) { // defensive coding
 	const serverSpec: serverManager.IServerSpec | undefined = await serverManagerApi.getServerSpec(serverName);
   }
@@ -253,9 +257,10 @@ To obtain the password with which to connect, use code like this which will also
 ```ts
   if (typeof serverSpec.password === 'undefined') {
     const scopes = [serverSpec.name, serverSpec.username || ''];
-    let session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { silent: true });
+	const account = serverManagerApi.getAccount(serverSpec);
+    let session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { silent: true, account });
     if (!session) {
-      session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { createIfNone: true });
+      session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { createIfNone: true, account });
     }
     if (session) {
       serverSpec.username = session.scopes[1];
