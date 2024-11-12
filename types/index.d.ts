@@ -1,3 +1,5 @@
+import * as vscode from 'vscode';
+
 export const EXTENSION_ID: string;
 export const AUTHENTICATION_PROVIDER: string;
 
@@ -29,4 +31,35 @@ export interface IJSONServerSpec {
 
 export interface IServerSpec extends IJSONServerSpec {
 	name: string;
+}
+
+export interface ServerManagerAPI {
+	pickServer(
+		scope?: vscode.ConfigurationScope,
+		options?: vscode.QuickPickOptions,
+	): Promise<string | undefined>;
+
+	getServerNames(
+		scope?: vscode.ConfigurationScope,
+		sorted?: boolean,
+	): IServerName[];
+
+	getServerSummary(
+		name: string,
+		scope?: vscode.ConfigurationScope,
+	): IServerName | undefined;
+
+	getServerSpec(
+		name: string,
+		scope?: vscode.ConfigurationScope,
+		flushCredentialCache?: boolean,
+		options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
+	): Promise<IServerSpec | undefined>;
+
+	getAccount(
+		serverSpec: IServerSpec
+	): vscode.AuthenticationSessionAccountInformation | undefined;
+
+	onDidChangePassword(
+	): vscode.Event<string>;
 }

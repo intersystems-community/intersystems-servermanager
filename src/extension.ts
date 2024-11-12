@@ -16,6 +16,11 @@ import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, 
 export const extensionId = "intersystems-community.servermanager";
 export let globalState: vscode.Memento;
 
+export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
+	const accountId = userName ? `${serverName}/${userName.toLowerCase()}` : undefined;
+	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
+}
+
 export function activate(context: vscode.ExtensionContext) {
 
 	const _onDidChangePassword = new vscode.EventEmitter<string>();
@@ -43,10 +48,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 					// Still logged in with the authentication provider?
 					const scopes = [serverSession.serverName, serverSession.username.toLowerCase()];
+					const account = getAccountFromParts(serverSession.serverName, serverSession.username);
 					const session = await vscode.authentication.getSession(
 						AUTHENTICATION_PROVIDER,
 						scopes,
-						{ silent: true },
+						{ silent: true, account },
 					);
 
 					// If not, try to log out on the server, then remove our record of its cookies
@@ -405,6 +411,10 @@ export function activate(context: vscode.ExtensionContext) {
 				await view.addToRecents(name);
 			}
 			return spec;
+		},
+
+		getAccount(serverSpec: IServerSpec): vscode.AuthenticationSessionAccountInformation | undefined {
+			return getAccountFromParts(serverSpec.name, serverSpec.username);
 		},
 
 		onDidChangePassword(

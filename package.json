@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "3.6.3-SNAPSHOT",
+  "version": "3.8.0-SNAPSHOT",
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
@@ -15,7 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.93.0"
   },
   "icon": "images/logo.png",
   "categories": [
@@ -52,8 +52,8 @@
     "node-cmd": "^5.0.0"
   },
   "devDependencies": {
-    "@intersystems-community/intersystems-servermanager": "^3.4.1",
-    "@types/vscode": "^1.75.0",
+    "@intersystems-community/intersystems-servermanager": "^3.8.0",
+    "@types/vscode": "^1.93.0",
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^14.18.0",

@@ -2,6 +2,7 @@ import {
 	authentication,
 	AuthenticationProvider,
 	AuthenticationProviderAuthenticationSessionsChangeEvent,
+	AuthenticationProviderSessionOptions,
 	AuthenticationSession,
 	Disposable,
 	Event,
@@ -56,13 +57,22 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	}
 
 	// This function is called first when `vscode.authentication.getSession` is called.
-	public async getSessions(scopes: string[] = []): Promise<readonly AuthenticationSession[]> {
+	public async getSessions(scopes: readonly string[] = [], options: AuthenticationProviderSessionOptions): Promise<AuthenticationSession[]> {
 		await this._ensureInitialized();
 		let sessions = this._sessions;
 
 		// Filter to return only those that match all supplied scopes, which are positional and case-insensitive.
 		for (let index = 0; index < scopes.length; index++) {
 			sessions = sessions.filter((session) => session.scopes[index] === scopes[index].toLowerCase());
+		}
+
+		if (options.account) {
+			const accountParts = options.account.id.split("/");
+			const serverName = accountParts.shift();
+			const userName = accountParts.join('/').toLowerCase();
+			if (serverName && userName) {
+				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1] === userName);
+			}
 		}
 
 		if (sessions.length === 1) {
