@@ -1,3 +1,7 @@
+## 3.8.0 (13-Nov-2024)
+* Prevent overprompting for permission and account (#242).
+* Update dependencies.
+
 ## 3.6.2 (23-Jul-2024)
 * Helpstring for intersystems.servers object incorrectly stated that uppercase letters are accepted (#229).
 * `Edit Settings` command now opens JSON file instead of Settings UI (#230).
