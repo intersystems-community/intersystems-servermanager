@@ -1,8 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "3.1.2022042002-SNAPSHOT",
-  "preview": true,
+  "version": "3.8.0-SNAPSHOT",
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
@@ -16,7 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.63.0"
+    "vscode": "^1.93.0"
   },
   "icon": "images/logo.png",
   "categories": [
@@ -35,53 +34,42 @@
   ],
   "private": true,
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "webpack --mode production --devtool hidden-source-map",
+    "webpack": "npm run clean && webpack --mode development",
+    "webpack-dev": "npm run clean && webpack --mode development --watch",
+    "clean": "rimraf dist",
     "package": "vsce package",
-    "compile": "tsc -p ./",
+    "compile": "webpack --mode production && tsc -p ./",
+    "test-compile": "webpack --mode development && tsc -p ./",
     "watch": "tsc -w -p ./tsconfig.json",
-    "pretest": "npm run compile",
+    "pretest": "npm run test-compile",
     "test": "node ./out/test/runTest.js",
     "lint": "node ./node_modules/tslint/bin/tslint --project tsconfig.json -t verbose",
     "lint-fix": "tslint --project tsconfig.json -t verbose --fix"
   },
   "dependencies": {
-    "axios": "^0.24.0",
-    "axios-cookiejar-support": "^1.0.1",
-    "node-cmd": "^4.0.0",
-    "tough-cookie": "^4.0.0"
+    "axios": "^1.7.4",
+    "node-cmd": "^5.0.0"
   },
   "devDependencies": {
-    "@types/vscode": "^1.63.0",
+    "@intersystems-community/intersystems-servermanager": "^3.8.0",
+    "@types/vscode": "^1.93.0",
     "@types/glob": "^7.1.1",
-    "@types/keytar": "^4.4.2",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^8.10.60",
+    "@types/node": "^14.18.0",
+    "@vscode/test-electron": "^2.3.8",
     "glob": "^7.1.6",
-    "mocha": "^9.1.4",
-    "ts-loader": "^6.2.2",
+    "mocha": "^9.2.2",
+    "rimraf": "^5.0.5",
+    "ts-loader": "^9.5.1",
     "tslint": "^5.20.1",
-    "typescript": "^3.8.3",
-    "vscode-test": "^1.3.0"
+    "typescript": "^5.3.3",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4"
   },
-  "main": "./out/extension",
+  "main": "./dist/extension",
   "activationEvents": [
-    "onAuthenticationRequest:intersystems-servermanager-credentials",
-    "onView:intersystems-community_servermanager",
-    "onCommand:intersystems-community.servermanager.refreshTree",
-    "onCommand:intersystems-community.servermanager.addServer",
-    "onCommand:intersystems-community.servermanager.storePassword",
-    "onCommand:intersystems-community.servermanager.clearPassword",
-    "onCommand:intersystems-community.servermanager.importServers",
-    "onCommand:intersystems-community.servermanager-credentials.testLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin2",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedLoginWithPreferenceCleared",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedLogin2WithPreferenceCleared",
-    "onCommand:intersystems-community.servermanager-credentials.testPartiallyScopedLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testPartiallyScopedLoginWithPreferenceCleared",
-    "onCommand:intersystems-community.servermanager-credentials.testQuietLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedQuietLogin",
-    "onCommand:intersystems-community.servermanager-credentials.testScopedQuietLogin2"
+    "onAuthenticationRequest:intersystems-servermanager-credentials"
   ],
   "contributes": {
     "authentication": [
@@ -94,8 +82,8 @@
       "activitybar": [
         {
           "id": "intersystems-community_servermanager",
-          "title": "InterSystems Tools",
-          "icon": "images/toolbox.svg"
+          "title": "InterSystems",
+          "icon": "images/InterSystems.svg"
         }
       ]
     },
@@ -104,7 +92,7 @@
         {
           "id": "intersystems-community_servermanager",
           "name": "Servers",
-          "contextualTitle": "InterSystems Tools",
+          "contextualTitle": "InterSystems",
           "icon": "images/serverManager.svg"
         }
       ]
@@ -112,7 +100,7 @@
     "viewsWelcome": [
       {
         "view": "explorer",
-        "contents": "Use the 'InterSystems Tools: Servers' view to work with your servers.\n[Manage Servers $(tools)](command:workbench.view.extension.intersystems-community_servermanager)"
+        "contents": "Use the 'InterSystems: Servers' view to work with your servers.\n[Manage Servers $(tools)](command:workbench.view.extension.intersystems-community_servermanager)"
       }
     ],
     "configuration": [
@@ -122,35 +110,8 @@
           "intersystems.servers": {
             "type": "object",
             "description": "InterSystems servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it.",
-            "markdownDescription": "[InterSystems](https://www.intersystems.com) servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain characters 'A' to 'Z', 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
+            "markdownDescription": "[InterSystems](https://www.intersystems.com) servers that other extensions connect to. Each property of this object names a server and holds nested properties specifying how to connect to it. Server names may only contain lowercase characters 'a' to 'z', digits, '-', '.', '_' and '~' characters.",
             "scope": "resource",
-            "default": {
-              "default~iris": {
-                "webServer": {
-                  "scheme": "http",
-                  "host": "127.0.0.1",
-                  "port": 52773
-                },
-                "description": "Connection to local InterSystems IRIS™ installed with default settings."
-              },
-              "default~cache": {
-                "webServer": {
-                  "scheme": "http",
-                  "host": "127.0.0.1",
-                  "port": 57772
-                },
-                "description": "Connection to local InterSystems Caché installed with default settings."
-              },
-              "default~ensemble": {
-                "webServer": {
-                  "scheme": "http",
-                  "host": "127.0.0.1",
-                  "port": 57772
-                },
-                "description": "Connection to local InterSystems Ensemble installed with default settings."
-              },
-              "/default": "default~iris"
-            },
             "patternProperties": {
               "^[a-z0-9-_~]+$": {
                 "type": "object",
@@ -204,6 +165,38 @@
                     ],
                     "additionalProperties": false
                   },
+                  "superServer": {
+                    "type": "object",
+                    "description": "InterSystems server's superserver.",
+                    "properties": {
+                      "host": {
+                        "type": "string",
+                        "description": "Hostname or IP address of the InterSystems server. If omitted, uses the value of 'webServer.host'.",
+                        "anyOf": [
+                          {
+                            "format": "hostname"
+                          },
+                          {
+                            "format": "ipv4"
+                          },
+                          {
+                            "format": "ipv6"
+                          }
+                        ]
+                      },
+                      "port": {
+                        "type": "integer",
+                        "description": "TCP port number the superserver listens on.",
+                        "minimum": 1,
+                        "maximum": 65535,
+                        "default": 1972
+                      }
+                    },
+                    "required": [
+                      "port"
+                    ],
+                    "additionalProperties": false
+                  },
                   "username": {
                     "type": "string",
                     "description": "Username to connect as. If not set here it must be provided when connecting."
@@ -211,7 +204,7 @@
                   "password": {
                     "type": "string",
                     "description": "Password of username.",
-                    "deprecationMessage": "Storing password in plaintext is not recommended. Instead, use the Command Palette command to store it in your keychain."
+                    "deprecationMessage": "Storing password in plaintext is not recommended. Consider deleting this property, then use 'key' button to save password when prompted for it by 'InterSystems Server Credentials'."
                   },
                   "description": {
                     "type": "string",
@@ -228,10 +221,6 @@
               "/default": {
                 "type": "string",
                 "description": "Name of the server to promote to the top of pick lists."
-              },
-              "/hideEmbeddedEntries": {
-                "type": "boolean",
-                "description": "Do not append the built-in 'default~*' server definitions to pick lists."
               }
             },
             "additionalProperties": false
@@ -241,20 +230,6 @@
       {
         "title": "Authentication",
         "properties": {
-          "intersystemsServerManager.authentication.provider": {
-            "type": "string",
-            "description": "Authentication provider that Server Manager will use for accessing InterSystems servers. This setting also affects the API that Server Manager publishes for use by other extensions.",
-            "enum": [
-              "intersystems-server-credentials",
-              "none"
-            ],
-            "enumDescriptions": [
-              "Use Server Manager's embedded 'InterSystems Server Credentials' authentication provider. Server Manager's own API will no longer return credentials that have been stored securely in the workstation's keychain.",
-              "Do not use VS Code's authentication model. Secure credential storage will be handled natively by Server Manager using the workstation's keychain, but Server Manager is unable to restrict which extensions can access those credentials via its API. Only use this if other extensions using the API have not yet been updated to use the authentication provider."
-            ],
-            "default": "intersystems-server-credentials",
-            "scope": "application"
-          },
           "intersystemsServerManager.credentialsProvider.deletePasswordOnSignout": {
             "type": "string",
             "description": "Whether to delete an account's stored password after signing out.",
@@ -289,13 +264,17 @@
       },
       {
         "command": "intersystems-community.servermanager.addToStarred",
-        "title": "Add to Starred",
+        "title": "Add to Favorites",
         "icon": "$(star-full)"
       },
       {
         "command": "intersystems-community.servermanager.removeFromStarred",
-        "title": "Remove from Starred",
+        "title": "Remove from Favorites",
         "icon": "$(star-empty)"
+      },
+      {
+        "command": "intersystems-community.servermanager.removeFromRecent",
+        "title": "Remove from Recent"
       },
       {
         "command": "intersystems-community.servermanager.openPortalExternal",
@@ -306,6 +285,11 @@
         "command": "intersystems-community.servermanager.openPortalTab",
         "title": "Open Management Portal in Tab",
         "icon": "$(tools)"
+      },
+      {
+        "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+        "title": "Open Management Portal Here in External Browser",
+        "icon": "$(link-external)"
       },
       {
         "command": "intersystems-community.servermanager.retryServer",
@@ -319,70 +303,9 @@
         "icon": "$(edit)"
       },
       {
-        "command": "intersystems-community.servermanager.storePassword",
-        "category": "InterSystems Server Manager",
-        "title": "Store Password in Keychain",
-        "icon": "$(key)"
-      },
-      {
-        "command": "intersystems-community.servermanager.clearPassword",
-        "category": "InterSystems Server Manager",
-        "title": "Clear Password from Keychain"
-      },
-      {
         "command": "intersystems-community.servermanager.importServers",
         "category": "InterSystems Server Manager",
         "title": "Import Servers from Windows Registry"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Login"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Login (iris201 as johnm)"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedLogin2",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Login (iris201 as johnm2)"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedLoginWithPreferenceCleared",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Login (iris201 as johnm) With Preference Cleared"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedLogin2WithPreferenceCleared",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Login (iris201 as johnm2) With Preference Cleared"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testPartiallyScopedLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Partially Scoped Login (iris201)"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testPartiallyScopedLoginWithPreferenceCleared",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Partially Scoped Login (iris201) With Preference Cleared"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testQuietLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Quiet Login"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedQuietLogin",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Quiet Login"
-      },
-      {
-        "command": "intersystems-community.servermanager-credentials.testScopedQuietLogin2",
-        "category": "InterSystems Server Credentials",
-        "title": "Test Scoped Quiet Login2"
       },
       {
         "command": "intersystems-community.servermanager.setIconRed",
@@ -441,6 +364,16 @@
         "command": "intersystems-community.servermanager.viewProject",
         "title": "View Code in Project",
         "icon": "$(eye)"
+      },
+      {
+        "command": "intersystems-community.servermanager.editWebApp",
+        "title": "Edit Files in Web Application",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "intersystems-community.servermanager.viewWebApp",
+        "title": "View Files in Web Application",
+        "icon": "$(eye)"
       }
     ],
     "submenus": [
@@ -494,11 +427,19 @@
           "when": "false"
         },
         {
+          "command": "intersystems-community.servermanager.removeFromRecent",
+          "when": "false"
+        },
+        {
           "command": "intersystems-community.servermanager.openPortalExternal",
           "when": "false"
         },
         {
           "command": "intersystems-community.servermanager.openPortalTab",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
           "when": "false"
         },
         {
@@ -555,6 +496,14 @@
         },
         {
           "command": "intersystems-community.servermanager.viewProject",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.editWebApp",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewWebApp",
           "when": "false"
         }
       ],
@@ -615,12 +564,22 @@
         },
         {
           "command": "intersystems-community.servermanager.editProject",
-          "when": "view == intersystems-community_servermanager && viewItem == project",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /project$/",
           "group": "inline@10"
         },
         {
           "command": "intersystems-community.servermanager.viewProject",
-          "when": "view == intersystems-community_servermanager && viewItem == project",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /project$/",
+          "group": "inline@20"
+        },
+        {
+          "command": "intersystems-community.servermanager.editWebApp",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /webapp$/",
+          "group": "inline@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewWebApp",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /webapp$/",
           "group": "inline@20"
         },
         {
@@ -632,6 +591,11 @@
           "command": "intersystems-community.servermanager.openPortalExternal",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "inline@90"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "inline@80"
         },
         {
           "command": "intersystems-community.servermanager.retryServer",
@@ -649,14 +613,9 @@
           "group": "1_edit@20"
         },
         {
-          "command": "intersystems-community.servermanager.storePassword",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "2_password@10"
-        },
-        {
-          "command": "intersystems-community.servermanager.clearPassword",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "2_password@20"
+          "command": "intersystems-community.servermanager.removeFromRecent",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /^recent.server./",
+          "group": "2_manage@10"
         }
       ]
     }

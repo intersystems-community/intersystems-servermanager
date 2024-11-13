@@ -1,19 +1,62 @@
-## 3.1.2022042001 (20-Apr-2022 pre-release)
-* Add 2.0.8 and 2.0.9 changes.
+## 3.6.2 (23-Jul-2024)
+* Helpstring for intersystems.servers object incorrectly stated that uppercase letters are accepted (#229).
+* `Edit Settings` command now opens JSON file instead of Settings UI (#230).
 
-## 3.1.2022020201 (02-Feb-2022 pre-release)
+## 3.6.1 (30-May-2024)
+* Don't attempt to open the Management Portal in the Simple Browser for IRIS 2024.1+ (#223).
+* Updated dependencies.
+
+## 3.6.0 (29-Jan-2024)
+* Change "Starred" to "Favorites" in command titles (#210).
+* Add 'Remove from Recent' to context menu of Recent entry (#213).
+* Rename and change logo of View Container (#216):
+  * Changed the icon from the toolbox to the ISC logo
+  * Changed the name from `InterSystems Tools` to `InterSystems`
+  * Webpack'ed extension.
+  * Updated vulnerable dependencies.
+* Default Connection Type picker to https if port 443 was specified (#219).
+
+## 3.4.2 (10-Aug-2023)
+* Add shortcut to Explorer section of Portal at namespace level (#185).
+* Remove embedded default server definitions and the associated `/hideEmbedded` setting (#203).
+* Add context information with which namespace action contributors can discover server API version (#206).
+* Fix some documentation links.
+
+## 3.4.1 (27-Jul-2023)
+* Treat same username on different servers as distinct accounts (#194).
+* Sort our entries in the Accounts menu.
+* Show username on tooltip of tree node that reports a connection problem.
+* Extend `intersystems.servers` objects to support optional `superServer` information (#182).
+* Update documentation link in README.
+
+## 3.4.0 (24-Jul-2023)
+* Add `pathPrefix` to new server setup prompts (#175). Thanks to @yannip1234.
+* Add "Web Applications" tree under namespaces (#184).
+* Remove support for `"intersystemsServerManager.authentication.provider": "none"` setting (#190).
 * Update vulnerable dependencies.
 
-## 3.1.2022012701 (27-Jan-2022 pre-release)
-* Update README.
-* Automate pre-release publication to Marketplace.
+## 3.2.2 (13-Feb-2023)
+* Improve deprecation message for `password` property (#164).
+* Use `@intersystems-community/intersystems-servermanager` NPM package, and document how to do this (#166, #167).
+* Update on Open VSX Registry.
+* Update vulnerable dependencies.
 
-## 3.1.2021122102 (21-Dec-2021 pre-release)
-* Make username case-insensitive in authentication provider.
+## 3.2.1 (04-Oct-2022)
+* Fix publishing failure.
 
-## 3.0.0 (27-Nov-2021 pre-release)
+## 3.2.0 (03-Oct-2022)
 * Implement `intersystems-server-credentials` authentication provider.
-* 
+* Implement `Migrate Legacy Passwords` command (#146).
+
+## 2.0.11 (08-Aug-2022)
+* Fix hang when user presses Escape on password prompt (#154).
+* Doublequote username in SQL GRANT statement recommendation (#151).
+
+## 2.0.10 (29-Jun-2022)
+* Accept self-signed certificates if `http.proxyStrictSSL` is set to `false` (#137).
+* Notify when SQL GRANT will be necessary in order to display list of server-side projects (#140).
+* Reuse session-cached username if server definition lacks one (#141).
+
 ## 2.0.9 (20-Apr-2022)
 * Add support for server-side projects (#131). 
 

@@ -1,0 +1,38 @@
+{
+  "name": "@intersystems-community/intersystems-servermanager",
+  "version": "3.8.0",
+  "description": "InterSystems Server Manager VS Code extension API interfaces and constants",
+  "types": "index.d.ts",
+  "main": "index.js",
+  "license": "MIT",
+  "private": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "test:tsc": "tsc --noEmit -p ./tsconfig.json --skipLibCheck",
+    "prerelease": "rimraf *.tgz",
+    "release": "npm publish --tag latest --access public",
+    "prebeta": "rimraf *.tgz",
+    "beta": "npm publish --tag beta --access public"
+  },
+  "keywords": [
+    "intersystems"
+  ],
+  "authors": [
+    "John Murray <johnm@georgejames.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/intersystems-community/intersystems-servermanager.git",
+    "directory": "types"
+  },
+  "bugs": {
+    "url": "https://github.com/intersystems-community/intersystems-servermanager/issues"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.93.0",
+    "rimraf": "^3.0.0"
+  }
+}

@@ -1,32 +1,37 @@
 # InterSystems Server Manager
 
-> **Note:** The best way to install and use this extension is by installing the [InterSystems ObjectScript Extension Pack](https://marketplace.visualstudio.com/items?itemName=intersystems-community.objectscript-pack) and following the [documentation here](https://intersystems-community.github.io/vscode-objectscript/).
+> **Note:** The best way to install and use this extension is by installing the [InterSystems ObjectScript Extension Pack](https://marketplace.visualstudio.com/items?itemName=intersystems-community.objectscript-pack) and following the [documentation here](https://docs.intersystems.com/components/csp/docbook/DocBook.UI.Page.cls?KEY=GVSCO).
 
-InterSystems Server Manager is a Visual Studio Code extension for defining connections to [InterSystems](https://www.intersystems.com/) servers. These definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript) for code editing.
+InterSystems Server Manager is a Visual Studio Code extension for defining connections to [InterSystems](https://www.intersystems.com/) servers. These definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript) for code editing. The [Launch WebTerminals](https://marketplace.visualstudio.com/items?itemName=georgejames.webterminal-vscode) extension is another.
 
 See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for changes in each release.
 
-# New in Version 3 - November 2021
+# New in Version 3.8 - November 2024
+- Updated the authentication provider to resolve overprompting caused by a VS Code 1.93 change.
+- Added a new function (`getAccount`) to the API surface as a helper for extensions leveraging the authentication provider.
 
-We are pleased to publish version 3 of this extension which improves the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). This significant new release took part in the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19).
+# New in Version 3.6 - January 2024
+The view container was renamed and given a new icon as part of work integrating the ObjectScript extension's views with it.
 
-> 2022-01-26: This is currently a **pre-release**.
+# New in Version 3.4 - July 2023
+
+- The sequence of prompts displayed when creating a new server definition now includes one where you can optionally enter the `pathPrefix` that is necessary when a single web server is providing REST connectivity to multiple InterSystems servers.
+
+- A new "Web Applications" tree within each namespace node provides a convenient way to create a workspace folder in which to edit web application files.
+
+> We have removed support for version 2's password storage mechanism. If you have been using the `"intersystemsServerManager.authentication.provider": "none"` setting this will no longer have any effect and your connections will behave as though no passwords have been stored. You can migrate stored passwords by downgrading to Server Manager 3.2 and running the `Migrate Passwords` command.
+> 
+>  VS Code 1.82 (August 2023) is scheduled to drop support for the keytar package used by the v2 mechanism, so you should perform v2 password migration before upgrading to that version.
+
+# New in Version 3.2 - October 2022
+
+We are pleased to publish version 3.2 of this extension. This replaces version 2, improving the security of stored passwords by integrating with VS Code's [Authentication Provider API](https://code.visualstudio.com/api/references/vscode-api#AuthenticationProvider). Version 3 was originally created for the [November 2021 InterSystems Security Contest](https://openexchange.intersystems.com/contest/19).
 
 Thanks to [George James Software](https://georgejames.com) for backing this development effort.
 
 ## The Authentication Provider
 
-Since version 2 Server Manager has enabled you to store connection passwords in the native keystore of your workstation's operating system. This was a more secure alternative to you putting them as plaintext in your JSON files. However, the `getServerSpec` function in Server Manager 2's API allowed **any** installed extension to obtain these stored passwords without requiring your permission.
-
-VS Code's Authentication Provider API, introduced in version 1.54 ([February 2021](https://code.visualstudio.com/updates/v1_54#_authentication-provider-api)) became mature enough in version 1.63 for us to use.
-
-Server Manager 3 does the following:
-
-1. Implements an authentication provider called 'intersystems-server-credentials'.
-2. Uses this authentication provider when accessing servers from its own [Server Tree](#the-server-tree).
-3. No longer returns passwords to callers of `getServerSpec`.
-
-> Items #2 and #3 have implications regarding backward compatibility. An interim [legacy mode](#legacy-mode) is available to help with the transition.
+Server Manager implements an authentication provider called 'intersystems-server-credentials', and uses this authentication provider when accessing servers from its own [Server Tree](#the-server-tree).
 
 ### Signing In
 
@@ -42,7 +47,7 @@ If you proceed, or if this step was skipped because your server definition inclu
 
 ![Enter password](images/README/authenticationProvider-password.png)
 
-If you click the 'key' button after typing your password it will be saved securely in your workstation keychain, from where the 'InterSystems Server Credentials' authentication provider will be able to retrieve it after you restart VS Code.
+By clicking the 'key' button at the upper right corner of the dialog after typing your password you can save it securely in your workstation's operating system keychain, from where the 'InterSystems Server Credentials' authentication provider will be able to retrieve it after you restart VS Code.
 
 If instead you press 'Enter' the password will be available only until you restart VS Code.
 
@@ -50,13 +55,13 @@ Either way, you are now signed in on the specified account.
 
 ### Trusting Other Extensions
 
-When another extension first asks to use an InterSystems Server Credentials account you must either allow this or deny it. For example, with a pre-release build of the InterSystems ObjectScript extension which uses the new authentication provider you get this after you click the edit pencil button alongside a namespace in the [Server Manager tree](#the-server-tree):
+When another extension first asks to use an InterSystems Server Credentials account you must either allow this or deny it. For example, when the InterSystems ObjectScript extension uses the new authentication provider you get this dialog after you click the edit pencil button alongside a namespace in the [Server Manager tree](#the-server-tree):
 
-![Allow another extension](images/README/authenticationProvider-allow.png)
+![Allow another extension](images/README/authenticationProvider-allowObjectScript.png)
 
 ### Managing Signed In Accounts
 
-You can use the menu of VS Code's Accounts icon in the activity bar to manage your signed in accounts:
+You can use the menu of VS Code's Accounts icon in the activity bar to manage your signed-in accounts:
 
 ![Manage account](images/README/authenticationProvider-signedIn.png)
 
@@ -68,7 +73,7 @@ The 'Sign Out' option lets you sign out this account after confirmation:
 
 ![Sign out](images/README/authenticationProvider-signOut.png)
 
-When signing out an account for which you previously saved the password will get an option to delete the password, unless you have altered the `intersystemsServerManager.credentialsProvider.deletePasswordOnSignout` setting:
+When signing out an account for which you previously saved the password you will get an option to delete the password, unless you have altered the `intersystemsServerManager.credentialsProvider.deletePasswordOnSignout` setting:
 
 ![Delete password](images/README/authenticationProvider-deletePassword.png)
 
@@ -92,7 +97,6 @@ In this tree you can:
 - Tag favorite servers.
 - Set icon colors.
 - Focus on recently used connections.
-- Manage stored passwords.
 - Add new servers, and edit existing ones.
 
 In common with the rest of VS Code, Server Manager stores your connection settings in JSON files. VS Code settings are arranged in a hierarchy that you can learn more about [here](https://code.visualstudio.com/docs/getstarted/settings).
@@ -109,7 +113,7 @@ On Windows, Server Manager can create connection entries for all connections you
 
 The server definition is added to your [user-level](https://code.visualstudio.com/docs/getstarted/settings) `settings.json` file and also appears at the top of the 'Recent' folder.
 
-Optionally use its context menu to store the password for the username you entered when defining the server. You can also set the color of the server icon.
+Optionally use its context menu to set the color of the server icon.
 
 The 'star' button that appears when you hover over the row lets you add the server to the `Favorites` list at the top of the tree.
 
@@ -120,17 +124,17 @@ The 'star' button that appears when you hover over the row lets you add the serv
 3. Click the 'edit pencil' icon to add an `isfs://server:namespace/` folder to your VS Code workspace, or use the 'viewing eye' icon to add an `isfs-readonly://server:namespace/` one.
 4. To add a folder that gives you access to server-side web application files (for example, CSP files), hold the <kbd>Alt</kbd> / <kbd>Option</kbd> key down as you click the button for the type of access you want.
 
-Learn more about `isfs` and `isfs-readonly` folders in the [InterSystems ObjectScript for VS Code documentation](https://intersystems-community.github.io/vscode-objectscript/serverside).
+Learn more about `isfs` and `isfs-readonly` folders in the [documentation](https://docs.intersystems.com/components/csp/docbook/DocBook.UI.Page.cls?KEY=GVSCO_ssworkflow).
 
-> If you are already doing client-side editing of your code (for example, managing it with Git), be sure you understand the consequences of also doing server-side editing using `isfs`. The ObjectScript extension's [README](https://marketplace.visualstudio.com/items?itemName=intersystems-community.vscode-objectscript) outlines the differences between client-side and server-side editing. If in doubt, limit yourself to `isfs-readonly` by only using the eye icon.
+> If you are already doing client-side editing of your code (for example, managing it with Git), be sure you understand the consequences of also doing server-side editing using `isfs`. The [documentation](https://docs.intersystems.com/components/csp/docbook/DocBook.UI.Page.cls?KEY=GVSCO_intro) outlines the differences between client-side and server-side editing. If in doubt, limit yourself to `isfs-readonly` by only using the eye icon.
 
 ## The 'Current' Folder
 
-When you have a folder or a workspace (including a multi-root one) open in VS Code, the Server Manager displays a 'Current' node at the start of its tree if your workspace references any server defined in Server Manager. The linking happens automatically if you added workspace folders from Server Manager as described above. If you are using the client-side mode of working, your `objectscript.conn` setting needs to use the `server` property.
+When you have a folder or a workspace (including a multi-root one) open in VS Code, Server Manager displays a 'Current' node at the start of its tree if your workspace references any server defined in Server Manager. The linking happens automatically if you added workspace folders from Server Manager as described above. If you are using the client-side mode of working, your `objectscript.conn` setting needs to use the `server` property.
 
 ## Launching Management Portal
 
-When you hover over a server entry in the tree, two command buttons let you launch InterSystems Management Portal.
+When you hover over a server entry in the tree two command buttons let you launch InterSystems Management Portal.
 
 The first button uses VS Code's Simple Browser feature, which creates a tab alongside any documents you may have open. The second button opens Portal in your workstation's default web browser.
 
@@ -177,8 +181,7 @@ In this example two connections have been defined:
 		},
 		"description": "My local IRIS instance"
 	},
-	"/default": "my-local",
-	"/hideEmbeddedEntries": true
+	"/default": "my-local"
 }
 ```
 
@@ -188,23 +191,9 @@ Notice how you can add a `description` property to each connection. This will be
 
 Servers are displayed in the quickpick in the order they are defined in the JSON file. The exception is that if a server name is set as the value of the `/default` property (see example above) it will be shown first in the list.
 
-A set of embedded servers with names beginning `default~` will appear at the end of the lists unless you add the property `"/hideEmbeddedEntries": true` to your `intersystems.server` object to hide them (see above).
-
-## Removing a Stored Password
-
-Use the server's context menu. Alternatively, run `InterSystems Server Manager: Clear Password from Keychain` from Command Palette.
-
 ---
 
 ## Technical Notes
-
-### Legacy Mode
-
-Server Manager 3 makes changes which may degrade the user experience relative to version 2. To revert, make this user-level setting:
-```json
-"intersystemsServerManager.authentication.provider": "none"
-```
-Please only use this as a short term measure until extensions that use the Server Manager `getServerSpec` API get updated to use the 'intersystems-server-credentials' authentication provider. The setting may be removed in a future release.
 
 ### Colors, Favorites and Recents
 
@@ -212,17 +201,19 @@ These features use VS Code's extension-private global state storage. Data is not
 
 ### The 'All Servers' Folder
 
-The `All Servers` tree respects the optional `/default` and `/hideEmbeddedEntries` settings in the `intersystems.servers` JSON.
+The `All Servers` tree respects the optional `/default` setting in the `intersystems.servers` JSON.
 
 If a server has been named in `/default` it is promoted to the top of the list, which is otherwise presented in alphabetical order.
-
-Embedded entries (built-in default ones) are demoted to the end of the list, or omitted completely if `/hideEmbeddedEntries` is true.
 
 ---
 
 ## Information for VS Code Extension Developers - How To Leverage Server Manager
 
-An extension XYZ needing to connect to InterSystems servers can define Server Manager as a dependency in its `package.json` like this:
+The NPM package [`@intersystems-community/intersystems-servermanager`](https://www.npmjs.com/package/@intersystems-community/intersystems-servermanager) defines the types used by the API which this extension exports. It also declares some constants.
+
+An extension XYZ needing to connect to InterSystems servers should include `"@intersystems-community/intersystems-servermanager": "^3.8.0"` in the `"devDependencies"` object in its `package.json`.
+
+It might also define Server Manager as a dependency in its `package.json` like this:
 
 ```json
   "extensionDependencies": [
@@ -230,46 +221,66 @@ An extension XYZ needing to connect to InterSystems servers can define Server Ma
   ],
 ```
 
-Alternatively the `activate` method of XYZ can detect whether the extension is already available, then offer to install it if necessary:
+Alternatively the `activate` method of XYZ can detect whether the extension is already available, then offer to install it if not:
 
 ```ts
-  const extId = "intersystems-community.servermanager";
-  let extension = vscode.extensions.getExtension(extId);
+  import * as serverManager from '@intersystems-community/intersystems-servermanager';
+```
+...
+```ts
+  let extension = vscode.extensions.getExtension(serverManager.EXTENSION_ID);
   if (!extension) {
 	// Optionally ask user for permission
 	// ...
 
-	await vscode.commands.executeCommand("workbench.extensions.installExtension", extId);
-	extension = vscode.extensions.getExtension(extId);
+	await vscode.commands.executeCommand('workbench.extensions.installExtension', serverManager.EXTENSION_ID);
+	extension = vscode.extensions.getExtension(serverManager.EXTENSION_ID);
   }
   if (!extension.isActive) {
     await extension.activate();
   }
 ```
 
-XYZ can then use the extension's API to obtain the properties of a named server definition, including the password from the keychain if present:
+XYZ can then use the extension's API to obtain the properties of a named server definition:
 
 ```ts
-  const serverManagerApi = extension.exports;
+  const serverManagerApi: serverManager.ServerManagerAPI = extension.exports;
   if (serverManagerApi && serverManagerApi.getServerSpec) { // defensive coding
-	const serverSpec = await serverManagerApi.getServerSpec(serverName);
+	const serverSpec: serverManager.IServerSpec | undefined = await serverManagerApi.getServerSpec(serverName);
   }
 ```
 
-If the `username` property is absent it will be prompted for. If no `password` is stored in the keychain or in the JSON definition the user will be asked to provide this the first time in any session that `getServerSpec` is called for a given server.
+The `username` and `password` properties will only be present if defined in the settings JSON. Storage of `password` there is deprecated and strongly discouraged.
+
+To obtain the password with which to connect, use code like this which will also prompt for a username if absent:
+
+```ts
+  if (typeof serverSpec.password === 'undefined') {
+    const scopes = [serverSpec.name, serverSpec.username || ''];
+	const account = serverManagerApi.getAccount(serverSpec);
+    let session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { silent: true, account });
+    if (!session) {
+      session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { createIfNone: true, account });
+    }
+    if (session) {
+      serverSpec.username = session.scopes[1];
+      serverSpec.password = session.accessToken;
+    }
+  }
+```
 
 To offer the user a quickpick of servers:
 
 ```ts
-  const serverName = await serverManagerApi.pickServer();
+  const serverName: string = await serverManagerApi.pickServer();
 ```
 
 To obtain an array of server names:
 
 ```ts
-  const allServerNames = await serverManagerApi.getServerNames();
+  const allServerNames: serverManager.IServerName[] = await serverManagerApi.getServerNames();
 ```
-For details of the API, including result types and available parameters, review the source code of the extension's `activate` method [here](https://github.com/intersystems-community/intersystems-servermanager/blob/master/src/extension.ts).
+For up-to-date details of the API, including result types and available parameters, review the source code of the extension's `activate` method [here](https://github.com/intersystems-community/intersystems-servermanager/blob/master/src/extension.ts).
 
 ---
 <div>Activity Bar icon made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>

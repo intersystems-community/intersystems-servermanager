@@ -7,22 +7,22 @@ import { extensions, window } from "vscode";
 import { extensionId } from "../../extension";
 
 suite("Extension Test Suite", () => {
-  suiteSetup(async () => {
-    // make sure extension is activated
-    const ext = extensions.getExtension(extensionId);
-    if (ext) {
-      await ext.activate();
-    } else {
-      assert.fail("Extension not found");
-    }
-  });
+	suiteSetup(async () => {
+		// make sure extension is activated
+		const ext = extensions.getExtension(extensionId);
+		if (ext) {
+			await ext.activate();
+		} else {
+			assert.fail("Extension not found");
+		}
+	});
 
-  before(() => {
-    window.showInformationMessage("Start all tests.");
-  });
+	before(() => {
+		window.showInformationMessage("Start all tests.");
+	});
 
-  test("Extension started", () => {
-    assert.ok("All good");
-  });
+	test("Extension started", () => {
+		assert.ok("All good");
+	});
 
 });
