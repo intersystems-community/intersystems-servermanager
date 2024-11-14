@@ -69,9 +69,14 @@
   },
   "main": "./dist/extension",
   "activationEvents": [
-    "onAuthenticationRequest:intersystems-servermanager-credentials"
   ],
   "contributes": {
+    "authentication": [
+      {
+        "id": "intersystems-servermanager-credentials",
+        "label": "InterSystems Server Credentials"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
