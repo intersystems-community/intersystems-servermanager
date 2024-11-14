@@ -69,7 +69,6 @@
   },
   "main": "./dist/extension",
   "activationEvents": [
-    "onAuthenticationRequest:intersystems-servermanager-credentials"
   ],
   "contributes": {
     "authentication": [
