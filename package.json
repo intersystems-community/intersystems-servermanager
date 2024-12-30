@@ -53,13 +53,13 @@
   },
   "devDependencies": {
     "@intersystems-community/intersystems-servermanager": "^3.8.0",
-    "@types/vscode": "^1.93.0",
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^14.18.0",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.93.0",
     "@vscode/test-electron": "^2.3.8",
     "glob": "^7.1.6",
-    "mocha": "^9.2.2",
+    "mocha": "^11.0.1",
     "rimraf": "^5.0.5",
     "ts-loader": "^9.5.1",
     "tslint": "^5.20.1",
@@ -68,8 +68,7 @@
     "webpack-cli": "^5.1.4"
   },
   "main": "./dist/extension",
-  "activationEvents": [
-  ],
+  "activationEvents": [],
   "contributes": {
     "authentication": [
       {
