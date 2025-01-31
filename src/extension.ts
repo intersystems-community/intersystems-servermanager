@@ -14,6 +14,8 @@ import { logout, serverSessions } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
 
 export const extensionId = "intersystems-community.servermanager";
+export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscript";
+
 export let globalState: vscode.Memento;
 
 export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
@@ -262,18 +264,17 @@ export function activate(context: vscode.ExtensionContext) {
 				const namespace = pathParts[3];
 				const serverSpec = await getServerSpec(serverName);
 				if (serverSpec) {
-					const ISFS_ID = "intersystems-community.vscode-objectscript";
-					const isfsExtension = vscode.extensions.getExtension(ISFS_ID);
+					const isfsExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
 					if (isfsExtension) {
 						if (!isfsExtension.isActive) {
 							await isfsExtension.activate();
 							if (!isfsExtension.isActive) {
-								vscode.window.showErrorMessage(`${ISFS_ID} could not be activated.`, "Close");
+								vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} could not be activated.`, "Close");
 								return;
 							}
 						}
 					} else {
-						vscode.window.showErrorMessage(`${ISFS_ID} is not installed.`, "Close");
+						vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} is not installed.`, "Close");
 						return;
 					}
 

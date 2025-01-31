@@ -2,8 +2,9 @@ import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
 import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
-import { IServerName } from "@intersystems-community/intersystems-servermanager";
+import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { makeRESTRequest } from "../makeRESTRequest";
+import { OBJECTSCRIPT_EXTENSIONID } from "../extension";
 
 const SETTINGS_VERSION = "v1";
 
@@ -271,10 +272,12 @@ function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
 	return children;
 }
 
-function currentServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
+async function currentServers(element: SMTreeItem, params?: any): Promise<ServerTreeItem[]> {
 	const children = new Map<string, ServerTreeItem>();
+	const dockerLocalPorts = new Map<number, string>();
 
-	vscode.workspace.workspaceFolders?.map((folder) => {
+	const workspaceFolders = vscode.workspace.workspaceFolders || [];
+	await Promise.all(workspaceFolders.map(async (folder) => {
 		const serverName = folder.uri.authority.split(":")[0];
 		if (["isfs", "isfs-readonly"].includes(folder.uri.scheme)) {
 			const serverSummary = getServerSummary(serverName);
@@ -284,10 +287,25 @@ function currentServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
 					new ServerTreeItem({ parent: element, label: serverName, id: serverName }, serverSummary),
 				);
 			}
+			return;
 		}
 		const conn = vscode.workspace.getConfiguration("objectscript.conn", folder);
 		const connServer = conn.get<string>("server");
-		if (connServer) {
+		if (conn.get("docker-compose")) {
+			const objectScriptExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
+			if (objectScriptExtension) {
+				if (!objectScriptExtension.isActive) {
+					await objectScriptExtension.activate();
+				}
+				if (objectScriptExtension.isActive && objectScriptExtension.exports?.asyncServerForUri) {
+					const server = await objectScriptExtension.exports.asyncServerForUri(folder.uri);
+					if (server && server.host === "localhost" && server.port > 0 && !dockerLocalPorts.has(server.port)) {
+						dockerLocalPorts.set(server.port, folder.name);
+					}
+				}
+			}
+		}
+		else if (connServer) {
 			const serverSummary = getServerSummary(connServer);
 			if (serverSummary) {
 				children.set(
@@ -296,7 +314,18 @@ function currentServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
 				);
 			}
 		}
-	});
+
+	}));
+
+	dockerLocalPorts.forEach((name, port) => {
+		if (!children.has(name)) {
+			const serverSummary: IServerName = { name, description: `Docker service bound to local port ${port} for folder '${name}'`, detail: `http://localhost:${port}/` };
+			children.set(
+				name,
+				new ServerTreeItem({ parent: element, label: `docker:${port}`, id: name }, serverSummary),
+			);
+		}
+	})
 
 	return Array.from(children.values()).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 }
@@ -347,7 +376,7 @@ export class ServerTreeItem extends SMTreeItem {
 		super({
 			getChildren: serverFeatures,
 			id: parentFolderId + ":" + serverSummary.name,
-			label: serverSummary.name,
+			label: element.label ? element.label : serverSummary.name,
 			params: { serverSummary },
 			parent: element.parent,
 			tooltip: new vscode.MarkdownString(wrappedDetail).appendMarkdown(escapedDescription ? `\n\n*${escapedDescription}*` : ""),
@@ -377,12 +406,12 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 	const children: FeatureTreeItem[] = [];
 
 	if (params?.serverSummary) {
-		const name = params.serverSummary.name;
-		const serverSpec = await getServerSpec(name);
+		let serverSpec = await specFromServerSummary(params.serverSummary);
 		if (!serverSpec) {
 			return undefined;
 		}
 
+		const name = serverSpec.name;
 		let response = await makeRESTRequest("HEAD", serverSpec);
 		if (response?.status === 401) {
 			// Authentication error, so retry in case first attempt cleared a no-longer-valid stored password
@@ -392,10 +421,19 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 		if (response?.status !== 200) {
 			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
 		} else {
-			children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec.username || 'UnknownUser'));
+			children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.username || 'UnknownUser'));
 		}
 	}
 	return children;
+}
+
+async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec | undefined> {
+	const { name, description, detail } = serverSummary;
+	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
+	if (dockerDetail) {
+		return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" } };
+	}
+	return getServerSpec(name);
 }
 
 // tslint:disable-next-line: max-classes-per-file
@@ -428,6 +466,7 @@ export class NamespacesTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName: string,
+		serverSpec: IServerSpec,
 		username: string
 	) {
 		const parentFolderId = element.parent?.id || "";
@@ -435,7 +474,7 @@ export class NamespacesTreeItem extends FeatureTreeItem {
 			getChildren: serverNamespaces,
 			id: parentFolderId + ":namespaces",
 			label: "Namespaces",
-			params: { serverName },
+			params: { serverName, serverSpec },
 			parent: element.parent,
 			tooltip: `Namespaces '${username}' can access`,
 		});
@@ -457,7 +496,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 
 	if (params?.serverName) {
 		const name: string = params.serverName;
-		const serverSpec = await getServerSpec(name);
+		const serverSpec: IServerSpec | undefined = params.serverSpec;
 		if (!serverSpec) {
 			return undefined;
 		}
@@ -468,7 +507,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 		} else {
 			const serverApiVersion = response.data.result.content.api;
 			response.data.result.content.namespaces.map((namespace: string) => {
-				children.push(new NamespaceTreeItem({ parent: element, label: name, id: name }, namespace, name, serverApiVersion));
+				children.push(new NamespaceTreeItem({ parent: element, label: name, id: name }, namespace, name, serverSpec, serverApiVersion));
 			});
 		}
 	}
@@ -483,6 +522,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 		element: ISMItem,
 		name: string,
 		serverName: string,
+		serverSpec: IServerSpec,
 		serverApiVersion: number
 	) {
 		const parentFolderId = element.parent?.id || "";
@@ -493,7 +533,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 			parent: element.parent,
 			tooltip: `${name} on ${serverName}`,
 			getChildren: namespaceFeatures,
-			params: { serverName, serverApiVersion }
+			params: { serverName, serverSpec, serverApiVersion }
 		});
 		this.name = name;
 		this.contextValue = `${serverApiVersion.toString()}/${name === "%SYS" ? "sysnamespace" : "namespace"}`;
@@ -510,8 +550,8 @@ export class NamespaceTreeItem extends SMTreeItem {
  */
 async function namespaceFeatures(element: NamespaceTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
 	return [
-		new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName, params.serverApiVersion),
-		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName, params.serverApiVersion)
+		new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName, params.serverSpec, params.serverApiVersion),
+		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName, params.serverSpec, params.serverApiVersion)
 	];
 }
 
@@ -520,6 +560,7 @@ export class ProjectsTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName: string,
+		serverSpec: IServerSpec,
 		serverApiVersion: number
 	) {
 		const parentFolderId = element.parent?.id || '';
@@ -529,7 +570,7 @@ export class ProjectsTreeItem extends FeatureTreeItem {
 			id: parentFolderId + ':projects',
 			tooltip: `Projects in this namespace`,
 			getChildren: namespaceProjects,
-			params: { serverName, serverApiVersion, ns: element.label }
+			params: { serverName, serverSpec, serverApiVersion, ns: element.label }
 		});
 		this.name = 'Projects';
 		this.contextValue = serverApiVersion.toString() + '/projects';
@@ -549,7 +590,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promi
 
 	if (params?.serverName && params.ns) {
 		const name: string = params.serverName;
-		const serverSpec = await getServerSpec(name)
+		const serverSpec: IServerSpec | undefined = params.serverSpec;
 		if (!serverSpec) {
 			return undefined
 		}
@@ -607,6 +648,7 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName: string,
+		serverSpec: IServerSpec,
 		serverApiVersion: number
 	) {
 		const parentFolderId = element.parent?.id || '';
@@ -616,7 +658,7 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 			id: parentFolderId + ':webapps',
 			tooltip: `Web Applications in this namespace`,
 			getChildren: namespaceWebApps,
-			params: { serverName, serverApiVersion, ns: element.label }
+			params: { serverName, serverSpec, serverApiVersion, ns: element.label }
 		});
 		this.name = 'Web Applications';
 		this.contextValue = serverApiVersion.toString() + '/webapps';
@@ -636,7 +678,7 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promis
 
 	if (params?.serverName && params.ns) {
 		const name: string = params.serverName;
-		const serverSpec = await getServerSpec(name)
+		const serverSpec: IServerSpec | undefined = params.serverSpec;
 		if (!serverSpec) {
 			return undefined
 		}

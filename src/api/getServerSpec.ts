@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { OBJECTSCRIPT_EXTENSIONID } from "../extension";
 
 /**
  * Get a server specification.
@@ -17,7 +18,42 @@ export async function getServerSpec(
 
 	// Unknown server
 	if (!server) {
-		return undefined;
+		const folder = vscode.workspace.workspaceFolders?.find(f => f.name === name);
+		if (!folder) {
+			return undefined;
+		}
+
+		// It is the name of a workspace root folder
+		// Get the server details from the ObjectScript extension if available
+		const objectScriptExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
+		if (!objectScriptExtension) {
+			return undefined;
+		}
+		if (!objectScriptExtension.isActive) {
+			// Activating it here would cause a deadlock because the activate method of the ObjectScript extension itself calls our getServerSpec API
+			return undefined;
+		}
+		let serverForUri: any;
+		if (objectScriptExtension.exports.asyncServerForUri) {
+			serverForUri = await objectScriptExtension.exports.asyncServerForUri(folder.uri);
+		} else {
+			serverForUri = objectScriptExtension.exports.serverForUri(folder.uri);
+		}
+		if (!serverForUri) {
+			return undefined;
+		}
+		return {
+			name: serverForUri.serverName,
+			webServer: {
+				scheme: serverForUri.scheme,
+				host: serverForUri.host,
+				port: serverForUri.port,
+				pathPrefix: serverForUri.pathPrefix
+			},
+			username: serverForUri.username,
+			password: serverForUri.password ? serverForUri.password : undefined,
+			description: `Server for workspace folder "${name}"`,
+		};
 	}
 
 	server.name = name;
