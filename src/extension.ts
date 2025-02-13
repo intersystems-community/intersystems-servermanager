@@ -269,18 +269,19 @@ export function activate(context: vscode.ExtensionContext) {
 						if (!isfsExtension.isActive) {
 							await isfsExtension.activate();
 							if (!isfsExtension.isActive) {
-								vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} could not be activated.`, "Close");
+								vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} could not be activated.`, "Dismiss");
 								return;
 							}
 						}
 					} else {
-						vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} is not installed.`, "Close");
+						vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} is not installed.`, "Dismiss");
 						return;
 					}
 
 					const params = [csp ? "csp" : "", project ? `project=${project}` : ""].filter(e => e != "").join("&");
 					const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}${csp && webApp ? webApp : "/"}${params ? `?${params}` : ""}`);
-					if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {
+					const uriString = uri.toString(true);
+					if (!(vscode.workspace.workspaceFolders || []).some((workspaceFolder) => workspaceFolder.uri.toString(true) == uriString)) {
 						const label = `${project ? `${project} - ${serverName}:${namespace}` : !csp ? `${serverName}:${namespace}` : ["", "/"].includes(uri.path) ? `${serverName}:${namespace} web files` : `${serverName} (${uri.path})`}${readonly && project == undefined ? " (read-only)" : ""}`;
 						const added = vscode.workspace.updateWorkspaceFolders(
 							vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
@@ -291,7 +292,7 @@ export function activate(context: vscode.ExtensionContext) {
 						if (added) {
 							await view.addToRecents(serverName);
 						} else {
-							vscode.window.showErrorMessage(`Folder ${uri.toString()} could not be added.`, "Close");
+							vscode.window.showErrorMessage(`Folder ${uriString} could not be added.`, "Dismiss");
 						}
 					}
 					// Switch to Explorer view and focus on the folder
@@ -351,6 +352,59 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(`${extensionId}.viewWebApp`, async (webAppTreeItem?: WebAppTreeItem) => {
 			await addWorkspaceFolderAsync(true, true, <NamespaceTreeItem>webAppTreeItem?.parent?.parent, undefined, webAppTreeItem?.name);
 		})
+	);
+
+	const addCategoriesFolders = async (namespaceTreeItem?: NamespaceTreeItem, readonly = false) => {
+		if (!namespaceTreeItem) return;
+		const idArray = namespaceTreeItem.id?.split(':');
+		if (!idArray || idArray?.length != 4) return;
+		const serverId = idArray[1];
+		const namespace = idArray[3];
+		const serverSpec = await getServerSpec(serverId);
+		if (!serverSpec) return;
+		const isfsExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
+		if (isfsExtension) {
+			if (!isfsExtension.isActive) {
+				await isfsExtension.activate();
+				if (!isfsExtension.isActive) {
+					vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} could not be activated.`, "Dismiss");
+					return;
+				}
+			}
+		} else {
+			vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} is not installed.`, "Dismiss");
+			return;
+		}
+
+		const baseUri = vscode.Uri.from({ scheme: `isfs${readonly ? "-readonly" : ""}`, authority: `${serverId}:${namespace.toLowerCase()}` });
+		const folders: Array<{ name: string, uri: vscode.Uri }> = [];
+		folders.push({
+			name: `${serverId}:${namespace} > Classes${readonly ? " (read-only)" : ""}`,
+			uri: baseUri.with({ query: 'filter=*.cls' })
+		});
+		folders.push({
+			name: `${serverId}:${namespace} > Routines${readonly ? " (read-only)" : ""}`,
+			uri: baseUri.with({ query: 'filter=*.mac,*.inc,*.int,*.bas,*.mvb,*.mvi' })
+		});
+		folders.push({
+			name: `${serverId}:${namespace} > Web${readonly ? " (read-only)" : ""}`,
+			uri: baseUri.with({ query: 'csp' })
+		});
+		folders.push({
+			name: `${serverId}:${namespace} > Other${readonly ? " (read-only)" : ""}`,
+			uri: baseUri.with({ query: "filter=*.other" })
+		});
+
+		if (vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders?.length ?? 0, null, ...folders)) {
+			await view.addToRecents(serverId);
+		} else {
+			vscode.window.showErrorMessage("Failed to add folders.", "Dismiss");
+		}
+	};
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand("intersystems-community.servermanager.editCategories", (item) => { addCategoriesFolders(item) }),
+		vscode.commands.registerCommand("intersystems-community.servermanager.viewCategories", (item) => { addCategoriesFolders(item, true) })
 	);
 
 	// Listen for relevant configuration changes

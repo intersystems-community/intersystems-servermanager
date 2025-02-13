@@ -372,6 +372,16 @@
         "command": "intersystems-community.servermanager.viewWebApp",
         "title": "View Files in Web Application",
         "icon": "$(eye)"
+      },
+      {
+        "command": "intersystems-community.servermanager.editCategories",
+        "title": "Edit Code in Namespace by Category",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "intersystems-community.servermanager.viewCategories",
+        "title": "View Code in Namespace by Category",
+        "icon": "$(list-tree)"
       }
     ],
     "submenus": [
@@ -503,6 +513,14 @@
         {
           "command": "intersystems-community.servermanager.viewWebApp",
           "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.editCategories",
+          "when": "false"
+        },
+        {
+          "command": "intersystems-community.servermanager.viewCategories",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -614,6 +632,12 @@
           "command": "intersystems-community.servermanager.removeFromRecent",
           "when": "view == intersystems-community_servermanager && viewItem =~ /^recent.server./",
           "group": "2_manage@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.editCategories",
+          "alt": "intersystems-community.servermanager.viewCategories",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "inline@30"
         }
       ]
     }
