@@ -281,7 +281,7 @@ export function activate(context: vscode.ExtensionContext) {
 					const params = [csp ? "csp" : "", project ? `project=${project}` : ""].filter(e => e != "").join("&");
 					const uri = vscode.Uri.parse(`isfs${readonly ? "-readonly" : ""}://${serverName}:${namespace}${csp && webApp ? webApp : "/"}${params ? `?${params}` : ""}`);
 					if ((vscode.workspace.workspaceFolders || []).filter((workspaceFolder) => workspaceFolder.uri.toString() === uri.toString()).length === 0) {
-						const label = `${project ? `${project} - ` : ""}${serverName}:${namespace}${csp ? ' web files' : ''}${readonly && project == undefined ? " (read-only)" : ""}`;
+						const label = `${project ? `${project} - ${serverName}:${namespace}` : !csp ? `${serverName}:${namespace}` : ["", "/"].includes(uri.path) ? `${serverName}:${namespace} web files` : `${serverName} (${uri.path})`}${readonly && project == undefined ? " (read-only)" : ""}`;
 						const added = vscode.workspace.updateWorkspaceFolders(
 							vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
 							0,
