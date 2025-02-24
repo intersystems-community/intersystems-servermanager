@@ -378,9 +378,26 @@
       {
         "id": "intersystems-community.servermanager.iconColor",
         "label": "Set Icon Color"
+      },
+      {
+        "id": "intersystems-community.servermanager.moreActions",
+        "label": "More Actions...",
+        "icon": "$(ellipsis)"
       }
     ],
     "menus": {
+      "intersystems-community.servermanager.moreActions": [
+        {
+          "command": "intersystems-community.servermanager.openPortalTab",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
+          "group": "1_builtin@10"
+        },
+        {
+          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
+          "group": "1_builtin@10"
+        }
+      ],
       "intersystems-community.servermanager.iconColor": [
         {
           "command": "intersystems-community.servermanager.setIconRed",
@@ -581,19 +598,14 @@
           "group": "inline@20"
         },
         {
-          "command": "intersystems-community.servermanager.openPortalTab",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "inline@80"
-        },
-        {
           "command": "intersystems-community.servermanager.openPortalExternal",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "inline@90"
         },
         {
-          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
-          "group": "inline@80"
+          "submenu": "intersystems-community.servermanager.moreActions",
+          "when": "view == intersystems-community_servermanager",
+          "group": "inline@999"
         },
         {
           "command": "intersystems-community.servermanager.retryServer",
