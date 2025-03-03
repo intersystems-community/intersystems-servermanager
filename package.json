@@ -67,6 +67,9 @@
     "webpack": "^5.95.0",
     "webpack-cli": "^5.1.4"
   },
+  "extensionDependencies": [
+    "intersystems-community.viewcontainer"
+  ],
   "main": "./dist/extension",
   "activationEvents": [],
   "contributes": {
@@ -76,17 +79,8 @@
         "label": "InterSystems Server Credentials"
       }
     ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "intersystems-community_servermanager",
-          "title": "InterSystems",
-          "icon": "images/InterSystems.svg"
-        }
-      ]
-    },
     "views": {
-      "intersystems-community_servermanager": [
+      "intersystems-community": [
         {
           "id": "intersystems-community_servermanager",
           "name": "Servers",
