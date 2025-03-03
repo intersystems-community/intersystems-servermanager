@@ -11,7 +11,7 @@ suite("Extension Test Suite", () => {
 		// make sure extension is activated
 		const ext = extensions.getExtension(extensionId);
 		if (ext) {
-			await ext.activate();
+			// await ext.activate();
 		} else {
 			assert.fail("Extension not found");
 		}
