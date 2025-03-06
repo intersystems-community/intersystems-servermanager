@@ -4,16 +4,4 @@
     "editor.formatOnSave": true
   },
   "typescript.preferences.quoteStyle": "double",
-  "intersystems.servers": {
-    "a": {
-        "webServer": {
-            "scheme": "http",
-            "host": "localhost",
-            "port": 52773,
-            "pathPrefix": "/iris"
-        },
-        "username": "_SYSTEM",
-        "password": "SYS"
-    }
-  }
 }
