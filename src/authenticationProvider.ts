@@ -14,7 +14,7 @@ import {
 	workspace,
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState } from "./extension";
+import { globalState } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { makeRESTRequest } from "./makeRESTRequest";
 

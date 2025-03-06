@@ -7,7 +7,7 @@ import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { getServerSpec } from "./api/getServerSpec";
-import { getAccountFromParts } from "./extension";
+import { getAccountFromParts } from "./commonActivate";
 
 export interface IServerSession {
 	serverName: string;
@@ -55,8 +55,8 @@ export async function makeRESTRequest(
 	data?: any,
 ): Promise<AxiosResponse | undefined> {
 
-	// Create the HTTPS agent
-	const httpsAgent = new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") });
+	// Create the HTTPS agent if in a node environment
+	const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
 
 	// Get the cookies
 	let cookies: string[] = getCookies(server);
@@ -165,7 +165,6 @@ export async function makeRESTRequest(
 		}
 		return respdata;
 	} catch (error) {
-		console.log(error);
 		return error.response;
 	}
 }
@@ -183,8 +182,8 @@ export async function logout(serverName: string) {
 		return;
 	}
 
-	// Create the HTTPS agent
-	const httpsAgent = new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") });
+	// Create the HTTPS agent if in a node environment
+	const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
 
 	// Get the cookies
 	let cookies: string[] = getCookies(server);
@@ -213,9 +212,7 @@ export async function logout(serverName: string) {
 				withCredentials: true,
 			},
 		);
-	} catch (error) {
-		console.log(error);
-	}
+	} catch { }
 }
 
 async function resolveCredentials(serverSpec: IServerSpec) {
