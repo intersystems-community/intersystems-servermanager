@@ -10,7 +10,7 @@ export async function addServer(
 	return await vscode.window
 		.showInputBox({
 			ignoreFocusOut: true,
-			placeHolder: "Name of new server definition",
+			title: "Enter name of new server definition",
 			validateInput: (value) => {
 				if (value === "") {
 					return "Required";
@@ -29,7 +29,7 @@ export async function addServer(
 				if (name) {
 					const description = await vscode.window.showInputBox({
 						ignoreFocusOut: true,
-						placeHolder: "Optional description",
+						title: "Optionally enter a description",
 					});
 					if (typeof description !== "undefined") {
 						if (description) {
@@ -37,7 +37,7 @@ export async function addServer(
 						}
 						const host = await vscode.window.showInputBox({
 							ignoreFocusOut: true,
-							placeHolder: "Hostname or IP address of web server",
+							title: "Enter the hostname or IP address of the web server",
 							validateInput: (value) => {
 								return value.trim().length ? undefined : "Required";
 							},
@@ -46,7 +46,7 @@ export async function addServer(
 							spec.webServer.host = host.trim();
 							const portString = await vscode.window.showInputBox({
 								ignoreFocusOut: true,
-								placeHolder: "Port of web server",
+								title: "Enter the port of the web server",
 								validateInput: (value) => {
 									const port = +value;
 									return value.match(/\d+/) &&
@@ -61,14 +61,17 @@ export async function addServer(
 								spec.webServer.port = +portString;
 								const prefix = await vscode.window.showInputBox({
 									ignoreFocusOut: true,
-									placeHolder:
-										"Optional path prefix of instance",
+									title:
+										"Optionally enter the path prefix of the instance",
 								});
 								if (typeof prefix !== "undefined") {
 									if (prefix) {
 										var pathPrefix = prefix.trim();
-										if (pathPrefix.charAt(0) !== "/") {
+										if (!pathPrefix.startsWith("/")) {
 											pathPrefix = "/" + pathPrefix;
+										}
+										if (pathPrefix.endsWith("/")) {
+											pathPrefix = pathPrefix.slice(0, -1);
 										}
 										spec.webServer.pathPrefix = pathPrefix;
 									}
@@ -76,8 +79,8 @@ export async function addServer(
 
 								const username = await vscode.window.showInputBox({
 									ignoreFocusOut: true,
-									placeHolder:
-										"Username",
+									title:
+										"Enter the username",
 									prompt:
 										"Leave empty to be prompted when connecting.",
 								});
@@ -89,7 +92,7 @@ export async function addServer(
 									const scheme = await new Promise<string | undefined>((resolve) => {
 										let result: string;
 										const quickPick = vscode.window.createQuickPick();
-										quickPick.placeholder = "Confirm connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.";
+										quickPick.title = "Confirm the connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.";
 										quickPick.ignoreFocusOut = true;
 										quickPick.items = [{ label: "http" }, { label: "https" }];
 										quickPick.activeItems = [quickPick.items[spec.webServer.port == 443 ? 1 : 0]];

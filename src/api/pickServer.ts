@@ -26,7 +26,7 @@ export async function pickServer(
 		let result: string;
 		let resolveOnHide = true;
 		const quickPick = vscode.window.createQuickPick();
-		quickPick.title = "Choose server or use '+' to add one";
+		quickPick.title = "Pick a server or use '+' to add one";
 		quickPick.placeholder = options.placeHolder;
 		quickPick.matchOnDescription = options.matchOnDescription || true;
 		quickPick.matchOnDetail = options.matchOnDetail || false;
