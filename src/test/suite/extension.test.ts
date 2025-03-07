@@ -4,7 +4,7 @@ import { before } from "mocha";
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
 import { extensions, window } from "vscode";
-import { extensionId } from "../../extension";
+import { extensionId } from "../../commonActivate";
 
 suite("Extension Test Suite", () => {
 	suiteSetup(async () => {

@@ -4,7 +4,7 @@ import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
 import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { makeRESTRequest } from "../makeRESTRequest";
-import { OBJECTSCRIPT_EXTENSIONID } from "../extension";
+import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
 
 const SETTINGS_VERSION = "v1";
 
