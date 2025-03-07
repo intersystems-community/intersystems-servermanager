@@ -269,12 +269,12 @@ export function activate(context: vscode.ExtensionContext) {
 						if (!isfsExtension.isActive) {
 							await isfsExtension.activate();
 							if (!isfsExtension.isActive) {
-								vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} could not be activated.`, "Close");
+								vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} could not be activated.`, "Dismiss");
 								return;
 							}
 						}
 					} else {
-						vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} is not installed.`, "Close");
+						vscode.window.showErrorMessage(`${OBJECTSCRIPT_EXTENSIONID} is not installed.`, "Dismiss");
 						return;
 					}
 
@@ -291,7 +291,7 @@ export function activate(context: vscode.ExtensionContext) {
 						if (added) {
 							await view.addToRecents(serverName);
 						} else {
-							vscode.window.showErrorMessage(`Folder ${uri.toString()} could not be added.`, "Close");
+							vscode.window.showErrorMessage(`Folder ${uri.toString()} could not be added.`, "Dismiss");
 						}
 					}
 					// Switch to Explorer view and focus on the folder
