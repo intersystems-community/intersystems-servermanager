@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Uri } from "vscode";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
-import { extensionId } from "../extension";
+import { extensionId } from "../commonActivate";
 import { makeRESTRequest } from "../makeRESTRequest";
 
 export enum BrowserTarget {

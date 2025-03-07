@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
-import { OBJECTSCRIPT_EXTENSIONID } from "../extension";
+import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
 
 /**
  * Get a server specification.
