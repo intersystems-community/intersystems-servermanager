@@ -1,3 +1,13 @@
+## 3.10.0 (02-Apr-2025)
+* Show `objectscript.conn.docker-compose` type connections under 'Current' node (#187).
+* Declare `authentication` contribution (#246).
+* Fix publishing to Open VSX registry (#248).
+* Suffix generated server-side folder names with web app path (#252).
+* Introduce an ellipsis submenu and demote Open Portal to it (#255).
+* Support running in a web environment (#258).
+* Input UI tweaks (#259).
+* Update dependencies.
+
 ## 3.8.0 (13-Nov-2024)
 * Prevent overprompting for permission and account (#242).
 * Update dependencies.
