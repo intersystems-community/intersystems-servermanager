@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { importFromRegistry } from "./commands/importFromRegistry";
 import { ServerManagerView } from "./ui/serverManagerView";
 import { commonActivate, extensionId } from "./commonActivate";
+import { logout, serverSessions } from "./makeRESTRequest";
 
 export function activate(context: vscode.ExtensionContext) {
 	const view = new ServerManagerView(context);
@@ -20,4 +21,9 @@ export function activate(context: vscode.ExtensionContext) {
 	return commonActivate(context, view);
 }
 
-export function deactivate() { }
+export async function deactivate() {
+	// Do our best to log out of all sessions
+	for (const serverSession of serverSessions) {
+		await logout(serverSession[1].serverName);
+	}
+}
