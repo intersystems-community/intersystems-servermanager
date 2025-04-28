@@ -16,7 +16,7 @@ import {
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
-import { makeRESTRequest } from "./makeRESTRequest";
+import { logout, makeRESTRequest } from "./makeRESTRequest";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -230,6 +230,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				await this._removeSession(session.id, true);
 				return false;
 			}
+			// Immediately log out the session created by credentials test
+			await logout(session.serverName);
 		}
 		this._checkedSessions.push(session);
 		return true;
