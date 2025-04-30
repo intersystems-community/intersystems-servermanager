@@ -23,7 +23,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 export async function deactivate() {
 	// Do our best to log out of all sessions
+
+	const promises: Promise<any>[] = [];
 	for (const serverSession of serverSessions) {
-		await logout(serverSession[1].serverName);
+		promises.push(logout(serverSession[1].serverName));
 	}
+	await Promise.allSettled(promises);
 }
