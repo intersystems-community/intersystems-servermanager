@@ -1,3 +1,7 @@
+## 3.10.1 (14-May-2025)
+* Try to end /api/atelier web sessions when extension deactivates (#267).
+* Update dependencies.
+
 ## 3.10.0 (02-Apr-2025)
 * Show `objectscript.conn.docker-compose` type connections under 'Current' node (#187).
 * Declare `authentication` contribution (#246).
