@@ -8,7 +8,7 @@ export function getServerSummary(name: string, scope?: vscode.ConfigurationScope
 	if (!server) {
 		return undefined;
 	}
-	return { name, description: server.description || "", detail: serverDetail(server) };
+	return { name, description: server.description || "", detail: serverDetail(server), scope };
 }
 
 export function serverDetail(connSpec: IServerSpec): string {
