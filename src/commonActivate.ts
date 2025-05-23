@@ -112,7 +112,41 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
             view.refreshTree();
         }),
         vscode.commands.registerCommand(`${extensionId}.addServer`, async () => {
-            const name = await addServer();
+            let scope: vscode.ConfigurationScope | undefined;
+            let target: vscode.ConfigurationTarget | undefined;
+            if (vscode.workspace.workspaceFolders) {
+                interface SettingsScope extends vscode.QuickPickItem {
+                    scope?: vscode.ConfigurationScope;
+                    target: vscode.ConfigurationTarget;
+                }
+                const options: SettingsScope[] = [{ label: "Global", detail: "User Settings", target: vscode.ConfigurationTarget.Global }];
+                if (vscode.workspace.workspaceFile) {
+                    // The workspace is a file, so each folder may be its own option
+                    options.push(
+                        { label: "Workspace", detail: vscode.workspace.workspaceFile.toString(true), target: vscode.ConfigurationTarget.Workspace },
+                        ...vscode.workspace.workspaceFolders
+                            .filter(f => !["isfs", "isfs-readonly"].includes(f.uri.scheme))
+                            .map(f => {
+                                return { label: f.name, detail: f.uri.toString(true), scope: f, target: vscode.ConfigurationTarget.WorkspaceFolder };
+                            })
+                    );
+                } else {
+                    // The workspace is a single local folder, so that is the only other option
+                    options.push({ label: "Workspace", detail: vscode.workspace.workspaceFolders[0]?.uri.toString(true) ?? "Current folder", target: vscode.ConfigurationTarget.Workspace });
+                }
+                const choice = await vscode.window.showQuickPick(options, {
+                    ignoreFocusOut: true,
+                    title: "Pick a settngs scope in which to add the server definition"
+                });
+                if (!choice) return;
+                scope = choice.scope;
+                target = choice.target;
+            } else {
+                // No workspace is open, so global is the only option
+                scope = undefined;
+                target = vscode.ConfigurationTarget.Global;
+            }
+            const name = await addServer(scope, target);
             if (name) {
                 await view.addToRecents(name);
             }
