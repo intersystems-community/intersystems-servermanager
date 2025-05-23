@@ -7,6 +7,7 @@ export interface IServerName {
 	name: string;
 	description: string;
 	detail: string;
+	scope?: vscode.ConfigurationScope;
 }
 
 export interface IWebServerSpec {

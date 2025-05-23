@@ -170,7 +170,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
         vscode.commands.registerCommand(`${extensionId}.editSettings`, (server?: ServerTreeItem) => {
             // Attempt to open the correct JSON file
             server = server instanceof ServerTreeItem ? server : undefined;
-            const servers = vscode.workspace.getConfiguration("intersystems").inspect<{ [key: string]: any }>("servers");
+            const scope: vscode.ConfigurationScope = server?.params?.serverSummary?.scope;
+            const servers = vscode.workspace.getConfiguration("intersystems", scope).inspect<{ [key: string]: any }>("servers");
             const openJSONArg = { revealSetting: { key: "intersystems.servers" } };
             const revealServer = (): void => {
                 // Find the start of the server's settings block
@@ -191,7 +192,19 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
                     }
                 }
             };
-            if (server && servers?.workspaceValue?.hasOwnProperty(server.name)) {
+            // Only WorkspaceFolder objects have an index.
+            if (server && servers?.workspaceFolderValue?.hasOwnProperty(server.name) && typeof (<vscode.WorkspaceFolder>scope)?.index == "number") {
+                // Open the workspace folder settings file. Need to use showTextDocument because the
+                // "workbench.action.openFolderSettingsFile" command always prompts the user.
+                vscode.window.showTextDocument(
+                    vscode.Uri.joinPath((<vscode.WorkspaceFolder>scope).uri, ".vscode", "settings.json"),
+                    // Need these two properties to mimic the workbench commands' behavior
+                    { preview: false, selection: new vscode.Range(0, 0, 0, 0) }
+                ).then(revealServer, () => {
+                    // If there's an error, fall back to showing the UI
+                    vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${extensionId}`);
+                });
+            } else if (server && servers?.workspaceValue?.hasOwnProperty(server.name)) {
                 // Open the workspace settings file
                 vscode.commands.executeCommand("workbench.action.openWorkspaceSettingsFile", openJSONArg).then(revealServer);
             } else if (server && servers?.globalValue?.hasOwnProperty(server.name)) {
