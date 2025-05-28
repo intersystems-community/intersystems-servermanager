@@ -261,14 +261,16 @@ export class SMTreeItem extends vscode.TreeItem {
 
 function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
 	const children: ServerTreeItem[] = [];
-	const getAllServers = (sorted?: boolean): ServerTreeItem[] => {
-		const serverNames = getServerNames(undefined, sorted);
-		return serverNames.map((serverName) => {
-			return new ServerTreeItem({ label: serverName.name, id: serverName.name, parent: treeItem }, serverName);
-		});
-	};
-
-	getAllServers(params.sorted).map((server) => children.push(server));
+	const wsServerNames = getServerNames(undefined);
+	children.push(...wsServerNames.map((wss) => {
+		return new ServerTreeItem({ label: wss.name, id: wss.name, parent: treeItem }, wss);
+	}));
+	vscode.workspace.workspaceFolders?.map((wf) => {
+		children.push(...getServerNames(wf).filter((wfs) => !wsServerNames.some((wss) => wss.name == wfs.name)).map((wfs) => {
+			return new ServerTreeItem({ label: `${wfs.name} (${wf.name})`, id: wfs.name, parent: treeItem }, wfs);
+		}));
+	});
+	if (params?.sorted) children.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 	return children;
 }
 

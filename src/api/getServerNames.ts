@@ -16,6 +16,7 @@ export function getServerNames(scope?: vscode.ConfigurationScope, sorted?: boole
 				description: `${servers[myDefault].description || ""} (default)`.trim(),
 				detail: serverDetail(servers[myDefault]),
 				name: myDefault,
+				scope,
 			});
 		}
 
@@ -26,15 +27,14 @@ export function getServerNames(scope?: vscode.ConfigurationScope, sorted?: boole
 					description: servers[key].description || "",
 					detail: serverDetail(servers[key]),
 					name: key,
+					scope,
 				});
 			}
 		}
 	}
 
 	// If requested, sort what we found
-	if (sorted) {
-		names = names.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
-	}
+	if (sorted) names.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 
 	// Append them
 	allNames.push(...names);
