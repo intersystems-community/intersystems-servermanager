@@ -230,7 +230,7 @@ export class SMTreeItem extends vscode.TreeItem {
 	public readonly parent: SMTreeItem | undefined;
 	// tslint:disable-next-line: ban-types
 	private readonly _getChildren?: Function;
-	private readonly _params?: any;
+	public readonly params?: any;
 
 	constructor(item: ISMItem) {
 		const collapsibleState = item.getChildren
@@ -247,12 +247,12 @@ export class SMTreeItem extends vscode.TreeItem {
 			this.iconPath = new vscode.ThemeIcon(item.codiconName);
 		}
 		this._getChildren = item.getChildren;
-		this._params = item.params;
+		this.params = item.params;
 	}
 
 	public async getChildren(): Promise<SMTreeItem[] | undefined> {
 		if (this._getChildren) {
-			return await this._getChildren(this, this._params);
+			return await this._getChildren(this, this.params);
 		} else {
 			return;
 		}
@@ -261,14 +261,19 @@ export class SMTreeItem extends vscode.TreeItem {
 
 function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
 	const children: ServerTreeItem[] = [];
-	const getAllServers = (sorted?: boolean): ServerTreeItem[] => {
-		const serverNames = getServerNames(undefined, sorted);
-		return serverNames.map((serverName) => {
-			return new ServerTreeItem({ label: serverName.name, id: serverName.name, parent: treeItem }, serverName);
-		});
-	};
-
-	getAllServers(params.sorted).map((server) => children.push(server));
+	// Add children for servers defined at the user or workspace level
+	const wsServerNames = getServerNames(undefined);
+	children.push(...wsServerNames.map((wss) => {
+		return new ServerTreeItem({ label: wss.name, id: wss.name, parent: treeItem }, wss);
+	}));
+	// Add children for servers defined at the workspace folder level
+	vscode.workspace.workspaceFolders?.map((wf) => {
+		if (["isfs", "isfs-readonly"].includes(wf.uri.scheme)) return;
+		children.push(...getServerNames(wf).filter((wfs) => !wsServerNames.some((wss) => wss.name == wfs.name)).map((wfs) => {
+			return new ServerTreeItem({ label: `${wfs.name} (${wf.name})`, id: wfs.name, parent: treeItem }, wfs);
+		}));
+	});
+	if (params?.sorted) children.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 	return children;
 }
 
@@ -280,7 +285,7 @@ async function currentServers(element: SMTreeItem, params?: any): Promise<Server
 	await Promise.all(workspaceFolders.map(async (folder) => {
 		const serverName = folder.uri.authority.split(":")[0];
 		if (["isfs", "isfs-readonly"].includes(folder.uri.scheme)) {
-			const serverSummary = getServerSummary(serverName);
+			const serverSummary = getServerSummary(serverName, folder);
 			if (serverSummary) {
 				children.set(
 					serverName,
@@ -304,13 +309,15 @@ async function currentServers(element: SMTreeItem, params?: any): Promise<Server
 					}
 				}
 			}
-		}
-		else if (connServer) {
-			const serverSummary = getServerSummary(connServer);
+		} else if (connServer) {
+			const serverSummary = getServerSummary(connServer, folder);
 			if (serverSummary) {
+				const key = `${connServer}${typeof vscode.workspace.getConfiguration("intersystems.servers", folder).inspect(connServer)?.workspaceFolderValue == "object"
+					? ` (${folder.name})` : ""
+					}`;
 				children.set(
-					connServer,
-					new ServerTreeItem({ parent: element, label: serverName, id: serverName }, serverSummary),
+					key,
+					new ServerTreeItem({ parent: element, label: key, id: serverName }, serverSummary),
 				);
 			}
 		}
@@ -369,7 +376,7 @@ export class ServerTreeItem extends SMTreeItem {
 			.replace(/[\n\t]/g, " ")
 			.replace(/[\r\f\b]/g, "")
 			.replace(/[\\`*_{}[\]()#+\-.!]/g, "\\$&")
-			.substr(0, 90)
+			.slice(0, 90)
 			.trim();
 		// Wrap detail (a uri string) as a null link to prevent it from being linkified
 		const wrappedDetail = `[${serverSummary.detail}]()`;
@@ -428,12 +435,12 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 }
 
 async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec | undefined> {
-	const { name, description, detail } = serverSummary;
+	const { name, description, detail, scope } = serverSummary;
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
 		return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" } };
 	}
-	return getServerSpec(name);
+	return getServerSpec(name, scope);
 }
 
 // tslint:disable-next-line: max-classes-per-file
