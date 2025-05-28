@@ -6,6 +6,10 @@ Package defining the interfaces used in the API that is published by the `inters
 
 # Changelog
 
+### v3.10.2
+
+- Add optional `scope` property to `IServerName`, which was introduced in Server Manager 3.10.2.
+
 ### v3.8.0
 
 - Add function signatures, including `getAccount` which was introduced in Server Manager 3.8.0.
