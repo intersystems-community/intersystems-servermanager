@@ -261,14 +261,19 @@ export class SMTreeItem extends vscode.TreeItem {
 
 function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
 	const children: ServerTreeItem[] = [];
-	const getAllServers = (sorted?: boolean): ServerTreeItem[] => {
-		const serverNames = getServerNames(undefined, sorted);
-		return serverNames.map((serverName) => {
-			return new ServerTreeItem({ label: serverName.name, id: serverName.name, parent: treeItem }, serverName);
-		});
-	};
-
-	getAllServers(params.sorted).map((server) => children.push(server));
+	// Add children for servers defined at the user or workspace level
+	const wsServerNames = getServerNames(undefined);
+	children.push(...wsServerNames.map((wss) => {
+		return new ServerTreeItem({ label: wss.name, id: wss.name, parent: treeItem }, wss);
+	}));
+	// Add children for servers defined at the workspace folder level
+	vscode.workspace.workspaceFolders?.map((wf) => {
+		if (["isfs", "isfs-readonly"].includes(wf.uri.scheme)) return;
+		children.push(...getServerNames(wf).filter((wfs) => !wsServerNames.some((wss) => wss.name == wfs.name)).map((wfs) => {
+			return new ServerTreeItem({ label: `${wfs.name} (${wf.name})`, id: wfs.name, parent: treeItem }, wfs);
+		}));
+	});
+	if (params?.sorted) children.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 	return children;
 }
 
@@ -304,13 +309,15 @@ async function currentServers(element: SMTreeItem, params?: any): Promise<Server
 					}
 				}
 			}
-		}
-		else if (connServer) {
+		} else if (connServer) {
 			const serverSummary = getServerSummary(connServer, folder);
 			if (serverSummary) {
+				const key = `${connServer}${typeof vscode.workspace.getConfiguration("intersystems.servers", folder).inspect(connServer)?.workspaceFolderValue == "object"
+					? ` (${folder.name})` : ""
+					}`;
 				children.set(
-					connServer,
-					new ServerTreeItem({ parent: element, label: serverName, id: serverName }, serverSummary),
+					key,
+					new ServerTreeItem({ parent: element, label: key, id: serverName }, serverSummary),
 				);
 			}
 		}

@@ -295,6 +295,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
         vscode.commands.registerCommand(`${extensionId}.viewWebApp`, async (webAppTreeItem?: WebAppTreeItem) => {
             await addWorkspaceFolderAsync(true, true, <NamespaceTreeItem>webAppTreeItem?.parent?.parent, undefined, webAppTreeItem?.name);
         }),
+        vscode.workspace.onDidChangeWorkspaceFolders(() => view.refreshTree()),
         // Listen for relevant configuration changes
         vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration("intersystems.servers") || e.affectsConfiguration("objectscript.conn")) {
