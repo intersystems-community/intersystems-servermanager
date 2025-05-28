@@ -53,7 +53,7 @@
     "node-cmd": "^5.0.0"
   },
   "devDependencies": {
-    "@intersystems-community/intersystems-servermanager": "^3.8.0",
+    "@intersystems-community/intersystems-servermanager": "^3.10.2",
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^20.14.0",
