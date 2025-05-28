@@ -261,11 +261,14 @@ export class SMTreeItem extends vscode.TreeItem {
 
 function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
 	const children: ServerTreeItem[] = [];
+	// Add children for servers defined at the user or workspace level
 	const wsServerNames = getServerNames(undefined);
 	children.push(...wsServerNames.map((wss) => {
 		return new ServerTreeItem({ label: wss.name, id: wss.name, parent: treeItem }, wss);
 	}));
+	// Add children for servers defined at the workspace folder level
 	vscode.workspace.workspaceFolders?.map((wf) => {
+		if (["isfs", "isfs-readonly"].includes(wf.uri.scheme)) return;
 		children.push(...getServerNames(wf).filter((wfs) => !wsServerNames.some((wss) => wss.name == wfs.name)).map((wfs) => {
 			return new ServerTreeItem({ label: `${wfs.name} (${wf.name})`, id: wfs.name, parent: treeItem }, wfs);
 		}));
@@ -306,13 +309,15 @@ async function currentServers(element: SMTreeItem, params?: any): Promise<Server
 					}
 				}
 			}
-		}
-		else if (connServer) {
+		} else if (connServer) {
 			const serverSummary = getServerSummary(connServer, folder);
 			if (serverSummary) {
+				const key = `${connServer}${typeof vscode.workspace.getConfiguration("intersystems.servers", folder).inspect(connServer)?.workspaceFolderValue == "object"
+					? ` (${folder.name})` : ""
+					}`;
 				children.set(
-					connServer,
-					new ServerTreeItem({ parent: element, label: serverName, id: serverName }, serverSummary),
+					key,
+					new ServerTreeItem({ parent: element, label: key, id: serverName }, serverSummary),
 				);
 			}
 		}
