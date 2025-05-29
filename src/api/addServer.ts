@@ -4,6 +4,7 @@ import { getServerNames } from "./getServerNames";
 
 export async function addServer(
 	scope?: vscode.ConfigurationScope,
+	target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global
 ): Promise<string | undefined> {
 	const serverNames = getServerNames(scope);
 	const spec: IJSONServerSpec = { webServer: { scheme: "", host: "", port: 0 } };
@@ -112,21 +113,28 @@ export async function addServer(
 									});
 									if (scheme) {
 										spec.webServer.scheme = scheme;
+										const levelStr =
+											target == vscode.ConfigurationTarget.WorkspaceFolder ? "workspace-folder" :
+												target == vscode.ConfigurationTarget.Workspace ? "workspace" :
+													"user";
 										try {
 											const config = vscode.workspace.getConfiguration(
 												"intersystems",
 												scope,
 											);
-											// For simplicity we always add to the user-level (aka Global) settings
-											const servers: any =
-												config.inspect("servers")?.globalValue || {};
+											const serversInspection = config.inspect("servers");
+											const servers = (
+												target == vscode.ConfigurationTarget.WorkspaceFolder ? serversInspection?.workspaceFolderValue :
+													target == vscode.ConfigurationTarget.Workspace ? serversInspection?.workspaceValue :
+														serversInspection?.globalValue
+											) ?? {};
 											servers[name] = spec;
-											await config.update("servers", servers, true);
-											vscode.window.showInformationMessage(`Server '${name}' stored in user-level settings.`);
+											await config.update("servers", servers, target);
+											vscode.window.showInformationMessage(`Server '${name}' stored in ${levelStr}-level settings.`);
 											return name;
 										} catch (error) {
 											vscode.window.showErrorMessage(
-												`Failed to store server '${name}' definition. Does your settings.json file contain a JSON syntax error?`,
+												`Failed to store server '${name}' definition. Does your ${levelStr}-level settings file contain a JSON syntax error?`,
 											);
 											return undefined;
 										}
