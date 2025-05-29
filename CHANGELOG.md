@@ -1,3 +1,9 @@
+## 3.10.2 (02-Jun-2025)
+* Show servers defined in workspace folder settings in `Current` tree UI (#273).
+* Support choosing settings scope for `Add Server` command (#274).
+* Publish `@intersystems-community/intersystems-servermanager@3.10.2` type definitions (#275).
+* Show servers defined in workspace folder settings in `All Servers` UI (#276).
+
 ## 3.10.1 (14-May-2025)
 * Try to end /api/atelier web sessions when extension deactivates (#267).
 * Update dependencies.
