@@ -215,25 +215,30 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
+export interface IAuthSession extends vscode.AuthenticationSession {
+	serverName: string;
+	userName: string;
+}
+
 async function resolveCredentials(serverSpec: IServerSpec) {
 	// This arises if setting says to use authentication provider
 	if (typeof serverSpec.password === "undefined") {
 		const scopes = [serverSpec.name, (serverSpec.username || "").toLowerCase()];
 		const account = getAccountFromParts(serverSpec.name, serverSpec.username);
-		let session = await vscode.authentication.getSession(
+		let session = <IAuthSession>await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
 			scopes,
 			{ silent: true, account },
 		);
 		if (!session) {
-			session = await vscode.authentication.getSession(
+			session = <IAuthSession>await vscode.authentication.getSession(
 				AUTHENTICATION_PROVIDER,
 				scopes,
 				{ createIfNone: true, account },
 			);
 		}
 		if (session) {
-			serverSpec.username = session.scopes[1] === "unknownuser" ? "" : session.scopes[1];
+			serverSpec.username = session.scopes[1] === "unknownuser" ? "" : session.userName;
 			serverSpec.password = session.accessToken;
 		}
 	}
