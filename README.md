@@ -263,7 +263,7 @@ To obtain the password with which to connect, use code like this which will also
       session = await vscode.authentication.getSession(serverManager.AUTHENTICATION_PROVIDER, scopes, { createIfNone: true, account });
     }
     if (session) {
-	  serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.account.id.split("/").slice(1).join("/");
+	  serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
       serverSpec.password = session.accessToken;
     }
   }
