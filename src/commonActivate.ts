@@ -91,7 +91,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				serverSessions.forEach(async (serverSession) => {
 
 					// Still logged in with the authentication provider?
-					const scopes = [serverSession.serverName, serverSession.username.toLowerCase()];
+					const scopes = [serverSession.serverName, serverSession.username];
 					const account = getAccountFromParts(serverSession.serverName, serverSession.username);
 					const session = await vscode.authentication.getSession(
 						AUTHENTICATION_PROVIDER,
