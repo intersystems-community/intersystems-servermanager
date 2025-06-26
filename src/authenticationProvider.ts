@@ -63,15 +63,15 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 		// Filter to return only those that match all supplied scopes, which are positional and case-insensitive.
 		for (let index = 0; index < scopes.length; index++) {
-			sessions = sessions.filter((session) => session.scopes[index] === scopes[index].toLowerCase());
+			sessions = sessions.filter((session) => session.scopes[index].toLowerCase() === scopes[index].toLowerCase());
 		}
 
 		if (options.account) {
 			const accountParts = options.account.id.split("/");
 			const serverName = accountParts.shift();
-			const userName = accountParts.join('/').toLowerCase();
+			const userName = accountParts.join('/');
 			if (serverName && userName) {
-				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1] === userName);
+				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1].toLowerCase() === userName.toLowerCase());
 			}
 		}
 
