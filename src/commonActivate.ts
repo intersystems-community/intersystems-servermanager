@@ -16,7 +16,7 @@ export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscr
 export let globalState: vscode.Memento;
 
 export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
-	const accountId = userName ? `${serverName}/${userName}` : undefined;
+	const accountId = userName ? `${serverName}/${userName.toLowerCase()}` : undefined;
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
 }
 
@@ -91,7 +91,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				serverSessions.forEach(async (serverSession) => {
 
 					// Still logged in with the authentication provider?
-					const scopes = [serverSession.serverName, serverSession.username];
+					const scopes = [serverSession.serverName, serverSession.username.toLowerCase()];
 					const account = getAccountFromParts(serverSession.serverName, serverSession.username);
 					const session = await vscode.authentication.getSession(
 						AUTHENTICATION_PROVIDER,
