@@ -16,7 +16,7 @@ export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscr
 export let globalState: vscode.Memento;
 
 export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
-	const accountId = userName ? `${serverName}/${userName.toLowerCase()}` : undefined;
+	const accountId = userName ? `${serverName}/${userName}` : undefined;
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
 }
 
