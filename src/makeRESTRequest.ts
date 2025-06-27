@@ -218,7 +218,7 @@ export async function logout(serverName: string) {
 async function resolveCredentials(serverSpec: IServerSpec) {
 	// This arises if setting says to use authentication provider
 	if (typeof serverSpec.password === "undefined") {
-		const scopes = [serverSpec.name, (serverSpec.username || "").toLowerCase()];
+		const scopes = [serverSpec.name, (serverSpec.username || "")];
 		const account = getAccountFromParts(serverSpec.name, serverSpec.username);
 		let session = await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
@@ -233,7 +233,7 @@ async function resolveCredentials(serverSpec: IServerSpec) {
 			);
 		}
 		if (session) {
-			serverSpec.username = session.scopes[1] === "unknownuser" ? "" : session.scopes[1];
+			serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
 			serverSpec.password = session.accessToken;
 		}
 	}

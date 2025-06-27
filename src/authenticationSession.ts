@@ -11,10 +11,9 @@ export class ServerManagerAuthenticationSession implements AuthenticationSession
 		public readonly userName: string,
 		password: string,
 	) {
-		const canonicalUserName = userName.toLowerCase();
 		this.id = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
 		this.accessToken = password;
-		this.account = { id: `${serverName}/${canonicalUserName}`, label: `${userName} on ${serverName}` };
-		this.scopes = [serverName, canonicalUserName];
+		this.account = { id: `${serverName}/${userName}`, label: `${userName} on ${serverName}` };
+		this.scopes = [serverName, userName];
 	}
 }
