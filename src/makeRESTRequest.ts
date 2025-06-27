@@ -233,7 +233,7 @@ async function resolveCredentials(serverSpec: IServerSpec) {
 			);
 		}
 		if (session) {
-			serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.account.id.split("/").slice(1).join("/");
+			serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
 			serverSpec.password = session.accessToken;
 		}
 	}
