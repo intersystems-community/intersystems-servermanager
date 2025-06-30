@@ -1,3 +1,6 @@
+## 3.10.3 (30-Jun-2025)
+* Preserve case of username in `scopes[1]` so `getSession` caller can obtain it exactly (#281).
+
 ## 3.10.2 (02-Jun-2025)
 * Show servers defined in workspace folder settings in `Current` tree UI (#273).
 * Support choosing settings scope for `Add Server` command (#274).
