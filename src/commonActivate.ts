@@ -168,7 +168,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		}),
 		vscode.commands.registerCommand(`${extensionId}.openPortalExternal`, (server?: ServerTreeItem) => {
 			if (server?.contextValue?.match(/\.server\./) && server.name) {
-				getPortalUriWithToken(BrowserTarget.EXTERNAL, server.name).then((uriWithToken) => {
+				getPortalUriWithToken(BrowserTarget.EXTERNAL, server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uriWithToken) => {
 					if (uriWithToken) {
 						vscode.env.openExternal(uriWithToken);
 					}
@@ -177,7 +177,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		}),
 		vscode.commands.registerCommand(`${extensionId}.openPortalTab`, (server?: ServerTreeItem) => {
 			if (server?.contextValue?.match(/\.server\./) && server.name) {
-				getPortalUriWithToken(BrowserTarget.SIMPLE, server.name).then((uriWithToken) => {
+				getPortalUriWithToken(BrowserTarget.SIMPLE, server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uriWithToken) => {
 					if (uriWithToken) {
 						//
 						// It is essential to pass skipEncoding=true when converting the uri to a string,
@@ -193,7 +193,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				if (pathParts && pathParts.length === 4) {
 					const serverName = pathParts[1];
 					const namespace = pathParts[3];
-					getPortalUriWithToken(BrowserTarget.EXTERNAL, serverName, "/csp/sys/exp/%25CSP.UI.Portal.ClassList.zen", namespace).then((uriWithToken) => {
+					getPortalUriWithToken(BrowserTarget.EXTERNAL, serverName, "/csp/sys/exp/%25CSP.UI.Portal.ClassList.zen", namespace, namespaceTreeItem.parent?.parent?.params?.serverSummary?.scope).then((uriWithToken) => {
 						if (uriWithToken) {
 							vscode.env.openExternal(uriWithToken);
 						}
