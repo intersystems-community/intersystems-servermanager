@@ -165,7 +165,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 							const enteredPassword = inputBox.value;
 							if (secretStorage && enteredPassword) {
 								await secretStorage.store(credentialKey, enteredPassword);
-								console.log(`Stored password at ${credentialKey}`);
 							}
 							// Resolve the promise and tidy up
 							resolve(enteredPassword);
@@ -270,7 +269,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (deletePassword) {
 			// Delete from secret storage
 			await this.secretStorage.delete(credentialKey);
-			console.log(`${AUTHENTICATION_PROVIDER_LABEL}: Deleted password at ${credentialKey}`);
 		}
 		if (index > -1) {
 			// Remove session here so we don't store it
@@ -278,6 +276,45 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 		await this._storeStrippedSessions();
 		this._onDidChangeSessions.fire({ added: [], removed: [session], changed: [] });
+	}
+
+	public async removeSessions(sessionIds: string[]): Promise<void> {
+		const storedPasswordCredKeys: string[] = [];
+		const removed: AuthenticationSession[] = [];
+		await Promise.allSettled(sessionIds.map(async (sessionId) => {
+			const index = this._sessions.findIndex((item) => item.id === sessionId);
+			const session = this._sessions[index];
+			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+			if (await this.secretStorage.get(credentialKey) !== undefined) {
+				storedPasswordCredKeys.push(credentialKey);
+			}
+			if (index > -1) {
+				this._sessions.splice(index, 1);
+			}
+			removed.push(session);
+		}));
+		if (storedPasswordCredKeys.length) {
+			const passwordOption = workspace.getConfiguration("intersystemsServerManager.credentialsProvider")
+				.get<string>("deletePasswordOnSignout", "ask");
+			let deletePasswords = (passwordOption === "always");
+			if (passwordOption === "ask") {
+				const choice = await window.showWarningMessage(
+					`Do you want to keep the stored passwords or delete them?`,
+					{
+						detail: `${storedPasswordCredKeys.length == sessionIds.length ? "All" : "Some"
+							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true
+					},
+					{ title: "Keep", isCloseAffordance: true },
+					{ title: "Delete", isCloseAffordance: false },
+				);
+				deletePasswords = (choice?.title === "Delete");
+			}
+			if (deletePasswords) {
+				await Promise.allSettled(storedPasswordCredKeys.map((e) => this.secretStorage.delete(e)));
+			}
+		}
+		await this._storeStrippedSessions();
+		this._onDidChangeSessions.fire({ added: [], removed, changed: [] });
 	}
 
 	private async _ensureInitialized(): Promise<void> {

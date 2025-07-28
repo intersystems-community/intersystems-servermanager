@@ -375,6 +375,11 @@
         "command": "intersystems-community.servermanager.viewWebApp",
         "title": "View Files in Web Application",
         "icon": "$(eye)"
+      },
+      {
+        "command": "intersystems-community.servermanager.signOut",
+        "category": "InterSystems Server Manager",
+        "title": "Sign Out of Accounts..."
       }
     ],
     "submenus": [
@@ -538,6 +543,11 @@
         },
         {
           "command": "intersystems-community.servermanager.editSettings",
+          "when": "view == intersystems-community_servermanager",
+          "group": "1_edit"
+        },
+        {
+          "command": "intersystems-community.servermanager.signOut",
           "when": "view == intersystems-community_servermanager",
           "group": "1_edit"
         },
