@@ -522,6 +522,11 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 	return children;
 }
 
+/** Returns `true` if `server` is a tree item representing a server defined at the workspace folder level */
+function serverItemIsWsFolder(server?: SMTreeItem): boolean {
+	return typeof server?.label == "string" && server.label.includes("(") && server.label.endsWith(")");
+}
+
 // tslint:disable-next-line: max-classes-per-file
 export class NamespaceTreeItem extends SMTreeItem {
 	public readonly name: string;
@@ -543,7 +548,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 			params: { serverName, serverSpec, serverApiVersion }
 		});
 		this.name = name;
-		this.contextValue = `${serverApiVersion.toString()}/${name === "%SYS" ? "sysnamespace" : "namespace"}`;
+		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent) ? "/wsFolder" : ""}/${name === "%SYS" ? "sysnamespace" : "namespace"}`;
 		this.iconPath = new vscode.ThemeIcon("archive");
 	}
 }
@@ -645,7 +650,7 @@ export class ProjectTreeItem extends SMTreeItem {
 			tooltip: description
 		});
 		this.name = name;
-		this.contextValue = serverApiVersion.toString() + '/project';
+		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "/wsFolder" : ""}/project`;
 		this.iconPath = new vscode.ThemeIcon('files');
 	}
 }
@@ -720,7 +725,7 @@ export class WebAppTreeItem extends SMTreeItem {
 			id
 		});
 		this.name = name;
-		this.contextValue = serverApiVersion.toString() + '/webapp';
+		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "/wsFolder" : ""}/webapp`;
 		this.iconPath = new vscode.ThemeIcon('file-code');
 	}
 }
