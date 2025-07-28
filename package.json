@@ -547,6 +547,11 @@
           "group": "1_edit"
         },
         {
+          "command": "intersystems-community.servermanager.signOut",
+          "when": "view == intersystems-community_servermanager",
+          "group": "1_edit"
+        },
+        {
           "command": "intersystems-community.servermanager.importServers",
           "when": "view == intersystems-community_servermanager && isWindows",
           "group": "2_import"
