@@ -548,7 +548,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 			params: { serverName, serverSpec, serverApiVersion }
 		});
 		this.name = name;
-		this.contextValue = `${serverApiVersion.toString()}/${name === "%SYS" ? "sysnamespace" : "namespace"}${serverItemIsWsFolder(element?.parent?.parent) ? "wsFolder" : ""}`;
+		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent) ? "/wsFolder" : ""}/${name === "%SYS" ? "sysnamespace" : "namespace"}`;
 		this.iconPath = new vscode.ThemeIcon("archive");
 	}
 }
@@ -650,7 +650,7 @@ export class ProjectTreeItem extends SMTreeItem {
 			tooltip: description
 		});
 		this.name = name;
-		this.contextValue = `${serverApiVersion.toString()}/project${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "wsFolder" : ""}`;
+		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "/wsFolder" : ""}/project`;
 		this.iconPath = new vscode.ThemeIcon('files');
 	}
 }
@@ -725,7 +725,7 @@ export class WebAppTreeItem extends SMTreeItem {
 			id
 		});
 		this.name = name;
-		this.contextValue = `${serverApiVersion.toString()}/webapp${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "wsFolder" : ""}`;
+		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "/wsFolder" : ""}/webapp`;
 		this.iconPath = new vscode.ThemeIcon('file-code');
 	}
 }
