@@ -76,13 +76,14 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		}
 	};
 
+	const authProvider = new ServerManagerAuthenticationProvider(context.secrets);
 	context.subscriptions.push(
 		// Register our authentication provider. NOTE: this will register the provider globally which means that
 		// any other extension can request to use use this provider via the `vscode.authentication.getSession` API.
 		vscode.authentication.registerAuthenticationProvider(
 			ServerManagerAuthenticationProvider.id,
 			ServerManagerAuthenticationProvider.label,
-			new ServerManagerAuthenticationProvider(context.secrets),
+			authProvider,
 			{ supportsMultipleAccounts: true },
 		),
 		// Ensure cookies do not survive an account sign-out
@@ -136,7 +137,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				}
 				const choice = await vscode.window.showQuickPick(options, {
 					ignoreFocusOut: true,
-					title: "Pick a settngs scope in which to add the server definition"
+					title: "Pick a settings scope in which to add the server definition"
 				});
 				if (!choice) return;
 				scope = choice.scope;
@@ -330,6 +331,16 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			await addWorkspaceFolderAsync(true, true, <NamespaceTreeItem>webAppTreeItem?.parent?.parent, undefined, webAppTreeItem?.name);
 		}),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => view.refreshTree()),
+		vscode.commands.registerCommand(`${extensionId}.signOut`, async () => {
+			const sessions = await authProvider.getSessions(undefined, {}).catch(() => { });
+			if (!sessions?.length) {
+				vscode.window.showInformationMessage("There are no stored accounts to sign out of.", "Dismiss");
+				return;
+			}
+			const picks = await vscode.window.showQuickPick(sessions.map((s) => s.account), { canPickMany: true, title: "Pick the accounts to sign out of" });
+			if (!picks?.length) return;
+			return authProvider.removeSessions(picks.map((p) => p.id));
+		}),
 		// Listen for relevant configuration changes
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration("intersystems.servers") || e.affectsConfiguration("objectscript.conn")) {
