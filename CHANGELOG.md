@@ -1,3 +1,8 @@
+## 3.10.4 (04-Aug-2025)
+* Fix Servers tree action buttons for servers defined in a workspace folder (#287).
+* Add command to sign out of multiple accounts at once (#288).
+* Update dependencies.
+
 ## 3.10.3 (30-Jun-2025)
 * Preserve case of username in `scopes[1]` so `getSession` caller can obtain it exactly (#281).
 
