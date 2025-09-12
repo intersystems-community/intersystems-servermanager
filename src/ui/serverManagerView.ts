@@ -468,7 +468,7 @@ export class OfflineTreeItem extends FeatureTreeItem {
 		});
 		this.name = "offline";
 		this.contextValue = "offline";
-		this.iconPath = new vscode.ThemeIcon("error");
+		this.iconPath = new vscode.ThemeIcon("error", new vscode.ThemeColor("problemsErrorIcon.foreground"));
 	}
 }
 
