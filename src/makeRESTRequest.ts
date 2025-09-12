@@ -53,7 +53,7 @@ export async function makeRESTRequest(
 	server: IServerSpec,
 	endpoint?: IAtelierRESTEndpoint,
 	data?: any,
-): Promise<AxiosResponse | undefined> {
+): Promise<AxiosResponse> {
 
 	// Create the HTTPS agent if in a node environment
 	const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
@@ -165,7 +165,8 @@ export async function makeRESTRequest(
 		}
 		return respdata;
 	} catch (error) {
-		return error.response;
+		// Stringify and re-throw error
+		throw stringifyError(error);
 	}
 }
 
@@ -236,5 +237,32 @@ async function resolveCredentials(serverSpec: IServerSpec) {
 			serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
 			serverSpec.password = session.accessToken;
 		}
+	}
+}
+
+/**
+ * Return a string representation of `error`.
+ * If `error` is `undefined`, returns the empty string.
+ * Borrowed from `vscode-objectscript:/src/utils/index.ts`
+ */
+function stringifyError(error): string {
+	try {
+		if (Array.isArray(error?.errors)) {
+			// Need to stringify the inner errors of an AggregateError
+			const errs = error.errors.map(stringifyError).filter((s) => s != "");
+			return errs.length ? `AggregateError:\n- ${errs.join("\n- ")}` : "";
+		}
+		return (
+			error == undefined
+				? ""
+				: typeof error == "string"
+					? error
+					: error instanceof Error
+						? error.toString()
+						: JSON.stringify(error)
+		).trim();
+	} catch {
+		// Need to catch errors from JSON.stringify()
+		return "";
 	}
 }

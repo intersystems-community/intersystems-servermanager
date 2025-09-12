@@ -38,7 +38,9 @@ export async function getPortalUriWithToken(
 						"SELECT Name FROM Security.Applications WHERE {fn CONCAT(Name, '/')} %STARTSWITH '/csp/sys/' AND UseCookies = 2 " +
 						"UNION SELECT $PIECE($PIECE($PIECE($ZVERSION,') ',2),' '),'.') AS Name"
 				},
-			);
+			).catch((errorStr) => {
+				vscode.window.showErrorMessage(`Error checking the Portal web apps for compatibility with Simple Browser${errorStr ? `: ${errorStr}` : "."}`, "Dismiss");
+			});
 			if (response) {
 				const appsRequiringCookie = (response.data?.result?.content as any[]).map((row) => {
 					return row.Name as string;
@@ -54,9 +56,6 @@ export async function getPortalUriWithToken(
 				else {
 					simpleBrowserCompatible.set(name, true);
 				}
-			}
-			else {
-				vscode.window.showWarningMessage(`Unable to check the Portal web apps for compatibility with Simple Browser.`, "Dismiss");
 			}
 			if (!simpleBrowserCompatible.get(name)) return;
 		}
@@ -75,7 +74,7 @@ export async function getPortalUriWithToken(
 			spec,
 			{ apiVersion: 1, namespace, path: "/action/query" },
 			{ query: "select %Atelier_v1_Utils.General_GetCSPToken(?, ?) token", parameters: [page, token] },
-		);
+		).catch(() => { /* Swallow errors */ });
 
 		if (!response) {
 			// User will have to enter credentials

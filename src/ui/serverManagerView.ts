@@ -419,16 +419,20 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 		}
 
 		const name = serverSpec.name;
-		let response = await makeRESTRequest("HEAD", serverSpec);
-		if (response?.status === 401) {
-			// Authentication error, so retry in case first attempt cleared a no-longer-valid stored password
-			serverSpec.password = undefined;
-			response = await makeRESTRequest("HEAD", serverSpec);
-		}
-		if (response?.status !== 200) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
-		} else {
-			children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.username || 'UnknownUser'));
+		try {
+			let response = await makeRESTRequest("HEAD", serverSpec);
+			if (response?.status === 401) {
+				// Authentication error, so retry in case first attempt cleared a no-longer-valid stored password
+				serverSpec.password = undefined;
+				response = await makeRESTRequest("HEAD", serverSpec);
+			}
+			if (response?.status !== 200) {
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+			} else {
+				children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.username || 'UnknownUser'));
+			}
+		} catch (errorStr) {
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr));
 		}
 	}
 	return children;
@@ -453,17 +457,18 @@ export class OfflineTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		username: string,
+		errorStr: string,
 	) {
 		const parentFolderId = element.parent?.id || "";
 		super({
 			id: parentFolderId + ":offline",
-			label: `Unavailable at ${new Date().toLocaleTimeString()}`,
+			label: `Error at ${new Date().toLocaleTimeString()}`,
 			parent: element.parent,
-			tooltip: `Server could not be accessed by '${username}'`,
+			tooltip: new vscode.MarkdownString(`Error accessing server as \`${username}\`${errorStr ? `:\n\n${errorStr}` : ""}`),
 		});
 		this.name = "offline";
 		this.contextValue = "offline";
-		this.iconPath = new vscode.ThemeIcon("warning");
+		this.iconPath = new vscode.ThemeIcon("error");
 	}
 }
 
@@ -508,14 +513,18 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 			return undefined;
 		}
 
-		const response = await makeRESTRequest("GET", serverSpec);
-		if (response?.status !== 200) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser'));
-		} else {
-			const serverApiVersion = response.data.result.content.api;
-			response.data.result.content.namespaces.map((namespace: string) => {
-				children.push(new NamespaceTreeItem({ parent: element, label: name, id: name }, namespace, name, serverSpec, serverApiVersion));
-			});
+		try {
+			const response = await makeRESTRequest("GET", serverSpec);
+			if (response?.status !== 200) {
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+			} else {
+				const serverApiVersion = response.data.result.content.api;
+				response.data.result.content.namespaces.map((namespace: string) => {
+					children.push(new NamespaceTreeItem({ parent: element, label: name, id: name }, namespace, name, serverSpec, serverApiVersion));
+				});
+			}
+		} catch (errorStr) {
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr));
 		}
 	}
 
