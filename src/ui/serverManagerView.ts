@@ -263,8 +263,11 @@ function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
 	const children: ServerTreeItem[] = [];
 	// Add children for servers defined at the user or workspace level
 	const wsServerNames = getServerNames(undefined);
+	const wsIsFolder = !vscode.workspace.workspaceFile;
+	const conf = vscode.workspace.getConfiguration("intersystems.servers");
 	children.push(...wsServerNames.map((wss) => {
-		return new ServerTreeItem({ label: wss.name, id: wss.name, parent: treeItem }, wss);
+		// If the server is defined at the workspace level and the workspace is a folder then it's effectively defined at the workspace folder level
+		return new ServerTreeItem({ label: `${wss.name}${wsIsFolder && typeof conf.inspect(wss.name)?.workspaceValue == "object" ? ` (${(vscode.workspace.workspaceFolders ?? [])[0]?.name})` : ""}`, id: wss.name, parent: treeItem }, wss);
 	}));
 	// Add children for servers defined at the workspace folder level
 	vscode.workspace.workspaceFolders?.map((wf) => {
@@ -312,7 +315,9 @@ async function currentServers(element: SMTreeItem, params?: any): Promise<Server
 		} else if (connServer) {
 			const serverSummary = getServerSummary(connServer, folder);
 			if (serverSummary) {
-				const key = `${connServer}${typeof vscode.workspace.getConfiguration("intersystems.servers", folder).inspect(connServer)?.workspaceFolderValue == "object"
+				const inspection = vscode.workspace.getConfiguration("intersystems.servers", folder).inspect(connServer);
+				// If the server is defined at the workspace level and the workspace is a folder then it's effectively defined at the workspace folder level
+				const key = `${connServer}${typeof inspection?.workspaceFolderValue == "object" || (typeof inspection?.workspaceValue == "object" && !vscode.workspace.workspaceFile)
 					? ` (${folder.name})` : ""
 					}`;
 				children.set(
@@ -533,7 +538,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 
 /** Returns `true` if `server` is a tree item representing a server defined at the workspace folder level */
 function serverItemIsWsFolder(server?: SMTreeItem): boolean {
-	return typeof server?.label == "string" && server.label.includes("(") && server.label.endsWith(")");
+	return typeof server?.label == "string" && ((server.label.includes("(") && server.label.endsWith(")")) || server.label.startsWith("docker:"));
 }
 
 // tslint:disable-next-line: max-classes-per-file
