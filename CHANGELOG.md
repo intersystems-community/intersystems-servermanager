@@ -1,3 +1,8 @@
+## 3.10.5 (06-Oct-2025)
+* Show error in tooltip when expanding a `Servers` tree items fails (#294).
+* Hide `Servers` tree icon buttons for creating workspace folders for servers that don't support them (#299).
+* Update dependencies (#295, #297).
+
 ## 3.10.4 (04-Aug-2025)
 * Fix Servers tree action buttons for servers defined in a workspace folder (#287).
 * Add command to sign out of multiple accounts at once (#288).
