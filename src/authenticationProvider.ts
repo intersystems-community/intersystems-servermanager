@@ -225,8 +225,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			serverSpec.username = session.userName;
 			serverSpec.password = session.accessToken;
 			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
-			if ([undefined, 401].includes(response?.status)) {
-				// Session is only invalid if we get a 401 or there's an error
+			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
 				return false;
 			}
