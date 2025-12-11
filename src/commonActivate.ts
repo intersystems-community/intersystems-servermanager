@@ -293,7 +293,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			}
 		}),
 		vscode.commands.registerCommand(`${extensionId}.retryServer`, (treeItem: SMTreeItem) => {
-			const depth = treeItem.id?.split(":").length;
+			const depth = treeItem?.id?.split(":").length;
 			if (depth === 2) {
 				view.refreshTree(treeItem);
 			} else if (depth === 3) {
