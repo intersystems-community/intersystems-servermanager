@@ -1,3 +1,8 @@
+## 3.10.6 (29-Dec-2025)
+* Fix logic for invalidating a REST session (#301).
+* Prevent uncaught error in `retryServer` command (#306).
+* Update dependencies (#302, #303, #304, #307).
+
 ## 3.10.5 (06-Oct-2025)
 * Show error in tooltip when expanding a `Servers` tree items fails (#294).
 * Hide `Servers` tree icon buttons for creating workspace folders for servers that don't support them (#299).
