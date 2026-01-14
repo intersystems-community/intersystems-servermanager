@@ -176,16 +176,25 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				});
 			}
 		}),
-		vscode.commands.registerCommand(`${extensionId}.openPortalTab`, (server?: ServerTreeItem) => {
+		vscode.commands.registerCommand(`${extensionId}.openPortalTab`, async (server?: ServerTreeItem) => {
 			if (server?.contextValue?.match(/\.server\./) && server.name) {
-				getPortalUriWithToken(BrowserTarget.SIMPLE, server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uriWithToken) => {
-					if (uriWithToken) {
-						//
-						// It is essential to pass skipEncoding=true when converting the uri to a string,
-						// otherwise the querystring's & and = get encoded.
-						vscode.commands.executeCommand("simpleBrowser.show", uriWithToken.toString(true));
-					}
-				});
+				// It is essential to pass skipEncoding=true when converting the uri to a string,
+				// otherwise the querystring's & and = get encoded.
+				// Prefer Integrated Browser if available (1.109+)
+				if ((await vscode.commands.getCommands()).includes("workbench.action.browser.open")) {
+					getPortalUriWithToken(BrowserTarget.INTEGRATED, server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uriWithToken) => {
+						if (uriWithToken) {
+							vscode.commands.executeCommand("workbench.action.browser.open", uriWithToken.toString(true));
+						}
+					});
+				} else {
+					getPortalUriWithToken(BrowserTarget.SIMPLE, server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uriWithToken) => {
+						if (uriWithToken) {
+							vscode.commands.executeCommand("simpleBrowser.show", uriWithToken.toString(true));
+						}
+					});
+
+				}
 			}
 		}),
 		vscode.commands.registerCommand(`${extensionId}.openPortalExplorerExternal`, (namespaceTreeItem?: NamespaceTreeItem) => {

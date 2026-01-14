@@ -7,9 +7,10 @@ import { makeRESTRequest } from "../makeRESTRequest";
 export enum BrowserTarget {
 	SIMPLE = 0,
 	EXTERNAL = 1,
+	INTEGRATED = 2,
 }
 
-const allTokens = [new Map<string, string>(), new Map<string, string>()];
+const allTokens = [new Map<string, string>(), new Map<string, string>(), new Map<string, string>()];
 
 const simpleBrowserCompatible = new Map<string, boolean>();
 
