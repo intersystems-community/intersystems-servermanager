@@ -15,7 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.93.0"
+    "vscode": "^1.109.0"
   },
   "icon": "images/logo.png",
   "categories": [
@@ -57,7 +57,7 @@
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^20.14.0",
-    "@types/vscode": "^1.93.0",
+    "@types/vscode": "^1.109.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/test-web": "^0.0.71",
     "glob": "^7.1.6",
