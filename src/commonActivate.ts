@@ -202,6 +202,23 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				}
 			}
 		}),
+		vscode.commands.registerCommand(`${extensionId}.openPortalExplorerTab`, (namespaceTreeItem?: NamespaceTreeItem) => {
+			if (namespaceTreeItem) {
+				const pathParts = namespaceTreeItem.id?.split(":");
+				if (pathParts && pathParts.length === 4) {
+					const serverName = pathParts[1];
+					const namespace = pathParts[3];
+					getPortalUriWithToken(BrowserTarget.EXTERNAL, serverName, "/csp/sys/exp/%2525CSP.UI.Portal.ClassList.zen", namespace, namespaceTreeItem.parent?.parent?.params?.serverSummary?.scope).then((uriWithToken) => {
+						if (uriWithToken) {
+							// It is essential to pass skipEncoding=true when converting the uri to a string,
+							// otherwise the querystring's & and = get encoded.
+							// Use Integrated Browser which arrived in 1.109
+							vscode.commands.executeCommand("workbench.action.browser.open", uriWithToken.toString(true));
+						}
+					});
+				}
+			}
+		}),
 		vscode.commands.registerCommand(`${extensionId}.editSettings`, (server?: ServerTreeItem) => {
 			// Attempt to open the correct JSON file
 			server = server instanceof ServerTreeItem ? server : undefined;
