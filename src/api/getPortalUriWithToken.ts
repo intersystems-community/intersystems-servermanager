@@ -5,11 +5,11 @@ import { extensionId } from "../commonActivate";
 import { makeRESTRequest } from "../makeRESTRequest";
 
 export enum BrowserTarget {
-	EXTERNAL = 1,
-	INTEGRATED = 2,
+	EXTERNAL = 0,
+	INTEGRATED = 1,
 }
 
-const allTokens = [new Map<string, string>(), new Map<string, string>(), new Map<string, string>()];
+const allTokens = [new Map<string, string>(), new Map<string, string>()];
 
 export async function getPortalUriWithToken(
 	target: BrowserTarget,
