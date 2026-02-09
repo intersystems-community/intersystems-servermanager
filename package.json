@@ -627,7 +627,8 @@
         {
           "command": "intersystems-community.servermanager.openPortalExternal",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "inline@90"
+          "group": "inline@90",
+          "alt": "intersystems-community.servermanager.openPortalTab"
         },
         {
           "submenu": "intersystems-community.servermanager.moreActions",
