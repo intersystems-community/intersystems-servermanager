@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
-import { BrowserTarget, getPortalUriWithToken } from "./api/getPortalUriWithToken";
+import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
 import { getServerSpec } from "./api/getServerSpec";
 import { getServerSummary } from "./api/getServerSummary";
@@ -169,9 +169,9 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		}),
 		vscode.commands.registerCommand(`${extensionId}.openPortalExternal`, (server?: ServerTreeItem) => {
 			if (server?.contextValue?.match(/\.server\./) && server.name) {
-				getPortalUriWithToken(BrowserTarget.EXTERNAL, server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uriWithToken) => {
-					if (uriWithToken) {
-						vscode.env.openExternal(uriWithToken);
+				getPortalUri(server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uri) => {
+					if (uri) {
+						vscode.env.openExternal(uri);
 					}
 				});
 			}
@@ -181,9 +181,9 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				// It is essential to pass skipEncoding=true when converting the uri to a string,
 				// otherwise the querystring's & and = get encoded.
 				// Use Integrated Browser which arrived in 1.109
-				getPortalUriWithToken(BrowserTarget.INTEGRATED, server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uriWithToken) => {
-					if (uriWithToken) {
-						vscode.commands.executeCommand("workbench.action.browser.open", uriWithToken.toString(true));
+				getPortalUri(server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uri) => {
+					if (uri) {
+						vscode.commands.executeCommand("workbench.action.browser.open", uri.toString(true));
 					}
 				});
 			}
@@ -194,9 +194,9 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				if (pathParts && pathParts.length === 4) {
 					const serverName = pathParts[1];
 					const namespace = pathParts[3];
-					getPortalUriWithToken(BrowserTarget.EXTERNAL, serverName, "/csp/sys/exp/%25CSP.UI.Portal.ClassList.zen", namespace, namespaceTreeItem.parent?.parent?.params?.serverSummary?.scope).then((uriWithToken) => {
-						if (uriWithToken) {
-							vscode.env.openExternal(uriWithToken);
+					getPortalUri(serverName, "/csp/sys/exp/%25CSP.UI.Portal.ClassList.zen", namespace, namespaceTreeItem.parent?.parent?.params?.serverSummary?.scope).then((uri) => {
+						if (uri) {
+							vscode.env.openExternal(uri);
 						}
 					});
 				}
@@ -208,12 +208,12 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				if (pathParts && pathParts.length === 4) {
 					const serverName = pathParts[1];
 					const namespace = pathParts[3];
-					getPortalUriWithToken(BrowserTarget.EXTERNAL, serverName, "/csp/sys/exp/%2525CSP.UI.Portal.ClassList.zen", namespace, namespaceTreeItem.parent?.parent?.params?.serverSummary?.scope).then((uriWithToken) => {
-						if (uriWithToken) {
+					getPortalUri(serverName, "/csp/sys/exp/%2525CSP.UI.Portal.ClassList.zen", namespace, namespaceTreeItem.parent?.parent?.params?.serverSummary?.scope).then((uri) => {
+						if (uri) {
 							// It is essential to pass skipEncoding=true when converting the uri to a string,
 							// otherwise the querystring's & and = get encoded.
 							// Use Integrated Browser which arrived in 1.109
-							vscode.commands.executeCommand("workbench.action.browser.open", uriWithToken.toString(true));
+							vscode.commands.executeCommand("workbench.action.browser.open", uri.toString(true));
 						}
 					});
 				}
