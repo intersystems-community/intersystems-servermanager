@@ -167,15 +167,6 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				await view.removeFromRecents(server.name);
 			}
 		}),
-		vscode.commands.registerCommand(`${extensionId}.openPortalExternal`, (server?: ServerTreeItem) => {
-			if (server?.contextValue?.match(/\.server\./) && server.name) {
-				getPortalUri(server.name, undefined, undefined, server?.params?.serverSummary?.scope).then((uri) => {
-					if (uri) {
-						vscode.env.openExternal(uri);
-					}
-				});
-			}
-		}),
 		vscode.commands.registerCommand(`${extensionId}.openPortalTab`, async (server?: ServerTreeItem) => {
 			if (server?.contextValue?.match(/\.server\./) && server.name) {
 				// It is essential to pass skipEncoding=true when converting the uri to a string,
@@ -186,20 +177,6 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 						vscode.commands.executeCommand("workbench.action.browser.open", uri.toString(true));
 					}
 				});
-			}
-		}),
-		vscode.commands.registerCommand(`${extensionId}.openPortalExplorerExternal`, (namespaceTreeItem?: NamespaceTreeItem) => {
-			if (namespaceTreeItem) {
-				const pathParts = namespaceTreeItem.id?.split(":");
-				if (pathParts && pathParts.length === 4) {
-					const serverName = pathParts[1];
-					const namespace = pathParts[3];
-					getPortalUri(serverName, "/csp/sys/exp/%25CSP.UI.Portal.ClassList.zen", namespace, namespaceTreeItem.parent?.parent?.params?.serverSummary?.scope).then((uri) => {
-						if (uri) {
-							vscode.env.openExternal(uri);
-						}
-					});
-				}
 			}
 		}),
 		vscode.commands.registerCommand(`${extensionId}.openPortalExplorerTab`, (namespaceTreeItem?: NamespaceTreeItem) => {
