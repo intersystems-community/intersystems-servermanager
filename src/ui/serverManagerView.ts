@@ -400,10 +400,6 @@ export class ServerTreeItem extends SMTreeItem {
 			"server-environment",
 			color ? new vscode.ThemeColor("charts." + color) : undefined,
 		);
-
-		// TODO If single click on server item should open Portal tab
-		// this.command = {command: 'intersystems-community.servermanager.openPortalTab',
-		//   title: 'Open Management Portal in Simple Browser Tab', arguments: [this]};
 	}
 }
 

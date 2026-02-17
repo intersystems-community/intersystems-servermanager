@@ -132,23 +132,6 @@ Learn more about `isfs` and `isfs-readonly` folders in the [documentation](https
 
 When you have a folder or a workspace (including a multi-root one) open in VS Code, Server Manager displays a 'Current' node at the start of its tree if your workspace references any server defined in Server Manager. The linking happens automatically if you added workspace folders from Server Manager as described above. If you are using the client-side mode of working, your `objectscript.conn` setting needs to use the `server` property.
 
-## Launching Management Portal
-
-When you hover over a server entry in the tree two command buttons let you launch InterSystems Management Portal.
-
-The first button uses VS Code's Simple Browser feature, which creates a tab alongside any documents you may have open. The second button opens Portal in your workstation's default web browser.
-
-### Notes About Simple Browser
-- There is only ever a single Simple Browser tab. Launching another server's Management Portal in it will replace the previous one.
-- If the server version is InterSystems IRIS 2020.1.1 or later you will need to change a setting on the suite of web applications that implement Management Portal. This is a consequence of change [SGM031 - Support SameSite for CSP session and user cookies](https://docs.intersystems.com/iris20201/csp/docbook/relnotes/index.html#SGM031). Simple Browser will not be permitted to store Portal's session management cookies, so Portal must be willing to fall back to using the CSPCHD query parameter mechanism.
-    -  Locate the five web applications whose path begins with `/csp/sys`
-	![Portal web app list](images/README/portalWebApps.png)
-
-	- Alter the `Use Cookie for Session` setting on each of them so it is `Autodetect` instead of `Always`.
-	![Portal web app detail](images/README/portalWebAppSetting.png)
-	Remember to save the change. The change is not thought to have any adverse effects on the usage of Portal from ordinary browsers, which will continue to use session cookies.
-- When a 2020.1.1+ Portal has resorted to using CSPCHD (see above) a few inter-page links fail because they don't add the CSPCHD queryparam. One specific case is the breadcrumb links. Pending the arrival of an InterSystems correction (JIRA DP-404817) these links will take you to the login page. Either enter your credentials to proceed, or launch Simple Browser again from the Server Manager tree.
-
 ## Amending and Removing Servers
 
 To manage your server definitions, including changing the username it connects with, [edit the relevant JSON file](https://code.visualstudio.com/docs/getstarted/settings).

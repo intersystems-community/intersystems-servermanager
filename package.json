@@ -15,7 +15,7 @@
     "multi-root ready"
   ],
   "engines": {
-    "vscode": "^1.93.0"
+    "vscode": "^1.109.0"
   },
   "icon": "images/logo.png",
   "categories": [
@@ -57,7 +57,7 @@
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^20.14.0",
-    "@types/vscode": "^1.93.0",
+    "@types/vscode": "^1.109.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/test-web": "^0.0.71",
     "glob": "^7.1.6",
@@ -278,18 +278,13 @@
         "title": "Remove from Recent"
       },
       {
-        "command": "intersystems-community.servermanager.openPortalExternal",
-        "title": "Open Management Portal in External Browser",
+        "command": "intersystems-community.servermanager.openPortalTab",
+        "title": "Open Management Portal in Tab",
         "icon": "$(link-external)"
       },
       {
-        "command": "intersystems-community.servermanager.openPortalTab",
-        "title": "Open Management Portal in Tab",
-        "icon": "$(tools)"
-      },
-      {
-        "command": "intersystems-community.servermanager.openPortalExplorerExternal",
-        "title": "Open Management Portal Here in External Browser",
+        "command": "intersystems-community.servermanager.openPortalExplorerTab",
+        "title": "Open Management Portal Here in Tab",
         "icon": "$(link-external)"
       },
       {
@@ -396,12 +391,7 @@
     "menus": {
       "intersystems-community.servermanager.moreActions": [
         {
-          "command": "intersystems-community.servermanager.openPortalTab",
-          "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
-          "group": "1_builtin@10"
-        },
-        {
-          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+          "command": "intersystems-community.servermanager.openPortalExplorerTab",
           "when": "view == intersystems-community_servermanager && viewItem =~ /namespace$/",
           "group": "1_builtin@10"
         }
@@ -454,15 +444,11 @@
           "when": "false"
         },
         {
-          "command": "intersystems-community.servermanager.openPortalExternal",
-          "when": "false"
-        },
-        {
           "command": "intersystems-community.servermanager.openPortalTab",
           "when": "false"
         },
         {
-          "command": "intersystems-community.servermanager.openPortalExplorerExternal",
+          "command": "intersystems-community.servermanager.openPortalExplorerTab",
           "when": "false"
         },
         {
@@ -611,7 +597,7 @@
           "group": "inline@20"
         },
         {
-          "command": "intersystems-community.servermanager.openPortalExternal",
+          "command": "intersystems-community.servermanager.openPortalTab",
           "when": "view == intersystems-community_servermanager && viewItem =~ /\\.server\\./",
           "group": "inline@90"
         },
