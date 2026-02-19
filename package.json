@@ -2,7 +2,7 @@
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
   "version": "3.10.7-SNAPSHOT",
-  "publisher": "intersystems-community",
+  "publisher": "consistem-sistemas",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
     "type": "git",

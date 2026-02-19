@@ -40,7 +40,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	private _sessions: ServerManagerAuthenticationSession[] = [];
 	private _checkedSessions: ServerManagerAuthenticationSession[] = [];
 
-	private _serverManagerExtension = extensions.getExtension("intersystems-community.servermanager");
+	private _serverManagerExtension = extensions.getExtension("consistem-sistemas.servermanager");
 
 	private _onDidChangeSessions = new EventEmitter<AuthenticationProviderAuthenticationSessionsChangeEvent>();
 	get onDidChangeSessions(): Event<AuthenticationProviderAuthenticationSessionsChangeEvent> {
