@@ -10,7 +10,7 @@ import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./
 import { logout, serverSessions } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
 
-export const extensionId = "consistem-sistemas.servermanager";
+export const extensionId = "intersystems-community.servermanager";
 export const OBJECTSCRIPT_EXTENSIONID = "consistem-sistemas.vscode-objectscript";
 
 export let globalState: vscode.Memento;
