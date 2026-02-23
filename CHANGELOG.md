@@ -1,3 +1,8 @@
+## 3.12.0 (23-Feb-2026)
+Minimum VS Code version is now 1.109.0.
+* Launch Management Portal pages in Integrated Browser (#310).
+* Update dependencies (#311, #312).
+
 ## 3.10.6 (29-Dec-2025)
 * Fix logic for invalidating a REST session (#301).
 * Prevent uncaught error in `retryServer` command (#306).

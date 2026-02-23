@@ -4,7 +4,15 @@
 
 InterSystems Server Manager is a Visual Studio Code extension for defining connections to [InterSystems](https://www.intersystems.com/) servers. These definitions can used by other VS Code extensions when they make connections. One example is the [ObjectScript extension](https://github.com/intersystems-community/vscode-objectscript) for code editing. The [Launch WebTerminals](https://marketplace.visualstudio.com/items?itemName=georgejames.webterminal-vscode) extension is another.
 
-See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for changes in each release.
+See the [CHANGELOG](https://marketplace.visualstudio.com/items/intersystems-community.servermanager/changelog) for details of changes in each release.
+
+# New in Version 3.12 - February 2026
+- Require VS Code 1.109+.
+- Launch Management Portal pages in Integrated Browser.
+
+# New in Version 3.10 - April 2025
+- Show `objectscript.conn.docker-compose` type connections under 'Current' node.
+- Support running in a web environment.
 
 # New in Version 3.8 - November 2024
 - Updated the authentication provider to resolve overprompting caused by a VS Code 1.93 change.
