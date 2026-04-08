@@ -1,3 +1,6 @@
+## 3.12.1 (08-Apr-2026)
+* Update dependencies (#316, #317, #318, #319, #321).
+
 ## 3.12.0 (23-Feb-2026)
 Minimum VS Code version is now 1.109.0.
 * Launch Management Portal pages in Integrated Browser (#310).
