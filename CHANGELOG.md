@@ -1,3 +1,6 @@
+## 3.12.2 (14-Apr-2026)
+* Update dependencies (#324).
+
 ## 3.12.1 (08-Apr-2026)
 * Update dependencies (#316, #317, #318, #319, #321).
 
