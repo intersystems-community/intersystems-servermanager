@@ -684,7 +684,7 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 		});
 		this.name = 'Web Applications';
 		this.contextValue = serverApiVersion.toString() + '/webapps';
-		this.iconPath = new vscode.ThemeIcon('library');
+		this.iconPath = new vscode.ThemeIcon('globe');
 	}
 }
 
