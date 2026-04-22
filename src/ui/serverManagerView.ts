@@ -684,7 +684,7 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 		});
 		this.name = 'Web Applications';
 		this.contextValue = serverApiVersion.toString() + '/webapps';
-		this.iconPath = new vscode.ThemeIcon('library');
+		this.iconPath = new vscode.ThemeIcon('globe');
 	}
 }
 
@@ -708,15 +708,15 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promis
 		const response = await makeRESTRequest(
 			"GET",
 			serverSpec,
-			{ apiVersion: 1, namespace: "%SYS", path: `/cspapps/${params.ns}` }
+			{ apiVersion: 1, namespace: "%SYS", path: `/cspapps/${params.ns}?detail=1` }
 		);
 		if (response?.status === 200) {
 			if (response.data.result.content === undefined) {
 				vscode.window.showErrorMessage(response.data.status.summary);
 				return undefined;
 			}
-			response.data.result.content.map((webapp: string) => {
-				children.push(new WebAppTreeItem({ parent: element, label: name, id: name }, webapp, params.serverApiVersion));
+			response.data.result.content.map((webapp: any) => {
+				children.push(new WebAppTreeItem({ parent: element, label: name, id: name }, webapp.name, webapp.default, params.serverApiVersion));
 			});
 		}
 	}
@@ -726,7 +726,7 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promis
 
 export class WebAppTreeItem extends SMTreeItem {
 	public readonly name: string;
-	constructor(element: ISMItem, name: string, serverApiVersion: number) {
+	constructor(element: ISMItem, name: string, isDefault: boolean, serverApiVersion: number) {
 		const parentFolderId = element.parent?.id || '';
 		const id = parentFolderId + ':' + name;
 		super({
@@ -736,6 +736,6 @@ export class WebAppTreeItem extends SMTreeItem {
 		});
 		this.name = name;
 		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "/wsFolder" : ""}/webapp`;
-		this.iconPath = new vscode.ThemeIcon('file-code');
+		this.iconPath = new vscode.ThemeIcon(isDefault ? 'folder-active' : 'folder');
 	}
 }
