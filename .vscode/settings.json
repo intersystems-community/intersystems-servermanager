@@ -3,5 +3,8 @@
     "editor.defaultFormatter": "vscode.typescript-language-features",
     "editor.formatOnSave": true
   },
-  "typescript.preferences.quoteStyle": "double",
+  "js/ts.preferences.quoteStyle": "double",
+  "git.branchProtection": [
+    "master"
+  ],
 }
