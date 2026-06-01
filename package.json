@@ -58,7 +58,6 @@
     "@types/node": "^22.13.14",
     "@types/vscode": "^1.109.0",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/test-web": "^0.0.71",
     "glob": "^11.1.0",
     "mocha": "^11.7.5",
     "rimraf": "^5.0.5",
