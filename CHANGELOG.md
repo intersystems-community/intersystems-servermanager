@@ -1,6 +1,6 @@
-## 3.12.3 (19-May-2026)
+## 3.12.3 (01-Jun-2026)
 * Web Applications: use a different icon for the namespace default app (#328)
-* Update dependencies (#326, #329, #330).
+* Update dependencies (#326, #329, #330, #332).
 
 ## 3.12.2 (14-Apr-2026)
 * Update dependencies (#324).
