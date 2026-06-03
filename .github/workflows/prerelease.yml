@@ -83,7 +83,7 @@ jobs:
           name: ${{ needs.build.outputs.name }}.vsix
       - name: Create Pre-Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -126,7 +126,7 @@ jobs:
           npx vsce package --pre-release -o ${{ needs.build.outputs.name }}.vsix --githubBranch prerelease
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.release.tag_name }}
           files: ${{ needs.build.outputs.name }}.vsix
