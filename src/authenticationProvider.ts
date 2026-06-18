@@ -4,6 +4,7 @@ import {
 	AuthenticationProviderAuthenticationSessionsChangeEvent,
 	AuthenticationProviderSessionOptions,
 	AuthenticationSession,
+	ConfigurationTarget,
 	Disposable,
 	Event,
 	EventEmitter,
@@ -13,10 +14,19 @@ import {
 	window,
 	workspace,
 } from "vscode";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
+import { IOAuth2Config, performOAuth2Login } from "./oauth2Flow";
+import { promptOAuth2Audience, promptOAuth2Authority, promptOAuth2ClientId } from "./oauth2Prompts";
+
+/** Extended server spec with OAuth2 support (internal only) */
+interface IServerSpecOAuth2 extends IServerSpec {
+	authMethod?: "password" | "oauth2";
+	oauth2?: IOAuth2Config;
+}
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -106,7 +116,37 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			}
 		}
 
-		let userName = scopes[1] ?? "";
+		// Check auth method early to branch the flow
+		const serverSpec = await getServerSpec(serverName) as IServerSpecOAuth2 | undefined;
+
+		if (serverSpec?.authMethod === "oauth2") {
+			return this._createOAuth2Session(serverName, serverSpec);
+		} else {
+			return this._createPasswordSession(serverName, scopes[1] ?? "");
+		}
+	}
+
+	private async _createOAuth2Session(serverName: string, serverSpec: IServerSpecOAuth2): Promise<AuthenticationSession> {
+		const userName = serverSpec.username || "OAuth2User";
+
+		// Resolve OAuth2 config — prompt for missing values
+		const oauth2Config = await resolveOAuth2Config(serverName, serverSpec);
+		if (!oauth2Config) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 configuration is required.`);
+		}
+
+		// Perform OAuth2 login flow (opens browser, gets JWT)
+		const token = await performOAuth2Login(oauth2Config);
+		if (!token) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
+		}
+
+		// Token is stored as the session's accessToken (password field) and sent as Bearer token
+		return this._finalizeSession(serverName, userName, token);
+	}
+
+	private async _createPasswordSession(serverName: string, scopeUserName: string): Promise<AuthenticationSession> {
+		let userName = scopeUserName;
 		if (!userName) {
 			// Prompt for the username.
 			const enteredUserName = await window.showInputBox({
@@ -123,7 +163,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-		let existingSession = this._sessions.find((s) => s.id === sessionId);
+		const existingSession = this._sessions.find((s) => s.id === sessionId);
 		if (existingSession) {
 			if (this._checkedSessions.find((s) => s.id === sessionId)) {
 				return existingSession;
@@ -136,7 +176,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			}
 		}
 
-		let password: string | undefined = "";
+		let password: string | undefined;
 
 		if (userName !== "UnknownUser") {
 			// Seek password in secret storage
@@ -197,6 +237,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			}
 		}
 
+		return this._finalizeSession(serverName, userName, password ?? "");
+	}
+
+	private async _finalizeSession(serverName: string, userName: string, password: string): Promise<AuthenticationSession> {
 		// We have all we need to create the session object
 		const session = new ServerManagerAuthenticationSession(serverName, userName, password);
 		// Update this._sessions and raise the event to notify
@@ -236,11 +280,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return true;
 	}
 
-	// This function is called when the end user signs out of the account.
-	public async removeSession(sessionId: string): Promise<void> {
-		this._removeSession(sessionId);
-	}
-
 	private async _removeSession(sessionId: string, alwaysDeletePassword = false): Promise<void> {
 		const index = this._sessions.findIndex((item) => item.id === sessionId);
 		const session = this._sessions[index];
@@ -278,6 +317,11 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		this._onDidChangeSessions.fire({ added: [], removed: [session], changed: [] });
 	}
 
+	// This function is called when the end user signs out of the account.
+	public async removeSession(sessionId: string): Promise<void> {
+		this._removeSession(sessionId);
+	}
+
 	public async removeSessions(sessionIds: string[]): Promise<void> {
 		const storedPasswordCredKeys: string[] = [];
 		const removed: AuthenticationSession[] = [];
@@ -302,7 +346,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 					`Do you want to keep the stored passwords or delete them?`,
 					{
 						detail: `${storedPasswordCredKeys.length == sessionIds.length ? "All" : "Some"
-							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true
+							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true,
 					},
 					{ title: "Keep", isCloseAffordance: true },
 					{ title: "Delete", isCloseAffordance: false },
@@ -404,4 +448,51 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			strippedSessions,
 		);
 	}
+}
+
+/**
+ * Resolve OAuth2 configuration for a server, prompting for any missing values.
+ * If the user cancels any prompt, returns undefined.
+ * Persists each value to settings immediately so progress isn't lost.
+ */
+async function resolveOAuth2Config(
+	serverName: string,
+	serverSpec: IServerSpecOAuth2,
+): Promise<{ authority: string; clientId: string; audience: string; scopes?: string[] } | undefined> {
+
+	const existing = serverSpec.oauth2;
+	const config = workspace.getConfiguration("intersystems.servers");
+
+	// Authority
+	let authority = existing?.authority;
+	if (!authority) {
+		authority = await promptOAuth2Authority(serverName);
+		if (!authority) { return undefined; }
+		const sc = config.get<any>(serverName) || {};
+		sc.oauth2 = { ...sc.oauth2, authority };
+		await config.update(serverName, sc, ConfigurationTarget.Global);
+	}
+
+	// Client ID
+	let clientId = existing?.clientId;
+	if (!clientId) {
+		clientId = await promptOAuth2ClientId(serverName);
+		if (!clientId) { return undefined; }
+		const sc = config.get<any>(serverName) || {};
+		sc.oauth2 = { ...sc.oauth2, clientId };
+		await config.update(serverName, sc, ConfigurationTarget.Global);
+	}
+
+	// Audience
+	let audience = existing?.audience;
+	if (!audience) {
+		const defaultAudience = `${serverSpec.webServer.scheme || "http"}://${serverSpec.webServer.host}:${serverSpec.webServer.port}/`;
+		audience = await promptOAuth2Audience(serverName, defaultAudience);
+		if (!audience) { return undefined; }
+		const sc = config.get<any>(serverName) || {};
+		sc.oauth2 = { ...sc.oauth2, audience };
+		await config.update(serverName, sc, ConfigurationTarget.Global);
+	}
+
+	return { authority, clientId, audience };
 }

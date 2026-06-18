@@ -94,9 +94,24 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				// Use AuthenticationProvider to get password (and possibly username) if not supplied by caller
 				await resolveCredentials(server);
-				if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
+				const isOAuth2 = (server as any).authMethod === "oauth2";
+				if (isOAuth2 && typeof server.password !== "undefined") {
+					// Resend with Bearer token (JWT from OAuth2 flow)
+					respdata = await axios.request(
+						{
+							httpsAgent,
+							data,
+							headers: {
+								"Content-Type": "application/json",
+								"Authorization": `Bearer ${server.password}`,
+							},
+							method,
+							url: encodeURI(url),
+							withCredentials: true,
+						},
+					);
+				} else if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
 					// Either we had no cookies or they expired, so resend the request with basic auth
 					respdata = await axios.request(
 						{
@@ -133,9 +148,22 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				// Use AuthenticationProvider to get password (and possibly username) if not supplied by caller
 				await resolveCredentials(server);
-				if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
+				const isOAuth2 = (server as any).authMethod === "oauth2";
+				if (isOAuth2 && typeof server.password !== "undefined") {
+					// Resend with Bearer token (JWT from OAuth2 flow)
+					respdata = await axios.request(
+						{
+							httpsAgent,
+							method,
+							headers: {
+								"Authorization": `Bearer ${server.password}`,
+							},
+							url: encodeURI(url),
+							withCredentials: true,
+						},
+					);
+				} else if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
 					// Either we had no cookies or they expired, so resend the request with basic auth
 					respdata = await axios.request(
 						{
@@ -217,8 +245,17 @@ export async function logout(serverName: string) {
 }
 
 async function resolveCredentials(serverSpec: IServerSpec) {
-	// This arises if setting says to use authentication provider
+	// Use authentication provider to get credentials when not already available
 	if (typeof serverSpec.password === "undefined") {
+		// Fetch full server spec to get authMethod (may not be on the passed-in object)
+		const fullSpec = await getServerSpec(serverSpec.name, undefined);
+		if (fullSpec && (fullSpec as any).authMethod) {
+			(serverSpec as any).authMethod = (fullSpec as any).authMethod;
+		}
+
+		// Request session from authentication provider
+		// For OAuth2: accessToken is the JWT, username is "OAuth2User"
+		// For password: accessToken is the password, username is the actual username
 		const scopes = [serverSpec.name, (serverSpec.username || "")];
 		const account = getAccountFromParts(serverSpec.name, serverSpec.username);
 		let session = await vscode.authentication.getSession(

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { IJSONServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { promptAuthMethod, promptOAuth2Audience, promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
 import { getServerNames } from "./getServerNames";
 
 export async function addServer(
@@ -90,6 +91,34 @@ export async function addServer(
 									if (usernameTrimmed !== "") {
 										spec.username = usernameTrimmed;
 									}
+
+									// Prompt for authentication method
+									const authMethod = await promptAuthMethod();
+									if (typeof authMethod === "undefined") {
+										return undefined;
+									}
+									if (authMethod === "oauth2") {
+										(spec as any).authMethod = "oauth2";
+
+										const authority = await promptOAuth2Authority(name);
+										if (!authority) {
+											return undefined;
+										}
+
+										const clientId = await promptOAuth2ClientId(name);
+										if (!clientId) {
+											return undefined;
+										}
+
+										const defaultAudience = `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`;
+										const audience = await promptOAuth2Audience(name, defaultAudience);
+										if (!audience) {
+											return undefined;
+										}
+
+										(spec as any).oauth2 = { authority, clientId, audience };
+									}
+
 									const scheme = await new Promise<string | undefined>((resolve) => {
 										let result: string;
 										const quickPick = vscode.window.createQuickPick();
