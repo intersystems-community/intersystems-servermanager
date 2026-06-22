@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 /**
  * Get a server specification.
@@ -14,8 +14,7 @@ export async function getServerSpec(
 	scope?: vscode.ConfigurationScope,
 ): Promise<IServerSpec | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	let server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) || legacyEmbeddedServer(name);
-
+	let server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSpec | undefined || legacyEmbeddedServer(name);
 	// Unknown server
 	if (!server) {
 		const folder = vscode.workspace.workspaceFolders?.find(f => f.name === name);
@@ -69,8 +68,8 @@ export async function getServerSpec(
 
 	// When authentication provider is being used we should only have a password if it came from the deprecated
 	// property of the settings object. Otherwise return it as undefined.
-	if (!server.password) {
-		server.password = undefined;
+	if (!server["password"]) {
+		server["password"] = undefined;
 	}
 	return server;
 }

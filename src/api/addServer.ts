@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { IJSONServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { promptAuthMethod, promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
 import { getServerNames } from "./getServerNames";
 
@@ -8,7 +7,6 @@ export async function addServer(
 	target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global
 ): Promise<string | undefined> {
 	const serverNames = getServerNames(scope);
-	const spec: IJSONServerSpec = { webServer: { scheme: "", host: "", port: 0 } };
 	return await vscode.window
 		.showInputBox({
 			ignoreFocusOut: true,
@@ -36,9 +34,7 @@ export async function addServer(
 				});
 				if (description === undefined) return;
 				description = description.trim();
-				if (description) spec.description = description;
-
-				const host = await vscode.window.showInputBox({
+				let host = await vscode.window.showInputBox({
 					ignoreFocusOut: true,
 					title: "Enter the hostname or IP address of the web server",
 					validateInput: (value) => {
@@ -46,9 +42,8 @@ export async function addServer(
 					},
 				});
 				if (host === undefined) return;
-				spec.webServer.host = host.trim();
-
-				const portString = await vscode.window.showInputBox({
+				host = host.trim();
+				const port = await vscode.window.showInputBox({
 					ignoreFocusOut: true,
 					title: "Enter the port of the web server",
 					validateInput: (value) => {
@@ -61,9 +56,7 @@ export async function addServer(
 							: "Required, 1-65535";
 					},
 				});
-				if (portString === undefined) return;
-				spec.webServer.port = +portString;
-
+				if (port === undefined) return;
 				let pathPrefix = await vscode.window.showInputBox({
 					ignoreFocusOut: true,
 					title:
@@ -77,17 +70,15 @@ export async function addServer(
 				if (pathPrefix.endsWith("/")) {
 					pathPrefix = pathPrefix.slice(0, -1);
 				}
-				spec.webServer.pathPrefix = pathPrefix;
-
 				const authMethod = await promptAuthMethod();
+				let authDetails: { username: string; oauth2?: { authority: string; clientId: string; } };
 				if (authMethod === undefined) return;
 				if (authMethod === "oauth2") {
-					(spec as any).authMethod = "oauth2";
 					const authority = await promptOAuth2Authority(name);
 					if (!authority) return;
 					const clientId = await promptOAuth2ClientId(name);
 					if (!clientId) return;
-					(spec as any).oauth2 = { authority, clientId };
+					authDetails = { username: "OAuth2User", oauth2: { authority, clientId } };
 				} else {
 					const username = await vscode.window.showInputBox({
 						ignoreFocusOut: true,
@@ -97,16 +88,15 @@ export async function addServer(
 							"Leave empty to be prompted when connecting.",
 					});
 					if (username === undefined) return;
-					if (username) spec.username = username;
+					authDetails = { username: username.trim() };
 				}
-
 				const scheme = await new Promise<string | undefined>((resolve) => {
 					let result: string;
 					const quickPick = vscode.window.createQuickPick();
 					quickPick.title = "Confirm the connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.";
 					quickPick.ignoreFocusOut = true;
 					quickPick.items = [{ label: "http" }, { label: "https" }];
-					quickPick.activeItems = [quickPick.items[spec.webServer.port == 443 ? 1 : 0]];
+					quickPick.activeItems = [quickPick.items[port === "443" ? 1 : 0]];
 					quickPick.onDidChangeSelection((items) => {
 						result = items[0].label;
 					});
@@ -122,8 +112,6 @@ export async function addServer(
 					quickPick.show();
 				});
 				if (scheme === undefined) return;
-				spec.webServer.scheme = scheme;
-
 				const levelStr =
 					target == vscode.ConfigurationTarget.WorkspaceFolder
 						? "workspace-folder"
@@ -141,7 +129,12 @@ export async function addServer(
 							target == vscode.ConfigurationTarget.Workspace ? serversInspection?.workspaceValue :
 								serversInspection?.globalValue
 					) ?? {};
-					servers[name] = spec;
+					servers[name] = {
+						webServer: { scheme, host, port: +port, pathPrefix },
+						...(description ? { description } : {}),
+						authMethod,
+						...authDetails,
+					};
 					await config.update("servers", servers, target);
 					vscode.window.showInformationMessage(`Server '${name}' stored in ${levelStr}-level settings.`);
 					return name;

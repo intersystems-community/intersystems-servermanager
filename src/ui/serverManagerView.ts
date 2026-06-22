@@ -424,7 +424,7 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 			let response = await makeRESTRequest("HEAD", serverSpec);
 			if (response?.status === 401) {
 				// Authentication error, so retry in case first attempt cleared a no-longer-valid stored password
-				serverSpec.password = undefined;
+				serverSpec["password"] = undefined;
 				response = await makeRESTRequest("HEAD", serverSpec);
 			}
 			if (response?.status !== 200) {
@@ -433,7 +433,7 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 				children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.username || 'UnknownUser'));
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr as string));
 		}
 	}
 	return children;
@@ -443,7 +443,16 @@ async function specFromServerSummary(serverSummary: IServerName): Promise<IServe
 	const { name, description, detail, scope } = serverSummary;
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
-		return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" } };
+		// Get full server spec first to preserve authMethod, oauth2, etc.
+		const serverSpec = await getServerSpec(name, scope);
+		if (serverSpec) {
+			// Override with Docker-specific connection details
+			serverSpec.webServer.host = "127.0.0.1";
+			serverSpec.webServer.port = parseInt(dockerDetail[1], 10);
+			return serverSpec;
+		}
+		// Fallback for servers without a spec in settings
+		return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" } } as IServerSpec;
 	}
 	return getServerSpec(name, scope);
 }
@@ -517,7 +526,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 		try {
 			const response = await makeRESTRequest("GET", serverSpec);
 			if (response?.status !== 200) {
-				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec["username"] || 'UnknownUser', `${response.status} ${response.statusText}`));
 			} else {
 				const serverApiVersion = response.data.result.content.api;
 				response.data.result.content.namespaces.map((namespace: string) => {
@@ -525,7 +534,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 				});
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec["username"] || 'UnknownUser', errorStr as string));
 		}
 	}
 

@@ -14,19 +14,13 @@ import {
 	window,
 	workspace,
 } from "vscode";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
-import { IOAuth2Config, performOAuth2Login } from "./oauth2Flow";
+import { performOAuth2Login } from "./oauth2Flow";
 import { promptOAuth2Authority, promptOAuth2ClientId } from "./oauth2Prompts";
-
-/** Extended server spec with OAuth2 support (internal only) */
-interface IServerSpecOAuth2 extends IServerSpec {
-	authMethod?: "password" | "oauth2";
-	oauth2?: IOAuth2Config;
-}
+import { IServerSpec, OAuth2IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -117,7 +111,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 
 		// Check auth method early to branch the flow
-		const serverSpec = await getServerSpec(serverName) as IServerSpecOAuth2 | undefined;
+		const serverSpec = await getServerSpec(serverName) as IServerSpec | undefined;
 
 		if (serverSpec?.authMethod === "oauth2") {
 			return this._createOAuth2Session(serverName, serverSpec);
@@ -125,10 +119,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			return this._createPasswordSession(serverName, scopes[1] ?? "");
 		}
 	}
-
-	private async _createOAuth2Session(serverName: string, serverSpec: IServerSpecOAuth2): Promise<AuthenticationSession> {
-		const userName = "OAuth2User";
-
+	private async _createOAuth2Session(serverName: string, serverSpec: OAuth2IServerSpec): Promise<AuthenticationSession> {
 		// Resolve OAuth2 config — prompt for missing values
 		const oauth2Config = await resolveOAuth2Config(serverName, serverSpec);
 		if (!oauth2Config) {
@@ -142,7 +133,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 
 		// Token is stored as the session's accessToken (password field) and sent as Bearer token
-		return this._finalizeSession(serverName, userName, token);
+		return this._finalizeSession(serverName, serverSpec.username, token);
 	}
 
 	private async _createPasswordSession(serverName: string, scopeUserName: string): Promise<AuthenticationSession> {
@@ -265,7 +256,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			return true;
 		}
 		const serverSpec = await getServerSpec(session.serverName);
-		if (serverSpec) {
+		if (serverSpec && serverSpec.authMethod !== "oauth2") {
 			serverSpec.username = session.userName;
 			serverSpec.password = session.accessToken;
 			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
@@ -457,10 +448,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
  */
 async function resolveOAuth2Config(
 	serverName: string,
-	serverSpec: IServerSpecOAuth2,
+	serverSpec: OAuth2IServerSpec,
 ): Promise<{ authority: string; clientId: string; audience: string; scopes?: string[] } | undefined> {
 
-	const existing = serverSpec.oauth2;
+	const existing: Partial<OAuth2IServerSpec["oauth2"]> = serverSpec.oauth2;
 	const config = workspace.getConfiguration("intersystems.servers");
 
 	// Authority

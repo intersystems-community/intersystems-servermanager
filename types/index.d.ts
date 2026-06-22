@@ -22,17 +22,29 @@ export interface ISuperServerSpec {
 	port: number;
 }
 
-export interface IJSONServerSpec {
+interface GeneralIServerSpec {
+	name: string;
 	webServer: IWebServerSpec;
 	superServer?: ISuperServerSpec;
-	username?: string;
-	password?: string;
 	description?: string;
 }
 
-export interface IServerSpec extends IJSONServerSpec {
-	name: string;
+interface PasswordIServerSpec extends GeneralIServerSpec {
+	authMethod?: "password";
+	username?: string;
+	password?: string;
 }
+
+interface OAuth2IServerSpec extends GeneralIServerSpec {
+	authMethod: "oauth2";
+	username: "OAuth2User";
+	oauth2: {
+		authority: string;
+		clientId: string;
+	};
+}
+
+export type IServerSpec = PasswordIServerSpec | OAuth2IServerSpec;
 
 export interface ServerManagerAPI {
 	pickServer(

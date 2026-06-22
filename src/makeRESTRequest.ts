@@ -40,6 +40,21 @@ function getCookies(server: IServerSpec): string[] {
 	return serverSessions.get(server.name)?.cookies ?? [];
 }
 
+interface OAuth2Credentials {
+	headers: {
+		Authorization: string,
+	},
+}
+
+interface PasswordCredentials {
+	auth: {
+		password: string,
+		username: string,
+	},
+}
+
+type Credentials = OAuth2Credentials | PasswordCredentials;
+
 /**
  * Make a REST request to an InterSystems server.
  *
@@ -94,42 +109,22 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				await resolveCredentials(server);
-				const isOAuth2 = (server as any).authMethod === "oauth2";
-				if (isOAuth2 && typeof server.password !== "undefined") {
-					// Resend with Bearer token (JWT from OAuth2 flow)
-					respdata = await axios.request(
-						{
-							httpsAgent,
-							data,
-							headers: {
-								"Content-Type": "application/json",
-								"Authorization": `Bearer ${server.password}`,
-							},
-							method,
-							url: encodeURI(url),
-							withCredentials: true,
-						},
-					);
-				} else if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
-					// Either we had no cookies or they expired, so resend the request with basic auth
-					respdata = await axios.request(
-						{
-							httpsAgent,
-							auth: {
-								password: server.password,
-								username: server.username,
-							},
-							data,
-							headers: {
-								"Content-Type": "application/json",
-							},
-							method,
-							url: encodeURI(url),
-							withCredentials: true,
-						},
-					);
-				}
+				const credentials = (await resolveCredentials(server)) || { headers: {} };
+				// There is a payload so we need to add content-type
+				credentials["headers"] = {
+					"Content-Type": "application/json",
+					...credentials["headers"]
+				};
+				respdata = await axios.request(
+					{
+						httpsAgent,
+						data,
+						method,
+						url: encodeURI(url),
+						withCredentials: true,
+						...credentials,
+					},
+				);
 			}
 		} else {
 			// No data payload
@@ -148,36 +143,16 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				await resolveCredentials(server);
-				const isOAuth2 = (server as any).authMethod === "oauth2";
-				if (isOAuth2 && typeof server.password !== "undefined") {
-					// Resend with Bearer token (JWT from OAuth2 flow)
-					respdata = await axios.request(
-						{
-							httpsAgent,
-							method,
-							headers: {
-								"Authorization": `Bearer ${server.password}`,
-							},
-							url: encodeURI(url),
-							withCredentials: true,
-						},
-					);
-				} else if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
-					// Either we had no cookies or they expired, so resend the request with basic auth
-					respdata = await axios.request(
-						{
-							httpsAgent,
-							auth: {
-								password: server.password,
-								username: server.username,
-							},
-							method,
-							url: encodeURI(url),
-							withCredentials: true,
-						},
-					);
-				}
+				let credentials = await resolveCredentials(server);
+				respdata = await axios.request(
+					{
+						httpsAgent,
+						method,
+						url: encodeURI(url),
+						withCredentials: true,
+						...credentials,
+					},
+				);
 			}
 		}
 
@@ -187,7 +162,7 @@ export async function makeRESTRequest(
 		// to a server with no username defined must not lose initially-recorded username
 		const session = serverSessions.get(server.name);
 		if (!session) {
-			serverSessions.set(server.name, { serverName: server.name, username: server.username || '', cookies });
+			serverSessions.set(server.name, { serverName: server.name, username: server["username"] || '', cookies });
 		} else {
 			serverSessions.set(server.name, { ...session, cookies });
 		}
@@ -244,17 +219,37 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(serverSpec: IServerSpec) {
+async function resolveCredentials(serverSpec: IServerSpec): Promise<Credentials | undefined> {
 	// Use authentication provider to get credentials when not already available
+	if (serverSpec.authMethod === "oauth2") {
+		const account = getAccountFromParts(serverSpec.name);
+		let session = await vscode.authentication.getSession(
+			AUTHENTICATION_PROVIDER,
+			[serverSpec.name],
+			{ silent: true, account },
+		);
+		if (!session) {
+			session = await vscode.authentication.getSession(
+				AUTHENTICATION_PROVIDER,
+				[serverSpec.name],
+				{ createIfNone: true, account },
+			);
+		}
+		if (!session) return;
+		return {
+			headers: { "Authorization": `Bearer ${session.accessToken}` }
+		}
+	}
+
+	// Password-based authentication
 	if (typeof serverSpec.password === "undefined") {
 		// Fetch full server spec to get authMethod (may not be on the passed-in object)
 		const fullSpec = await getServerSpec(serverSpec.name, undefined);
 		if (fullSpec && (fullSpec as any).authMethod) {
-			(serverSpec as any).authMethod = (fullSpec as any).authMethod;
+			serverSpec.authMethod = (fullSpec as any).authMethod;
 		}
 
 		// Request session from authentication provider
-		// For OAuth2: accessToken is the JWT, username is "OAuth2User"
 		// For password: accessToken is the password, username is the actual username
 		const scopes = [serverSpec.name, (serverSpec.username || "")];
 		const account = getAccountFromParts(serverSpec.name, serverSpec.username);
@@ -273,6 +268,12 @@ async function resolveCredentials(serverSpec: IServerSpec) {
 		if (session) {
 			serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
 			serverSpec.password = session.accessToken;
+		}
+	}
+	return {
+		auth: {
+			username: serverSpec.username ?? "",
+			password: serverSpec.password ?? ""
 		}
 	}
 }
