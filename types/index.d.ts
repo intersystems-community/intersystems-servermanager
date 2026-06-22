@@ -38,6 +38,8 @@ interface PasswordIServerSpec extends GeneralIServerSpec {
 interface OAuth2IServerSpec extends GeneralIServerSpec {
 	authMethod: "oauth2";
 	username: "OAuth2User";
+	// The token is stored as password so that IServerSpec is backward-compatible (password is always a field although optional)
+	password?: string;
 	oauth2: {
 		authority: string;
 		clientId: string;
