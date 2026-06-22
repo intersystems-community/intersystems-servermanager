@@ -27,7 +27,6 @@ export async function addServer(
 		.then(
 			async (name): Promise<string | undefined> => {
 				if (name === undefined) return;
-
 				let description = await vscode.window.showInputBox({
 					ignoreFocusOut: true,
 					title: "Optionally enter a description",
@@ -80,7 +79,7 @@ export async function addServer(
 					if (!clientId) return;
 					authDetails = { username: "OAuth2User", oauth2: { authority, clientId } };
 				} else {
-					const username = await vscode.window.showInputBox({
+					let username = await vscode.window.showInputBox({
 						ignoreFocusOut: true,
 						title:
 							"Enter the username",
@@ -88,7 +87,8 @@ export async function addServer(
 							"Leave empty to be prompted when connecting.",
 					});
 					if (username === undefined) return;
-					authDetails = { username: username.trim() };
+					username = username.trim();
+					authDetails = { username };
 				}
 				const scheme = await new Promise<string | undefined>((resolve) => {
 					let result: string;
