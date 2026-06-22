@@ -111,9 +111,9 @@ export async function makeRESTRequest(
 			if (respdata.status === 401) {
 				const credentials = (await resolveCredentials(server)) || { headers: {} };
 				// There is a payload so we need to add content-type
-				credentials.headers = {
+				credentials["headers"] = {
 					"Content-Type": "application/json",
-					...credentials.headers,
+					...credentials["headers"],
 				};
 				respdata = await axios.request(
 					{

@@ -5,7 +5,6 @@ import {
 	AuthenticationProviderAuthenticationSessionsChangeEvent,
 	AuthenticationProviderSessionOptions,
 	AuthenticationSession,
-	ConfigurationTarget,
 	Disposable,
 	Event,
 	EventEmitter,
