@@ -441,20 +441,17 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 
 async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec | undefined> {
 	const { name, description, detail, scope } = serverSummary;
+	const spec = await getServerSpec(name, scope);
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
-		// Get full server spec first to preserve authMethod, oauth2, etc.
-		const serverSpec = await getServerSpec(name, scope);
-		if (serverSpec) {
-			// Override with Docker-specific connection details
-			serverSpec.webServer.host = "127.0.0.1";
-			serverSpec.webServer.port = parseInt(dockerDetail[1], 10);
-			return serverSpec;
+		if (!spec) {
+			return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" } } as IServerSpec;
 		}
-		// Fallback for servers without a spec in settings
-		return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" } } as IServerSpec;
+		// Override with Docker-specific connection details
+		spec.webServer.host = "127.0.0.1";
+		spec.webServer.port = parseInt(dockerDetail[1], 10);
 	}
-	return getServerSpec(name, scope);
+	return spec;
 }
 
 // tslint:disable-next-line: max-classes-per-file
