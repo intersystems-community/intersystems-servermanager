@@ -162,7 +162,7 @@ export async function makeRESTRequest(
 		// to a server with no username defined must not lose initially-recorded username
 		const session = serverSessions.get(server.name);
 		if (!session) {
-			serverSessions.set(server.name, { serverName: server.name, username: server["username"] || '', cookies });
+			serverSessions.set(server.name, { serverName: server.name, username: server.username || '', cookies });
 		} else {
 			serverSessions.set(server.name, { ...session, cookies });
 		}

@@ -523,7 +523,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 		try {
 			const response = await makeRESTRequest("GET", serverSpec);
 			if (response?.status !== 200) {
-				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec["username"] || 'UnknownUser', `${response.status} ${response.statusText}`));
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
 			} else {
 				const serverApiVersion = response.data.result.content.api;
 				response.data.result.content.namespaces.map((namespace: string) => {
@@ -531,7 +531,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 				});
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec["username"] || 'UnknownUser', errorStr as string));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr as string));
 		}
 	}
 
