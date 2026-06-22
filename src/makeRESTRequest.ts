@@ -242,15 +242,7 @@ async function resolveCredentials(serverSpec: IServerSpec): Promise<Credentials 
 	}
 
 	// Password-based authentication
-	if (typeof serverSpec.password === "undefined") {
-		// Fetch full server spec to get authMethod (may not be on the passed-in object)
-		const fullSpec = await getServerSpec(serverSpec.name, undefined);
-		if (fullSpec && (fullSpec as any).authMethod) {
-			serverSpec.authMethod = (fullSpec as any).authMethod;
-		}
-
-		// Request session from authentication provider
-		// For password: accessToken is the password, username is the actual username
+	if (serverSpec.password === undefined) {
 		const scopes = [serverSpec.name, (serverSpec.username || "")];
 		const account = getAccountFromParts(serverSpec.name, serverSpec.username);
 		let session = await vscode.authentication.getSession(
