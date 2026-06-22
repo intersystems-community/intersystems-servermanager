@@ -280,6 +280,11 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return true;
 	}
 
+	// This function is called when the end user signs out of the account.
+	public async removeSession(sessionId: string): Promise<void> {
+		this._removeSession(sessionId);
+	}
+
 	private async _removeSession(sessionId: string, alwaysDeletePassword = false): Promise<void> {
 		const index = this._sessions.findIndex((item) => item.id === sessionId);
 		const session = this._sessions[index];
@@ -315,11 +320,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 		await this._storeStrippedSessions();
 		this._onDidChangeSessions.fire({ added: [], removed: [session], changed: [] });
-	}
-
-	// This function is called when the end user signs out of the account.
-	public async removeSession(sessionId: string): Promise<void> {
-		this._removeSession(sessionId);
 	}
 
 	public async removeSessions(sessionIds: string[]): Promise<void> {
