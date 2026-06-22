@@ -241,15 +241,6 @@
                         "description": "OAuth2 client ID for this application.",
                         "minLength": 1
                       },
-                      "audience": {
-                        "type": "string",
-                        "description": "API identifier (audience) registered with your identity provider. Typically the IRIS server's base URL.",
-                        "pattern": "^https?://",
-                        "examples": [
-                          "http://localhost:52773/",
-                          "https://iris-server.example.com/"
-                        ]
-                      },
                       "scopes": {
                         "type": "array",
                         "description": "Optional additional scopes to request beyond 'openid profile email'.",
@@ -261,8 +252,7 @@
                     },
                     "required": [
                       "authority",
-                      "clientId",
-                      "audience"
+                      "clientId"
                     ],
                     "additionalProperties": false
                   }

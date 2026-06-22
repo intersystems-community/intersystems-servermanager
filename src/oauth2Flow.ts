@@ -44,6 +44,7 @@ export async function performOAuth2Login(config: IOAuth2Config): Promise<string 
 	// - "openid": required by OIDC spec, triggers ID token issuance
 	// - "profile": includes user's name/picture in claims
 	// - "email": includes user's email in claims
+	// It is standard to pass those scopes althought we don't need them
 	const scopes = ["openid", "profile", "email"];
 	const authUrl = new URL(authorizationEndpoint);
 	authUrl.searchParams.set("client_id", config.clientId);

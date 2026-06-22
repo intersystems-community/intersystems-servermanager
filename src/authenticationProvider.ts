@@ -20,7 +20,7 @@ import { globalState } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { IOAuth2Config, performOAuth2Login } from "./oauth2Flow";
-import { promptOAuth2Audience, promptOAuth2Authority, promptOAuth2ClientId } from "./oauth2Prompts";
+import { promptOAuth2Authority, promptOAuth2ClientId } from "./oauth2Prompts";
 
 /** Extended server spec with OAuth2 support (internal only) */
 interface IServerSpecOAuth2 extends IServerSpec {
@@ -484,15 +484,7 @@ async function resolveOAuth2Config(
 	}
 
 	// Audience
-	let audience = existing?.audience;
-	if (!audience) {
-		const defaultAudience = `${serverSpec.webServer.scheme || "http"}://${serverSpec.webServer.host}:${serverSpec.webServer.port}/`;
-		audience = await promptOAuth2Audience(serverName, defaultAudience);
-		if (!audience) { return undefined; }
-		const sc = config.get<any>(serverName) || {};
-		sc.oauth2 = { ...sc.oauth2, audience };
-		await config.update(serverName, sc, ConfigurationTarget.Global);
-	}
+	const audience = `${serverSpec.webServer.scheme || "http"}://${serverSpec.webServer.host}:${serverSpec.webServer.port}/`;
 
 	return { authority, clientId, audience };
 }

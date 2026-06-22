@@ -4,8 +4,8 @@ import * as vscode from "vscode";
  * Prompt the user to select an authentication method (password or oauth2).
  * Returns "password", "oauth2", or undefined if cancelled.
  */
-export async function promptAuthMethod(): Promise<string | undefined> {
-	return await new Promise<string | undefined>((resolve) => {
+export async function promptAuthMethod(): Promise<"password" | "oauth2" | undefined> {
+	return await new Promise((resolve) => {
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = "Select the authentication method";
 		quickPick.ignoreFocusOut = true;
@@ -14,9 +14,9 @@ export async function promptAuthMethod(): Promise<string | undefined> {
 			{ label: "oauth2", description: "OAuth2/OpenID Connect (e.g., Auth0, Keycloak)" },
 		];
 		quickPick.activeItems = [quickPick.items[0]];
-		let result: string | undefined;
+		let result: "password" | "oauth2";
 		quickPick.onDidChangeSelection((items) => {
-			result = items[0].label;
+			result = items[0].label as typeof result;
 		});
 		quickPick.onDidAccept(() => {
 			resolve(result);
@@ -62,20 +62,5 @@ export async function promptOAuth2ClientId(serverName: string): Promise<string |
 		title: `OAuth2 Configuration for '${serverName}'`,
 		prompt: "Enter the OAuth2 client ID for this application",
 		placeHolder: "your-client-id",
-	}) || undefined;
-}
-
-/**
- * Prompt the user for the OAuth2 audience.
- * Pre-fills with defaultAudience if provided.
- * Returns the entered value, or undefined if cancelled.
- */
-export async function promptOAuth2Audience(serverName: string, defaultAudience: string): Promise<string | undefined> {
-	return await vscode.window.showInputBox({
-		ignoreFocusOut: true,
-		title: `OAuth2 Configuration for '${serverName}'`,
-		prompt: "Enter the audience (API identifier registered with your IdP)",
-		placeHolder: defaultAudience || "https://your-iris-server/",
-		value: defaultAudience,
 	}) || undefined;
 }
