@@ -127,7 +127,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	}
 
 	private async _createOAuth2Session(serverName: string, serverSpec: IServerSpecOAuth2): Promise<AuthenticationSession> {
-		const userName = serverSpec.username || "OAuth2User";
+		const userName = "OAuth2User";
 
 		// Resolve OAuth2 config — prompt for missing values
 		const oauth2Config = await resolveOAuth2Config(serverName, serverSpec);

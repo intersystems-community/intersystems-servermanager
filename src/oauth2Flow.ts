@@ -66,6 +66,7 @@ export async function performOAuth2Login(config: IOAuth2Config): Promise<string 
 				const error = query.get("error");
 
 				disposable.dispose();
+				clearTimeout(timeoutHandle);
 
 				if (error) {
 					vscode.window.showErrorMessage(`OAuth2 error: ${error} - ${query.get("error_description") || ""}`, { modal: true });
@@ -82,7 +83,7 @@ export async function performOAuth2Login(config: IOAuth2Config): Promise<string 
 		});
 
 		// Auto-cancel after 2 minutes
-		setTimeout(() => {
+		const timeoutHandle = setTimeout(() => {
 			disposable.dispose();
 			vscode.window.showWarningMessage("OAuth2: Login timed out. Please try again.", { modal: true });
 			resolve(undefined);
