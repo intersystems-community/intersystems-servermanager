@@ -14,7 +14,7 @@ export async function getServerSpec(
 	scope?: vscode.ConfigurationScope,
 ): Promise<IServerSpec | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	const server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSpec | undefined || legacyEmbeddedServer(name);
+	const server = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSpec | undefined || legacyEmbeddedServer(name);
 	// Unknown server
 	if (!server) {
 		const folder = vscode.workspace.workspaceFolders?.find(f => f.name === name);
