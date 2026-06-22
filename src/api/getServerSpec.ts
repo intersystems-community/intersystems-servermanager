@@ -14,7 +14,7 @@ export async function getServerSpec(
 	scope?: vscode.ConfigurationScope,
 ): Promise<IServerSpec | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	let server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSpec | undefined || legacyEmbeddedServer(name);
+	const server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSpec | undefined || legacyEmbeddedServer(name);
 	// Unknown server
 	if (!server) {
 		const folder = vscode.workspace.workspaceFolders?.find(f => f.name === name);
@@ -47,7 +47,7 @@ export async function getServerSpec(
 				scheme: serverForUri.scheme,
 				host: serverForUri.host,
 				port: serverForUri.port,
-				pathPrefix: serverForUri.pathPrefix
+				pathPrefix: serverForUri.pathPrefix,
 			},
 			username: serverForUri.username,
 			password: serverForUri.password ? serverForUri.password : undefined,
@@ -64,7 +64,6 @@ export async function getServerSpec(
 		// Fall back to default if appropriate
 		server.superServer.host = server.superServer.host || server.webServer.host;
 	}
-
 
 	// When authentication provider is being used we should only have a password if it came from the deprecated
 	// property of the settings object. Otherwise return it as undefined.

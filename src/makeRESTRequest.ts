@@ -1,12 +1,12 @@
 // Derived from
 //  https://github.com/intersystems/language-server/blob/bdeea88d1900a3aff35d5ac373436899f3904a7e/server/src/server.ts
 
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import axios, { AxiosResponse } from "axios";
 import * as https from "https";
 import * as vscode from "vscode";
-import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { getServerSpec } from "./api/getServerSpec";
+import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { getAccountFromParts } from "./commonActivate";
 
 export interface IServerSession {
@@ -43,14 +43,14 @@ function getCookies(server: IServerSpec): string[] {
 interface OAuth2Credentials {
 	headers: {
 		Authorization: string,
-	},
+	};
 }
 
 interface PasswordCredentials {
 	auth: {
 		password: string,
 		username: string,
-	},
+	};
 }
 
 type Credentials = OAuth2Credentials | PasswordCredentials;
@@ -98,7 +98,7 @@ export async function makeRESTRequest(
 					data,
 					headers: {
 						"Content-Type": "application/json",
-						"Cookie": cookies.join(" ")
+						"Cookie": cookies.join(" "),
 					},
 					method,
 					url: encodeURI(url),
@@ -111,9 +111,9 @@ export async function makeRESTRequest(
 			if (respdata.status === 401) {
 				const credentials = (await resolveCredentials(server)) || { headers: {} };
 				// There is a payload so we need to add content-type
-				credentials["headers"] = {
+				credentials.headers = {
 					"Content-Type": "application/json",
-					...credentials["headers"]
+					...credentials.headers,
 				};
 				respdata = await axios.request(
 					{
@@ -133,7 +133,7 @@ export async function makeRESTRequest(
 					httpsAgent,
 					method,
 					headers: {
-						"Cookie": cookies.join(" ")
+						Cookie: cookies.join(" "),
 					},
 					url: encodeURI(url),
 					validateStatus: (status) => {
@@ -143,7 +143,7 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				let credentials = await resolveCredentials(server);
+				const credentials = await resolveCredentials(server);
 				respdata = await axios.request(
 					{
 						httpsAgent,
@@ -156,13 +156,13 @@ export async function makeRESTRequest(
 			}
 		}
 
-		cookies = updateCookies(cookies, respdata.headers['set-cookie'] || []);
+		cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
 
 		// Only store the session for a serverName the first time because subsequent requests
 		// to a server with no username defined must not lose initially-recorded username
 		const session = serverSessions.get(server.name);
 		if (!session) {
-			serverSessions.set(server.name, { serverName: server.name, username: server.username || '', cookies });
+			serverSessions.set(server.name, { serverName: server.name, username: server.username || "", cookies });
 		} else {
 			serverSessions.set(server.name, { ...session, cookies });
 		}
@@ -190,7 +190,7 @@ export async function logout(serverName: string) {
 	const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
 
 	// Get the cookies
-	let cookies: string[] = getCookies(server);
+	const cookies: string[] = getCookies(server);
 
 	// Build the URL
 	let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
@@ -207,7 +207,7 @@ export async function logout(serverName: string) {
 				httpsAgent,
 				method: "HEAD",
 				headers: {
-					"Cookie": cookies.join(" ")
+					Cookie: cookies.join(" "),
 				},
 				url: encodeURI(url),
 				validateStatus: (status) => {
@@ -235,10 +235,10 @@ async function resolveCredentials(serverSpec: IServerSpec): Promise<Credentials 
 				{ createIfNone: true, account },
 			);
 		}
-		if (!session) return;
+		if (!session) { return; }
 		return {
-			headers: { "Authorization": `Bearer ${session.accessToken}` }
-		}
+			headers: { Authorization: `Bearer ${session.accessToken}` },
+		};
 	}
 
 	// Password-based authentication
@@ -265,9 +265,9 @@ async function resolveCredentials(serverSpec: IServerSpec): Promise<Credentials 
 	return {
 		auth: {
 			username: serverSpec.username ?? "",
-			password: serverSpec.password ?? ""
-		}
-	}
+			password: serverSpec.password ?? "",
+		},
+	};
 }
 
 /**
