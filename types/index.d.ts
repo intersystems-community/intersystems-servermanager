@@ -84,6 +84,6 @@ export interface ServerManagerAPI {
 	): vscode.Event<string>;
 
 	getAuthorization(
-		authorization: Required<Authorization>
+		authorization: Required<Pick<Authorization, keyof Authorization>>
 	): String
 }
