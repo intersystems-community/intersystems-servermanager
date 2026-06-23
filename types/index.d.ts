@@ -22,22 +22,22 @@ export interface ISuperServerSpec {
 	port: number;
 }
 
-interface GeneralIServerSpec {
+export interface GeneralIServerSpec {
 	name: string;
 	webServer: IWebServerSpec;
 	superServer?: ISuperServerSpec;
 	description?: string;
 }
 
-interface PasswordIServerSpec extends GeneralIServerSpec {
+export interface PasswordAuthorization {
 	authMethod?: "password";
 	username?: string;
 	password?: string;
 }
 
-interface OAuth2IServerSpec extends GeneralIServerSpec {
+export interface OAuth2Authorization {
 	authMethod: "oauth2";
-	username: "OAuth2User";
+	username?: string;
 	// The token is stored as password so that IServerSpec is backward-compatible (password is always a field although optional)
 	password?: string;
 	oauth2: {
@@ -45,6 +45,11 @@ interface OAuth2IServerSpec extends GeneralIServerSpec {
 		clientId: string;
 	};
 }
+
+export type Authorization = PasswordAuthorization | OAuth2Authorization;
+
+export type PasswordIServerSpec = GeneralIServerSpec & PasswordAuthorization;
+export type OAuth2IServerSpec = GeneralIServerSpec & OAuth2Authorization;
 
 export type IServerSpec = PasswordIServerSpec | OAuth2IServerSpec;
 
@@ -77,4 +82,8 @@ export interface ServerManagerAPI {
 
 	onDidChangePassword(
 	): vscode.Event<string>;
+
+	getAuthorization(
+		authorization: Required<Authorization>
+	): String
 }

@@ -175,7 +175,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 
 		// Token is stored as the session's accessToken (password field) and sent as Bearer token
-		return this._finalizeSession(serverName, serverSpec.username, token);
+		return this._finalizeSession(serverName, serverSpec.username || "OAuth2User", token);
 	}
 
 	private async _createPasswordSession(serverName: string, scopeUserName: string): Promise<AuthenticationSession> {

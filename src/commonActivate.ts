@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { Authorization, IServerName, IServerSpec, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
@@ -24,7 +24,7 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
  * Handle all activation requirements that are shared by `extension.ts` and `web-extension.ts`.
  * Returns our exported API.
  */
-export function commonActivate(context: vscode.ExtensionContext, view: ServerManagerView): any {
+export function commonActivate(context: vscode.ExtensionContext, view: ServerManagerView): ServerManagerAPI {
 	const _onDidChangePassword = new vscode.EventEmitter<string>();
 
 	// Other parts of this extension will use this to persist state
@@ -344,7 +344,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 	);
 
 	// Create our exported API
-	const api = {
+	const api: ServerManagerAPI = {
 		async pickServer(
 			scope?: vscode.ConfigurationScope,
 			options: vscode.QuickPickOptions = {},
@@ -405,6 +405,14 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		): vscode.Event<string> {
 			return _onDidChangePassword.event;
 		},
+
+		getAuthorization(authorization: Required<Authorization>): string {
+			const { authMethod, username, password } = authorization;
+			return authMethod == "oauth2"
+				? `Bearer ${password}`
+				: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
+		}
+
 
 	};
 
