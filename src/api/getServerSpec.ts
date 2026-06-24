@@ -33,7 +33,15 @@ export async function getServerSpec(
 			// Activating it here would cause a deadlock because the activate method of the ObjectScript extension itself calls our getServerSpec API
 			return undefined;
 		}
-		let serverForUri: any;
+		let serverForUri: {
+			serverName: string;
+			scheme: string;
+			host: string;
+			port: number;
+			pathPrefix: string;
+			username: string;
+			password?: string;
+		};
 		if (objectScriptExtension.exports.asyncServerForUri) {
 			serverForUri = await objectScriptExtension.exports.asyncServerForUri(folder.uri);
 		} else {

@@ -211,6 +211,15 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 	}
 }
 
+export interface ServerParams {
+	sorted?: boolean;
+	serverSummary?: IServerName;
+	serverName?: string;
+	serverSpec?: IServerSpec;
+	serverApiVersion?: number;
+	ns?: string;
+}
+
 interface ISMItem {
 	label: string;
 	id: string;
@@ -221,7 +230,7 @@ interface ISMItem {
 	codiconName?: string;
 	// tslint:disable-next-line: ban-types
 	getChildren?: Function;
-	params?: any;
+	params?: ServerParams;
 }
 
 // tslint:disable-next-line: max-classes-per-file
@@ -230,7 +239,7 @@ export class SMTreeItem extends vscode.TreeItem {
 	public readonly parent: SMTreeItem | undefined;
 	// tslint:disable-next-line: ban-types
 	private readonly _getChildren?: Function;
-	public readonly params?: any;
+	public readonly params?: ServerParams;
 
 	constructor(item: ISMItem) {
 		const collapsibleState = item.getChildren
@@ -259,7 +268,7 @@ export class SMTreeItem extends vscode.TreeItem {
 	}
 }
 
-function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
+function allServers(treeItem: SMTreeItem, params?: ServerParams): ServerTreeItem[] {
 	const children: ServerTreeItem[] = [];
 	// Add children for servers defined at the user or workspace level
 	const wsServerNames = getServerNames(undefined);
@@ -280,7 +289,7 @@ function allServers(treeItem: SMTreeItem, params?: any): ServerTreeItem[] {
 	return children;
 }
 
-async function currentServers(element: SMTreeItem, params?: any): Promise<ServerTreeItem[]> {
+async function currentServers(element: SMTreeItem, params?: ServerParams): Promise<ServerTreeItem[]> {
 	const children = new Map<string, ServerTreeItem>();
 	const dockerLocalPorts = new Map<number, string>();
 
@@ -342,7 +351,7 @@ async function currentServers(element: SMTreeItem, params?: any): Promise<Server
 	return Array.from(children.values()).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 }
 
-function favoriteServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
+function favoriteServers(element: SMTreeItem, params?: ServerParams): ServerTreeItem[] {
 	const children: ServerTreeItem[] = [];
 
 	favoritesMap.forEach((_, name) => {
@@ -355,7 +364,7 @@ function favoriteServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
 	return children.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 }
 
-function recentServers(element: SMTreeItem, params?: any): ServerTreeItem[] {
+function recentServers(element: SMTreeItem, params?: ServerParams): ServerTreeItem[] {
 	const children: ServerTreeItem[] = [];
 
 	recentsArray.map((name) => {
@@ -410,7 +419,7 @@ export class ServerTreeItem extends SMTreeItem {
  * @param params (unused)
  * @returns feature folders of a server.
  */
-async function serverFeatures(element: ServerTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
+async function serverFeatures(element: ServerTreeItem, params?: ServerParams): Promise<FeatureTreeItem[] | undefined> {
 	const children: FeatureTreeItem[] = [];
 
 	if (params?.serverSummary) {
@@ -504,7 +513,7 @@ export class NamespacesTreeItem extends FeatureTreeItem {
  * @param params (unused)
  * @returns namespaces of a server.
  */
-async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<NamespaceTreeItem[] | undefined> {
+async function serverNamespaces(element: ServerTreeItem, params?: ServerParams): Promise<NamespaceTreeItem[] | undefined> {
 	const children: NamespaceTreeItem[] = [];
 
 	if (params?.serverName) {
@@ -570,10 +579,10 @@ export class NamespaceTreeItem extends SMTreeItem {
  * @param params (unused)
  * @returns feature folders of a namespace.
  */
-async function namespaceFeatures(element: NamespaceTreeItem, params?: any): Promise<FeatureTreeItem[] | undefined> {
+async function namespaceFeatures(element: NamespaceTreeItem, params?: ServerParams): Promise<FeatureTreeItem[] | undefined> {
 	return [
-		new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName, params.serverSpec, params.serverApiVersion),
-		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params.serverName, params.serverSpec, params.serverApiVersion)
+		new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params?.serverName, params?.serverSpec, params?.serverApiVersion),
+		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params?.serverName, params?.serverSpec, params?.serverApiVersion)
 	];
 }
 
@@ -581,9 +590,9 @@ export class ProjectsTreeItem extends FeatureTreeItem {
 	public readonly name: string;
 	constructor(
 		element: ISMItem,
-		serverName: string,
-		serverSpec: IServerSpec,
-		serverApiVersion: number
+		serverName?: string,
+		serverSpec?: IServerSpec,
+		serverApiVersion: number = 0
 	) {
 		const parentFolderId = element.parent?.id || '';
 		super({
@@ -607,7 +616,7 @@ export class ProjectsTreeItem extends FeatureTreeItem {
  * @param params { serverName }
  * @returns projects in a server namespace.
  */
-async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promise<ProjectTreeItem[] | undefined> {
+async function namespaceProjects(element: ProjectsTreeItem, params?: ServerParams): Promise<ProjectTreeItem[] | undefined> {
 	const children: ProjectTreeItem[] = [];
 
 	if (params?.serverName && params.ns) {
@@ -635,7 +644,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promi
 				return undefined;
 			}
 			response.data.result.content.map((project) => {
-				children.push(new ProjectTreeItem({ parent: element, label: name, id: name }, project.Name, project.Description, params.serverApiVersion));
+				children.push(new ProjectTreeItem({ parent: element, label: name, id: name }, project.Name, project.Description, params.serverApiVersion!));
 			});
 		}
 	}
@@ -669,9 +678,9 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 	public readonly name: string;
 	constructor(
 		element: ISMItem,
-		serverName: string,
-		serverSpec: IServerSpec,
-		serverApiVersion: number
+		serverName: string | undefined,
+		serverSpec: IServerSpec | undefined,
+		serverApiVersion: number = 0
 	) {
 		const parentFolderId = element.parent?.id || '';
 		super({
@@ -695,7 +704,7 @@ export class WebAppsTreeItem extends FeatureTreeItem {
  * @param params { serverName }
  * @returns web applications in a server namespace.
  */
-async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promise<WebAppTreeItem[] | undefined> {
+async function namespaceWebApps(element: ProjectsTreeItem, params?: ServerParams & { serverApiVersion: number }): Promise<WebAppTreeItem[] | undefined> {
 	const children: ProjectTreeItem[] = [];
 
 	if (params?.serverName && params.ns) {
@@ -715,7 +724,7 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: any): Promis
 				vscode.window.showErrorMessage(response.data.status.summary);
 				return undefined;
 			}
-			response.data.result.content.map((webapp: any) => {
+			response.data.result.content.map((webapp: { name: string, default: boolean }) => {
 				children.push(new WebAppTreeItem({ parent: element, label: name, id: name }, webapp.name, webapp.default, params.serverApiVersion));
 			});
 		}

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { IServerName, IServerSpec, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
@@ -24,7 +24,7 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
  * Handle all activation requirements that are shared by `extension.ts` and `web-extension.ts`.
  * Returns our exported API.
  */
-export function commonActivate(context: vscode.ExtensionContext, view: ServerManagerView): any {
+export function commonActivate(context: vscode.ExtensionContext, view: ServerManagerView): ServerManagerAPI {
 	const _onDidChangePassword = new vscode.EventEmitter<string>();
 
 	// Other parts of this extension will use this to persist state
@@ -199,8 +199,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		vscode.commands.registerCommand(`${extensionId}.editSettings`, (server?: ServerTreeItem) => {
 			// Attempt to open the correct JSON file
 			server = server instanceof ServerTreeItem ? server : undefined;
-			const scope: vscode.ConfigurationScope = server?.params?.serverSummary?.scope;
-			const servers = vscode.workspace.getConfiguration("intersystems", scope).inspect<{ [key: string]: any }>("servers");
+			const scope = server?.params?.serverSummary?.scope;
+			const servers = vscode.workspace.getConfiguration("intersystems", scope).inspect("servers");
 			const openJSONArg = { revealSetting: { key: "intersystems.servers" } };
 			const revealServer = (): void => {
 				// Find the start of the server's settings block
