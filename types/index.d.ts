@@ -75,7 +75,7 @@ export interface ServerManagerAPI {
 	): Promise<IServerSpec | undefined>;
 
 	getAccount(
-		serverSpec: IServerSpec
+		serverSpec: { name: string, username?: string }
 	): vscode.AuthenticationSessionAccountInformation | undefined;
 
 	onDidChangePassword(

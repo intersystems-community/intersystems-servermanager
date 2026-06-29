@@ -407,7 +407,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			}
 		},
 
-		getAccount(serverSpec: IServerSpec): vscode.AuthenticationSessionAccountInformation | undefined {
+		getAccount(serverSpec: { name: string, username?: string }): vscode.AuthenticationSessionAccountInformation | undefined {
 			return getAccountFromParts(serverSpec.name, serverSpec["username"]);
 		},
 
