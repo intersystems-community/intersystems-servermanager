@@ -70,14 +70,14 @@ export async function addServer(
 					pathPrefix = pathPrefix.slice(0, -1);
 				}
 				const authMethod = await promptAuthMethod();
-				let authDetails: { username: string; oauth2?: { authority: string; clientId: string; } };
+				let authDetails: { username?: string; oauth2?: { authority: string; clientId: string; } };
 				if (authMethod === undefined) return;
 				if (authMethod === "oauth2") {
 					const authority = await promptOAuth2Authority(name);
 					if (!authority) return;
 					const clientId = await promptOAuth2ClientId(name);
 					if (!clientId) return;
-					authDetails = { username: "OAuth2User", oauth2: { authority, clientId } };
+					authDetails = { oauth2: { authority, clientId } };
 				} else {
 					let username = await vscode.window.showInputBox({
 						ignoreFocusOut: true,
@@ -132,7 +132,6 @@ export async function addServer(
 					servers[name] = {
 						webServer: { scheme, host, port: +port, pathPrefix },
 						...(description ? { description } : {}),
-						authMethod,
 						...authDetails,
 					};
 					await config.update("servers", servers, target);

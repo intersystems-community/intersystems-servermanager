@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
-import { getServerSpec } from "../api/getServerSpec";
+import { getServerSetting } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
 import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { makeRESTRequest } from "../makeRESTRequest";
@@ -428,12 +428,12 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 				response = await makeRESTRequest("HEAD", serverSpec);
 			}
 			if (response?.status !== 200) {
-				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec['username'] || 'UnknownUser', `${response.status} ${response.statusText}`));
 			} else {
-				children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.username || 'UnknownUser'));
+				children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec['username'] || 'UnknownUser'));
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr as string));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec['username'] || 'UnknownUser', errorStr as string));
 		}
 	}
 	return children;
@@ -441,7 +441,7 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 
 async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec | undefined> {
 	const { name, description, detail, scope } = serverSummary;
-	const spec = await getServerSpec(name, scope);
+	const spec = await getServerSetting(name, scope);
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
 		if (!spec) {
@@ -523,7 +523,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 		try {
 			const response = await makeRESTRequest("GET", serverSpec);
 			if (response?.status !== 200) {
-				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec['username'] || 'UnknownUser', `${response.status} ${response.statusText}`));
 			} else {
 				const serverApiVersion = response.data.result.content.api;
 				response.data.result.content.namespaces.map((namespace: string) => {
@@ -531,7 +531,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: any): Promise<
 				});
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr as string));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec['username'] || 'UnknownUser', errorStr as string));
 		}
 	}
 
@@ -633,7 +633,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: any): Promi
 			if (response.data.result.content === undefined) {
 				let message;
 				if (response.data.status?.errors[0]?.code === 5540) {
-					message = `To allow user '${serverSpec.username}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${serverSpec.username}"`;
+					message = `To allow user '${serverSpec['username'] || 'UnknownUser'}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${serverSpec['username'] || 'UnknownUser'}"`;
 				} else {
 					message = response.data.status.summary;
 				}

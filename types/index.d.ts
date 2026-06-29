@@ -23,38 +23,30 @@ export interface ISuperServerSpec {
 }
 
 export interface PasswordAuthorization {
-	authMethod?: "password";
+	// The properties are present only if defined in the settings JSON.
+	//   Storage of `password` there is deprecated and strongly discouraged.
 	username?: string;
 	password?: string;
 }
 
 export interface OAuth2Authorization {
-	authMethod: "oauth2";
-	username?: string;
-	// The token is stored as password so that IServerSpec is backward-compatible (password is always a field although optional)
-	password?: string;
-	oauth2: {
-		authority: string;
-		clientId: string;
-	};
+	// The bearer_token is never present by getServerSpec for now.
+	bearer_token: string | undefined;
 }
 
 export type Authorization = PasswordAuthorization | OAuth2Authorization;
 
-interface GeneralIJSONServerSpec {
+export interface GeneralIJSONServerSpec {
 	webServer: IWebServerSpec;
 	superServer?: ISuperServerSpec;
 	description?: string;
 }
 
-export type PasswordIJSONServerSpec = GeneralIJSONServerSpec & PasswordAuthorization;
-export type OAuth2IJSONServerSpec = GeneralIJSONServerSpec & OAuth2Authorization;
-export type IJSONServerSpec = PasswordIJSONServerSpec | OAuth2IJSONServerSpec;
+export type IJSONServerSpec = GeneralIJSONServerSpec & Authorization;
 
-interface GeneralIServerSpec extends GeneralIJSONServerSpec {
+export interface GeneralIServerSpec extends GeneralIJSONServerSpec {
 	name: string;
 }
-
 export type PasswordIServerSpec = GeneralIServerSpec & PasswordAuthorization;
 export type OAuth2IServerSpec = GeneralIServerSpec & OAuth2Authorization;
 export type IServerSpec = PasswordIServerSpec | OAuth2IServerSpec;
@@ -90,6 +82,6 @@ export interface ServerManagerAPI {
 	): vscode.Event<string>;
 
 	getAuthorization(
-		authorization: Required<Pick<Authorization, keyof Authorization>>
-	): String
+		authorization: Required<Authorization>
+	): string
 }

@@ -1,4 +1,4 @@
-import { IServerSpec, OAuth2IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { OAuth2IServerSetting } from "./serverSetting";
 import {
 	authentication,
 	AuthenticationProvider,
@@ -16,7 +16,7 @@ import {
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState } from "./commonActivate";
-import { getServerSpec } from "./api/getServerSpec";
+import { getServerSetting } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
 
@@ -109,10 +109,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 
 		// Check auth method early to branch the flow
-		const serverSpec = await getServerSpec(serverName) as IServerSpec | undefined;
+		const serverSetting = await getServerSetting(serverName);
 
-		if (serverSpec?.authMethod === "oauth2") {
-			return this._createOAuth2Session(serverName, serverSpec);
+		if (serverSetting && 'oauth2' in serverSetting) {
+			return this._createOAuth2Session(serverName, serverSetting);
 		} else {
 			return this._createPasswordSession(serverName, scopes[1] ?? "");
 		}
@@ -161,9 +161,9 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		await this._storeStrippedSessions();
 		this._onDidChangeSessions.fire({ added: [], removed, changed: [] });
 	}
-	private async _createOAuth2Session(serverName: string, serverSpec: OAuth2IServerSpec): Promise<AuthenticationSession> {
+	private async _createOAuth2Session(serverName: string, serverSetting: OAuth2IServerSetting): Promise<AuthenticationSession> {
 		// Resolve OAuth2 config — prompt for missing values
-		const oauth2Config = await resolveOAuth2Config(serverSpec);
+		const oauth2Config = await resolveOAuth2Config(serverSetting);
 		if (!oauth2Config) {
 			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 configuration is required.`);
 		}
@@ -175,7 +175,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 
 		// Token is stored as the session's accessToken (password field) and sent as Bearer token
-		return this._finalizeSession(serverName, serverSpec.username || "OAuth2User", token);
+		return this._finalizeSession(serverName, "OAuth2User", token);
 	}
 
 	private async _createPasswordSession(serverName: string, scopeUserName: string): Promise<AuthenticationSession> {
@@ -297,11 +297,11 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (this._checkedSessions.find((s) => s.id === session.id)) {
 			return true;
 		}
-		const serverSpec = await getServerSpec(session.serverName);
-		if (serverSpec && serverSpec.authMethod !== "oauth2") {
-			serverSpec.username = session.userName;
-			serverSpec.password = session.accessToken;
-			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
+		const serverSetting = await getServerSetting(session.serverName);
+		if (serverSetting && !('oauth2' in serverSetting)) {
+			serverSetting.username = session.userName;
+			serverSetting.password = session.accessToken;
+			const response = await makeRESTRequest("HEAD", serverSetting).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
 				return false;
@@ -445,7 +445,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
  * Persists each value to settings immediately so progress isn't lost.
  */
 async function resolveOAuth2Config(
-	serverSpec: OAuth2IServerSpec,
+	serverSetting: OAuth2IServerSetting,
 ): Promise<{ authority: string; clientId: string; audience: string; scopes?: string[] } | undefined> {
-	return { authority: serverSpec.oauth2.authority, clientId: serverSpec.oauth2.clientId, audience: `${serverSpec.webServer.scheme || "http"}://${serverSpec.webServer.host}:${serverSpec.webServer.port}/` };
+	return { authority: serverSetting.oauth2.authority, clientId: serverSetting.oauth2.clientId, audience: `${serverSetting.webServer.scheme || "http"}://${serverSetting.webServer.host}:${serverSetting.webServer.port}/` };
 }

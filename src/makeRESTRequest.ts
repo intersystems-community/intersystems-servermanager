@@ -1,13 +1,13 @@
 // Derived from
 //  https://github.com/intersystems/language-server/blob/bdeea88d1900a3aff35d5ac373436899f3904a7e/server/src/server.ts
 
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import axios, { AxiosResponse } from "axios";
 import * as https from "https";
 import * as vscode from "vscode";
-import { getServerSpec } from "./api/getServerSpec";
+import { getServerSetting } from "./api/getServerSpec";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { getAccountFromParts } from "./commonActivate";
+import { IServerSetting } from "./serverSetting";
 
 export interface IServerSession {
 	serverName: string;
@@ -36,7 +36,7 @@ function updateCookies(oldCookies: string[], newCookies: string[]): string[] {
 	return oldCookies;
 }
 
-function getCookies(server: IServerSpec): string[] {
+function getCookies(server: IServerSetting): string[] {
 	return serverSessions.get(server.name)?.cookies ?? [];
 }
 
@@ -59,13 +59,13 @@ type Credentials = OAuth2Credentials | PasswordCredentials;
  * Make a REST request to an InterSystems server.
  *
  * @param method The REST method.
- * @param server The server to send the request to.
+ * @param server The server setting to send the request to (internal type with OAuth2 config).
  * @param endpoint Optional endpoint object. If omitted the request will be to /api/atelier/
  * @param data Optional request data. Usually passed for POST requests.
  */
 export async function makeRESTRequest(
 	method: "HEAD" | "GET" | "POST",
-	server: IServerSpec,
+	server: IServerSetting,
 	endpoint?: IAtelierRESTEndpoint,
 	data?: any,
 ): Promise<AxiosResponse> {
@@ -162,7 +162,7 @@ export async function makeRESTRequest(
 		// to a server with no username defined must not lose initially-recorded username
 		const session = serverSessions.get(server.name);
 		if (!session) {
-			serverSessions.set(server.name, { serverName: server.name, username: server.username || "", cookies });
+			serverSessions.set(server.name, { serverName: server.name, username: server['username'] ?? "", cookies });
 		} else {
 			serverSessions.set(server.name, { ...session, cookies });
 		}
@@ -180,7 +180,7 @@ export async function makeRESTRequest(
  */
 export async function logout(serverName: string) {
 
-	const server = await getServerSpec(serverName, undefined);
+	const server = await getServerSetting(serverName, undefined);
 
 	if (!server) {
 		return;
@@ -219,19 +219,19 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(serverSpec: IServerSpec): Promise<Credentials | undefined> {
+async function resolveCredentials(setting: IServerSetting): Promise<Credentials | undefined> {
 	// Use authentication provider to get credentials when not already available
-	if (serverSpec.authMethod === "oauth2") {
-		const account = getAccountFromParts(serverSpec.name);
+	if ('oauth2' in setting) {
+		const account = getAccountFromParts(setting.name);
 		let session = await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
-			[serverSpec.name],
+			[setting.name],
 			{ silent: true, account },
 		);
 		if (!session) {
 			session = await vscode.authentication.getSession(
 				AUTHENTICATION_PROVIDER,
-				[serverSpec.name],
+				[setting.name],
 				{ createIfNone: true, account },
 			);
 		}
@@ -242,9 +242,10 @@ async function resolveCredentials(serverSpec: IServerSpec): Promise<Credentials 
 	}
 
 	// Password-based authentication
-	if (serverSpec.password === undefined) {
-		const scopes = [serverSpec.name, (serverSpec.username || "")];
-		const account = getAccountFromParts(serverSpec.name, serverSpec.username);
+	if (setting.password === undefined) {
+		const username = setting.username || "";
+		const scopes = [setting.name, username];
+		const account = getAccountFromParts(setting.name, username);
 		let session = await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
 			scopes,
@@ -258,14 +259,14 @@ async function resolveCredentials(serverSpec: IServerSpec): Promise<Credentials 
 			);
 		}
 		if (session) {
-			serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
-			serverSpec.password = session.accessToken;
+			setting.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
+			setting.password = session.accessToken;
 		}
 	}
 	return {
 		auth: {
-			username: serverSpec.username ?? "",
-			password: serverSpec.password ?? "",
+			username: setting.username ?? "",
+			password: setting.password ?? "",
 		},
 	};
 }

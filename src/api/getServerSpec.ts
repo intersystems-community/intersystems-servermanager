@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { IServerSetting } from "../serverSetting";
 
 /**
  * Get a server specification.
@@ -9,12 +9,12 @@ import { IServerSpec } from "@intersystems-community/intersystems-servermanager"
  * @param scope The settings scope to use for the lookup.
  * @returns Server specification or undefined.
  */
-export async function getServerSpec(
+export async function getServerSetting(
 	name: string,
 	scope?: vscode.ConfigurationScope,
-): Promise<IServerSpec | undefined> {
+): Promise<IServerSetting | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	const server = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSpec | undefined || legacyEmbeddedServer(name);
+	const server = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSetting | undefined || legacyEmbeddedServer(name);
 	// Unknown server
 	if (!server) {
 		const folder = vscode.workspace.workspaceFolders?.find(f => f.name === name);
@@ -80,7 +80,7 @@ export async function getServerSpec(
  * @param name The name.
  * @returns Server specification or undefined.
  */
-export function legacyEmbeddedServer(name: string): IServerSpec | undefined {
+export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
 	return {
 		"default~iris": {
 			"name": "default~iris",

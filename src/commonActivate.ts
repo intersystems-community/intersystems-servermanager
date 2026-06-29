@@ -3,7 +3,7 @@ import { Authorization, IServerName, IServerSpec, ServerManagerAPI } from "@inte
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
-import { getServerSpec } from "./api/getServerSpec";
+import { getServerSetting } from "./api/getServerSpec";
 import { getServerSummary } from "./api/getServerSummary";
 import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
@@ -37,8 +37,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			if (pathParts && pathParts.length === 4) {
 				const serverName = pathParts[1];
 				const namespace = pathParts[3];
-				const serverSpec = await getServerSpec(serverName);
-				if (serverSpec) {
+				const serverSetting = await getServerSetting(serverName);
+				if (serverSetting) {
 					const isfsExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
 					if (isfsExtension) {
 						if (!isfsExtension.isActive) {
@@ -390,15 +390,25 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			flushCredentialCache: boolean = false,
 			options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
 		): Promise<IServerSpec | undefined> {
-			const spec = await getServerSpec(name, scope);
-			if (spec && !options?.hideFromRecents) {
+			const setting = await getServerSetting(name, scope);
+			if (!setting) {
+				return undefined;
+			}
+
+			if (!options?.hideFromRecents) {
 				await view.addToRecents(name);
 			}
-			return spec;
+
+			if ('oauth2' in setting) {
+				const { oauth2, ...rest } = setting;
+				return { ...rest, bearer_token: undefined };
+			} else {
+				return setting;
+			}
 		},
 
 		getAccount(serverSpec: IServerSpec): vscode.AuthenticationSessionAccountInformation | undefined {
-			return getAccountFromParts(serverSpec.name, serverSpec.username);
+			return getAccountFromParts(serverSpec.name, serverSpec["username"]);
 		},
 
 		onDidChangePassword(
@@ -407,10 +417,11 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		},
 
 		getAuthorization(authorization: Required<Authorization>): string {
-			const { authMethod, username, password } = authorization;
-			return authMethod == "oauth2"
-				? `Bearer ${password}`
-				: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
+			if ('bearer_token' in authorization) {
+				return `Bearer ${authorization.bearer_token}`;
+			} else {
+				return `Basic ${Buffer.from(`${authorization.username}:${authorization.password}`).toString("base64")} `;
+			}
 		}
 
 
