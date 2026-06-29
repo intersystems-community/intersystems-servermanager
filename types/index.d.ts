@@ -22,13 +22,6 @@ export interface ISuperServerSpec {
 	port: number;
 }
 
-export interface GeneralIServerSpec {
-	name: string;
-	webServer: IWebServerSpec;
-	superServer?: ISuperServerSpec;
-	description?: string;
-}
-
 export interface PasswordAuthorization {
 	authMethod?: "password";
 	username?: string;
@@ -48,9 +41,22 @@ export interface OAuth2Authorization {
 
 export type Authorization = PasswordAuthorization | OAuth2Authorization;
 
+interface GeneralIJSONServerSpec {
+	webServer: IWebServerSpec;
+	superServer?: ISuperServerSpec;
+	description?: string;
+}
+
+export type PasswordIJSONServerSpec = GeneralIJSONServerSpec & PasswordAuthorization;
+export type OAuth2IJSONServerSpec = GeneralIJSONServerSpec & OAuth2Authorization;
+export type IJSONServerSpec = PasswordIJSONServerSpec | OAuth2IJSONServerSpec;
+
+interface GeneralIServerSpec extends GeneralIJSONServerSpec {
+	name: string;
+}
+
 export type PasswordIServerSpec = GeneralIServerSpec & PasswordAuthorization;
 export type OAuth2IServerSpec = GeneralIServerSpec & OAuth2Authorization;
-
 export type IServerSpec = PasswordIServerSpec | OAuth2IServerSpec;
 
 export interface ServerManagerAPI {
