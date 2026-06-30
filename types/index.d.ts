@@ -72,11 +72,11 @@ export interface ServerManagerAPI {
 export class Authorization {
 	public resolved(): this is ResolvedAuthorization;
 	public resolve(accessToken: string, username?: string): this is ResolvedAuthorization;
+	public get username(): string;
+	public get password(): string | undefined;
 }
 
 export class ResolvedAuthorization extends Authorization {
-	public get username(): string | undefined;
-	public get password(): string | undefined;
 	public get httpAuthorizationHeader(): string;
 	public get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }

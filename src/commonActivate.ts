@@ -25,6 +25,8 @@ abstract class Authorization {
 	public abstract resolved(): this is ResolvedAuthorization;
 
 	public abstract resolve(accessToken: string, username?: string): this is ResolvedAuthorization;
+
+	public abstract get username(): string;
 }
 
 export class PasswordAuthorization extends Authorization {
@@ -83,8 +85,8 @@ export class OAuth2Authorization extends Authorization {
 		return true;
 	}
 
-	public get username(): undefined {
-		return undefined;
+	public get username(): string {
+		return "OAuth2User";
 	}
 	public get password(): undefined {
 		return undefined;
