@@ -62,6 +62,11 @@ export interface ServerManagerAPI {
 
 	onDidChangePassword(
 	): vscode.Event<string>;
+
+	makeAuthorization(
+		username?: string,
+		password?: string,
+	): Authorization;
 }
 
 export class Authorization {
