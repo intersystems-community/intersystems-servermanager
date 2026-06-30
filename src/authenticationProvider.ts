@@ -1,4 +1,3 @@
-import { OAuth2IServerSetting } from "./serverSetting";
 import {
 	authentication,
 	AuthenticationProvider,
@@ -15,10 +14,11 @@ import {
 	workspace,
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState } from "./commonActivate";
-import { getServerSetting } from "./api/getServerSpec";
+import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
+import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -108,14 +108,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			}
 		}
 
-		// Check auth method early to branch the flow
-		const serverSetting = await getServerSetting(serverName);
-
-		if (serverSetting && 'oauth2' in serverSetting) {
-			return this._createOAuth2Session(serverName, serverSetting);
-		} else {
-			return this._createPasswordSession(serverName, scopes[1] ?? "");
-		}
+		const serverSpec = await getServerSpec(serverName);
+		return this._createSession(serverName, scopes[1] ?? "", serverSpec);
 	}
 
 	// This function is called when the end user signs out of the account.
@@ -161,24 +155,20 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		await this._storeStrippedSessions();
 		this._onDidChangeSessions.fire({ added: [], removed, changed: [] });
 	}
-	private async _createOAuth2Session(serverName: string, serverSetting: OAuth2IServerSetting): Promise<AuthenticationSession> {
-		// Resolve OAuth2 config — prompt for missing values
-		const oauth2Config = await resolveOAuth2Config(serverSetting);
-		if (!oauth2Config) {
-			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 configuration is required.`);
+
+	private async _createSession(serverName: string, scopeUserName: string, spec?: IServerSpec): Promise<AuthenticationSession> {
+		if (spec?.authorization instanceof OAuth2Authorization) {
+			const token = await performOAuth2Login({
+				authority: spec.authorization.oauth2.authority,
+				clientId: spec.authorization.oauth2.clientId,
+				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
+			});
+			if (!token) {
+				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
+			}
+			return this._finalizeSession(serverName, "OAuth2User", token);
 		}
 
-		// Perform OAuth2 login flow (opens browser, gets JWT)
-		const token = await performOAuth2Login(oauth2Config);
-		if (!token) {
-			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
-		}
-
-		// Token is stored as the session's accessToken (password field) and sent as Bearer token
-		return this._finalizeSession(serverName, "OAuth2User", token);
-	}
-
-	private async _createPasswordSession(serverName: string, scopeUserName: string): Promise<AuthenticationSession> {
 		let userName = scopeUserName;
 		if (!userName) {
 			// Prompt for the username.
@@ -297,11 +287,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (this._checkedSessions.find((s) => s.id === session.id)) {
 			return true;
 		}
-		const serverSetting = await getServerSetting(session.serverName);
-		if (serverSetting && !('oauth2' in serverSetting)) {
-			serverSetting.username = session.userName;
-			serverSetting.password = session.accessToken;
-			const response = await makeRESTRequest("HEAD", serverSetting).catch(() => { /* Swallow errors */ });
+		const serverSpec = await getServerSpec(session.serverName);
+		if (serverSpec?.authorization instanceof PasswordAuthorization) {
+			serverSpec.authorization = new PasswordAuthorization(session.userName, session.accessToken);
+			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
 				return false;
@@ -437,15 +426,4 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			strippedSessions,
 		);
 	}
-}
-
-/**
- * Resolve OAuth2 configuration for a server, prompting for any missing values.
- * If the user cancels any prompt, returns undefined.
- * Persists each value to settings immediately so progress isn't lost.
- */
-async function resolveOAuth2Config(
-	serverSetting: OAuth2IServerSetting,
-): Promise<{ authority: string; clientId: string; audience: string; scopes?: string[] } | undefined> {
-	return { authority: serverSetting.oauth2.authority, clientId: serverSetting.oauth2.clientId, audience: `${serverSetting.webServer.scheme || "http"}://${serverSetting.webServer.host}:${serverSetting.webServer.port}/` };
 }

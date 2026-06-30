@@ -1,14 +1,15 @@
 import * as vscode from "vscode";
-import { Authorization, IServerName, IServerSpec, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
+import { IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
-import { getServerSetting } from "./api/getServerSpec";
+import { getServerSpec } from "./api/getServerSpec";
 import { getServerSummary } from "./api/getServerSummary";
 import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { logout, serverSessions } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
+import { OAuth2Config } from "./serverSetting";
 
 export const extensionId = "intersystems-community.servermanager";
 export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscript";
@@ -18,6 +19,84 @@ export let globalState: vscode.Memento;
 export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
 	const accountId = userName ? `${serverName}/${userName}` : undefined;
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
+}
+
+abstract class Authorization {
+	public abstract resolved(): this is ResolvedAuthorization;
+
+	public abstract resolve(accessToken: string, username?: string): this is ResolvedAuthorization;
+}
+
+export class PasswordAuthorization extends Authorization {
+	constructor(private _username: string, private _password?: string) {
+		super()
+	}
+
+	public get username(): string {
+		return this._username;
+	}
+
+	public get password(): string | undefined {
+		return this._password;
+	}
+
+	public get httpAuthorizationHeader(): string {
+		return `Basic ${Buffer.from(`${this._username}:${this._password}`).toString("base64")}`;
+	}
+
+	override resolved(): this is ResolvedAuthorization {
+		return this._password !== undefined
+	}
+
+	override resolve(accessToken: string, username?: string): this is ResolvedAuthorization {
+		this._username = username ?? this._username;
+		this._password = accessToken;
+		return true;
+	}
+
+	public get credentials(): { auth: { username: string; password: string }; headers?: Record<string, string> } {
+		return {
+			auth: {
+				username: this._username,
+				password: this._password!,
+			},
+			headers: {}
+		};
+	}
+}
+
+export class OAuth2Authorization extends Authorization {
+	constructor(public oauth2: OAuth2Config, private _bearer?: string) {
+		super()
+	}
+
+	public get httpAuthorizationHeader(): string {
+		return `Bearer ${this._bearer}`;
+	}
+
+	override resolved(): this is ResolvedAuthorization {
+		return this._bearer !== undefined
+	}
+
+	override resolve(accessToken: string): this is ResolvedAuthorization {
+		this._bearer = accessToken;
+		return true;
+	}
+
+	public get username(): undefined {
+		return undefined;
+	}
+	public get password(): undefined {
+		return undefined;
+	}
+
+	public get credentials(): { auth?: { username: string; password: string }; headers: Record<string, string> } {
+		return {
+			headers: {
+				Authorization: this.httpAuthorizationHeader,
+			}
+		};
+	}
 }
 
 /**
@@ -37,7 +116,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			if (pathParts && pathParts.length === 4) {
 				const serverName = pathParts[1];
 				const namespace = pathParts[3];
-				const serverSetting = await getServerSetting(serverName);
+				const serverSetting = await getServerSpec(serverName);
 				if (serverSetting) {
 					const isfsExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
 					if (isfsExtension) {
@@ -390,8 +469,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			flushCredentialCache: boolean = false,
 			options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
 		): Promise<IServerSpec | undefined> {
-			const setting = await getServerSetting(name, scope);
-			if (!setting) {
+			const spec = await getServerSpec(name, scope);
+			if (spec === undefined) {
 				return undefined;
 			}
 
@@ -399,12 +478,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				await view.addToRecents(name);
 			}
 
-			if ('oauth2' in setting) {
-				const { oauth2, ...rest } = setting;
-				return { ...rest, bearer_token: undefined };
-			} else {
-				return setting;
-			}
+			return spec;
 		},
 
 		getAccount(serverSpec: { name: string, username?: string }): vscode.AuthenticationSessionAccountInformation | undefined {
@@ -415,15 +489,6 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		): vscode.Event<string> {
 			return _onDidChangePassword.event;
 		},
-
-		getAuthorization(authorization: Required<Authorization>): string {
-			if ('bearer_token' in authorization) {
-				return `Bearer ${authorization.bearer_token}`;
-			} else {
-				return `Basic ${Buffer.from(`${authorization.username}:${authorization.password}`).toString("base64")} `;
-			}
-		}
-
 
 	};
 

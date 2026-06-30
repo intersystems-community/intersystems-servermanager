@@ -22,34 +22,16 @@ export interface ISuperServerSpec {
 	port: number;
 }
 
-export interface PasswordAuthorization {
-	// The properties are present only if defined in the settings JSON.
-	//   Storage of `password` there is deprecated and strongly discouraged.
-	username?: string;
-	password?: string;
-}
-
-export interface OAuth2Authorization {
-	// The bearer_token is never present by getServerSpec for now.
-	bearer_token: string | undefined;
-}
-
-export type Authorization = PasswordAuthorization | OAuth2Authorization;
-
-export interface GeneralIJSONServerSpec {
+export interface IJSONServerSpec {
 	webServer: IWebServerSpec;
 	superServer?: ISuperServerSpec;
 	description?: string;
+	authorization: Authorization;
 }
 
-export type IJSONServerSpec = GeneralIJSONServerSpec & Authorization;
-
-export interface GeneralIServerSpec extends GeneralIJSONServerSpec {
+export interface IServerSpec extends IJSONServerSpec {
 	name: string;
 }
-export type PasswordIServerSpec = GeneralIServerSpec & PasswordAuthorization;
-export type OAuth2IServerSpec = GeneralIServerSpec & OAuth2Authorization;
-export type IServerSpec = PasswordIServerSpec | OAuth2IServerSpec;
 
 export interface ServerManagerAPI {
 	pickServer(
@@ -80,8 +62,16 @@ export interface ServerManagerAPI {
 
 	onDidChangePassword(
 	): vscode.Event<string>;
+}
 
-	getAuthorization(
-		authorization: Required<Authorization>
-	): string
+export class Authorization {
+	public resolved(): this is ResolvedAuthorization;
+	public resolve(accessToken: string, username?: string): this is ResolvedAuthorization;
+}
+
+export class ResolvedAuthorization extends Authorization {
+	public get username(): string | undefined;
+	public get password(): string | undefined;
+	public get httpAuthorizationHeader(): string;
+	public get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }

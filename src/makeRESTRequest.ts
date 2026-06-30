@@ -4,10 +4,10 @@
 import axios, { AxiosResponse } from "axios";
 import * as https from "https";
 import * as vscode from "vscode";
-import { getServerSetting } from "./api/getServerSpec";
+import { getServerSpec } from "./api/getServerSpec";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
-import { getAccountFromParts } from "./commonActivate";
-import { IServerSetting } from "./serverSetting";
+import { getAccountFromParts, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export interface IServerSession {
 	serverName: string;
@@ -36,24 +36,16 @@ function updateCookies(oldCookies: string[], newCookies: string[]): string[] {
 	return oldCookies;
 }
 
-function getCookies(server: IServerSetting): string[] {
+function getCookies(server: IServerSpec): string[] {
 	return serverSessions.get(server.name)?.cookies ?? [];
 }
-
-interface OAuth2Credentials {
-	headers: {
-		Authorization: string,
-	};
-}
-
-interface PasswordCredentials {
-	auth: {
+interface Credentials {
+	headers?: Record<string, string>;
+	auth?: {
 		password: string,
 		username: string,
 	};
-}
-
-type Credentials = OAuth2Credentials | PasswordCredentials;
+};
 
 /**
  * Make a REST request to an InterSystems server.
@@ -65,7 +57,7 @@ type Credentials = OAuth2Credentials | PasswordCredentials;
  */
 export async function makeRESTRequest(
 	method: "HEAD" | "GET" | "POST",
-	server: IServerSetting,
+	server: IServerSpec,
 	endpoint?: IAtelierRESTEndpoint,
 	data?: any,
 ): Promise<AxiosResponse> {
@@ -109,7 +101,7 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				const credentials = (await resolveCredentials(server)) || { headers: {} };
+				const credentials = await resolveCredentials(server) ?? {};
 				// There is a payload so we need to add content-type
 				credentials["headers"] = {
 					"Content-Type": "application/json",
@@ -143,7 +135,7 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				const credentials = await resolveCredentials(server);
+				const credentials = await resolveCredentials(server) ?? {};
 				respdata = await axios.request(
 					{
 						httpsAgent,
@@ -156,15 +148,18 @@ export async function makeRESTRequest(
 			}
 		}
 
-		cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
+		const authorization = server.authorization;
+		if (authorization.resolved()) {
+			cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
 
-		// Only store the session for a serverName the first time because subsequent requests
-		// to a server with no username defined must not lose initially-recorded username
-		const session = serverSessions.get(server.name);
-		if (!session) {
-			serverSessions.set(server.name, { serverName: server.name, username: server['username'] ?? "", cookies });
-		} else {
-			serverSessions.set(server.name, { ...session, cookies });
+			// Only store the session for a serverName the first time because subsequent requests
+			// to a server with no username defined must not lose initially-recorded username
+			const session = serverSessions.get(server.name);
+			if (!session) {
+				serverSessions.set(server.name, { serverName: server.name, username: authorization.username || "", cookies });
+			} else {
+				serverSessions.set(server.name, { ...session, cookies });
+			}
 		}
 		return respdata;
 	} catch (error) {
@@ -180,7 +175,7 @@ export async function makeRESTRequest(
  */
 export async function logout(serverName: string) {
 
-	const server = await getServerSetting(serverName, undefined);
+	const server = await getServerSpec(serverName, undefined);
 
 	if (!server) {
 		return;
@@ -219,33 +214,33 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(setting: IServerSetting): Promise<Credentials | undefined> {
+async function resolveCredentials(spec: IServerSpec): Promise<Credentials | undefined> {
 	// Use authentication provider to get credentials when not already available
-	if ('oauth2' in setting) {
-		const account = getAccountFromParts(setting.name);
+	if (spec.authorization instanceof OAuth2Authorization) {
+		const account = getAccountFromParts(spec.name);
 		let session = await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
-			[setting.name],
+			[spec.name],
 			{ silent: true, account },
 		);
 		if (!session) {
 			session = await vscode.authentication.getSession(
 				AUTHENTICATION_PROVIDER,
-				[setting.name],
+				[spec.name],
 				{ createIfNone: true, account },
 			);
 		}
 		if (!session) { return; }
-		return {
-			headers: { Authorization: `Bearer ${session.accessToken}` },
-		};
+		if (spec.authorization.resolve(session.accessToken)) {
+			return spec.authorization.credentials;
+		} else {
+			return;
+		}
 	}
-
-	// Password-based authentication
-	if (setting.password === undefined) {
-		const username = setting.username || "";
-		const scopes = [setting.name, username];
-		const account = getAccountFromParts(setting.name, username);
+	let authorization = spec.authorization as PasswordAuthorization;
+	if (!spec.authorization.resolved()) {
+		const scopes = [spec.name, authorization.username];
+		const account = getAccountFromParts(spec.name, authorization.username);
 		let session = await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
 			scopes,
@@ -259,16 +254,17 @@ async function resolveCredentials(setting: IServerSetting): Promise<Credentials 
 			);
 		}
 		if (session) {
-			setting.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
-			setting.password = session.accessToken;
+			authorization.resolve(
+				session.accessToken,
+				session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1],
+			)
 		}
 	}
-	return {
-		auth: {
-			username: setting.username ?? "",
-			password: setting.password ?? "",
-		},
-	};
+	if (authorization.resolved()) {
+		return authorization.credentials
+	} else {
+		return;
+	}
 }
 
 /**

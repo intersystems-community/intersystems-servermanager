@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
-import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
+import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
 import { IServerSetting } from "../serverSetting";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 /**
  * Get a server specification.
@@ -9,14 +10,14 @@ import { IServerSetting } from "../serverSetting";
  * @param scope The settings scope to use for the lookup.
  * @returns Server specification or undefined.
  */
-export async function getServerSetting(
+export async function getServerSpec(
 	name: string,
 	scope?: vscode.ConfigurationScope,
-): Promise<IServerSetting | undefined> {
+): Promise<IServerSpec | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	const server = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSetting | undefined || legacyEmbeddedServer(name);
+	const setting = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSetting | undefined || legacyEmbeddedServer(name);
 	// Unknown server
-	if (!server) {
+	if (!setting) {
 		const folder = vscode.workspace.workspaceFolders?.find(f => f.name === name);
 		if (!folder) {
 			return undefined;
@@ -49,28 +50,27 @@ export async function getServerSetting(
 				port: serverForUri.port,
 				pathPrefix: serverForUri.pathPrefix,
 			},
-			username: serverForUri.username,
-			password: serverForUri.password ? serverForUri.password : undefined,
+			authorization: new PasswordAuthorization(serverForUri.username, serverForUri.password),
 			description: `Server for workspace folder "${name}"`,
 		};
 	}
 
-	server.name = name;
-	server.description = server.description || "";
-	server.webServer.scheme = server.webServer.scheme || "http";
-	server.webServer.port = server.webServer.port || (server.webServer.scheme === "https" ? 443 : 80);
-	server.webServer.pathPrefix = server.webServer.pathPrefix || "";
-	if (server.superServer) {
+	const { oauth2, username, password, ...spec } = setting;
+	spec.name = name;
+	spec.description = spec.description || "";
+	spec.webServer.scheme = spec.webServer.scheme || "http";
+	spec.webServer.port = spec.webServer.port || (spec.webServer.scheme === "https" ? 443 : 80);
+	spec.webServer.pathPrefix = spec.webServer.pathPrefix || "";
+	if (spec.superServer) {
 		// Fall back to default if appropriate
-		server.superServer.host = server.superServer.host || server.webServer.host;
+		spec.superServer.host = spec.superServer.host || spec.webServer.host;
 	}
-
-	// When authentication provider is being used we should only have a password if it came from the deprecated
-	// property of the settings object. Otherwise return it as undefined.
-	if (!server["password"]) {
-		server["password"] = undefined;
-	}
-	return server;
+	return {
+		...spec,
+		authorization: (oauth2 !== undefined)
+			? new OAuth2Authorization(oauth2)
+			: new PasswordAuthorization(username || "", password),
+	};
 }
 
 /**

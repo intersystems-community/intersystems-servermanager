@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
-import { getServerSetting } from "../api/getServerSpec";
+import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
 import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { makeRESTRequest } from "../makeRESTRequest";
@@ -441,7 +441,7 @@ async function serverFeatures(element: ServerTreeItem, params?: any): Promise<Fe
 
 async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec | undefined> {
 	const { name, description, detail, scope } = serverSummary;
-	const spec = await getServerSetting(name, scope);
+	const spec = await getServerSpec(name, scope);
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
 		if (!spec) {
