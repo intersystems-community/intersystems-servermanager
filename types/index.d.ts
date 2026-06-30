@@ -25,8 +25,8 @@ export interface ISuperServerSpec {
 export interface IJSONServerSpec {
 	webServer: IWebServerSpec;
 	superServer?: ISuperServerSpec;
-	description?: string;
 	authorization: Authorization;
+	description?: string;
 }
 
 export interface IServerSpec extends IJSONServerSpec {
@@ -75,6 +75,8 @@ export class Authorization {
 	public get username(): string;
 	public get password(): string | undefined;
 	public clone(): Authorization;
+	public get httpAuthorizationHeader(): undefined | string;
+	public get credentials(): undefined | { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }
 
 export class ResolvedAuthorization extends Authorization {
