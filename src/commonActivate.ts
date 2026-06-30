@@ -27,6 +27,8 @@ abstract class Authorization {
 	public abstract resolve(accessToken: string, username?: string): this is ResolvedAuthorization;
 
 	public abstract get username(): string;
+
+	public abstract clone(): Authorization;
 }
 
 export class PasswordAuthorization extends Authorization {
@@ -47,7 +49,7 @@ export class PasswordAuthorization extends Authorization {
 	}
 
 	override resolved(): this is ResolvedAuthorization {
-		return this._password !== undefined
+		return this.username !== "" && this._password !== undefined
 	}
 
 	override resolve(accessToken: string, username?: string): this is ResolvedAuthorization {
@@ -65,10 +67,14 @@ export class PasswordAuthorization extends Authorization {
 			headers: {}
 		};
 	}
+
+	public clone(): PasswordAuthorization {
+		return new PasswordAuthorization(this._username, this._password)
+	}
 }
 
 export class OAuth2Authorization extends Authorization {
-	constructor(public oauth2: OAuth2Config, private _bearer?: string) {
+	constructor(public readonly oauth2: OAuth2Config, private _bearer?: string) {
 		super()
 	}
 
@@ -98,6 +104,10 @@ export class OAuth2Authorization extends Authorization {
 				Authorization: this.httpAuthorizationHeader,
 			}
 		};
+	}
+
+	public clone(): OAuth2Authorization {
+		return new OAuth2Authorization(this.oauth2, this._bearer)
 	}
 }
 

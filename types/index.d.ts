@@ -74,6 +74,7 @@ export class Authorization {
 	public resolve(accessToken: string, username?: string): this is ResolvedAuthorization;
 	public get username(): string;
 	public get password(): string | undefined;
+	public clone(): Authorization;
 }
 
 export class ResolvedAuthorization extends Authorization {
