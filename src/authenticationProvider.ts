@@ -98,6 +98,20 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return serverName;
 	}
 
+	private async promptUserName(serverName: string) {
+		// Prompt for the username.
+		const enteredUserName = await window.showInputBox({
+			ignoreFocusOut: true,
+			placeHolder: `Username on server '${serverName}'`,
+			prompt: "Enter the username to access the InterSystems server with. Leave blank for unauthenticated access as 'UnknownUser'.",
+			title: `${AUTHENTICATION_PROVIDER_LABEL}: Username on InterSystems server '${serverName}'`,
+		});
+		if (enteredUserName === undefined) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
+		}
+		return enteredUserName || "UnknownUser";
+	}
+
 	// This function is called after `this.getSessions` is called, and only when:
 	// - `this.getSessions` returns nothing but `createIfNone` was `true` in call to `vscode.authentication.getSession`
 	// - `vscode.authentication.getSession` was called with `forceNewSession: true` or
@@ -106,10 +120,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	public async createSession(scopes: string[]): Promise<AuthenticationSession> {
 		await this._ensureInitialized();
 
-		const serverName = scopes[0] ?? await this.promptServerName();
+		const serverName = scopes[0] || await this.promptServerName();
 		const spec = await getServerSpec(serverName);
-		let userName = scopes[1] ?? "";
-
 		if (spec?.authorization instanceof OAuth2Authorization) {
 			const token = await performOAuth2Login({
 				authority: spec.authorization.oauth2.authority,
@@ -121,20 +133,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			}
 			return this._finalizeSession(serverName, "OAuth2User", token);
 		}
-
-		if (!userName) {
-			// Prompt for the username.
-			const enteredUserName = await window.showInputBox({
-				ignoreFocusOut: true,
-				placeHolder: `Username on server '${serverName}'`,
-				prompt: "Enter the username to access the InterSystems server with. Leave blank for unauthenticated access as 'UnknownUser'.",
-				title: `${AUTHENTICATION_PROVIDER_LABEL}: Username on InterSystems server '${serverName}'`,
-			});
-			if (typeof enteredUserName === "undefined") {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
-			}
-			userName = enteredUserName === "" ? "UnknownUser" : enteredUserName;
-		}
+		const userName = scopes[1] || await this.promptUserName(serverName);
 
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
