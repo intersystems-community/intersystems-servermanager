@@ -109,8 +109,6 @@ export class OAuth2Authorization extends Authorization {
 	public get httpAuthorizationHeader(): string | undefined {
 		if (this.resolved()) {
 			return `Bearer ${this._bearer}`;
-		} else {
-			return undefined;
 		}
 	}
 
@@ -144,12 +142,14 @@ export class OAuth2Authorization extends Authorization {
 	}
 
 
-	public get credentials(): { auth?: { username: string; password: string }; headers: Record<string, string> } {
-		return {
-			headers: {
-				Authorization: this.httpAuthorizationHeader,
-			}
-		};
+	public get credentials(): { auth?: { username: string; password: string }; headers: Record<string, string> } | undefined {
+		if (this.resolved()) {
+			return {
+				headers: {
+					Authorization: this.httpAuthorizationHeader,
+				}
+			};
+		}
 	}
 
 	public clone(): OAuth2Authorization {
