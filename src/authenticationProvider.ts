@@ -84,6 +84,53 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return sessions || [];
 	}
 
+	// This function is called after `this.getSessions` is called, and only when:
+	// - `this.getSessions` returns nothing but `createIfNone` was `true` in call to `vscode.authentication.getSession`
+	// - `vscode.authentication.getSession` was called with `forceNewSession: true` or
+	//   `forceNewSession: {detail: "Reason message for modal dialog"}` (proposed API since 1.59, finalized in 1.63)
+	// - The end user initiates the "silent" auth flow via the Accounts menu
+	public async createSession(scopes: string[]): Promise<AuthenticationSession> {
+		await this._ensureInitialized();
+
+		const serverName = scopes[0] || await this.promptServerName();
+		const spec = await getServerSpec(serverName);
+		if (spec?.authorization instanceof OAuth2Authorization) {
+			const token = await performOAuth2Login({
+				authority: spec.authorization.oauth2.authority,
+				clientId: spec.authorization.oauth2.clientId,
+				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
+			});
+			if (!token) {
+				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
+			}
+			return this._finalizeSession(serverName, "OAuth2User", token);
+		}
+		const userName = scopes[1] || await this.promptUserName(serverName);
+
+		// Return existing session if found
+		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
+		const existingSession = this._sessions.find((s) => s.id === sessionId);
+		if (existingSession) {
+			if (this._checkedSessions.find((s) => s.id === sessionId)) {
+				return existingSession;
+			}
+
+			// Check if the session is still valid
+			if (await this._isStillValid(existingSession)) {
+				this._checkedSessions.push(existingSession);
+				return existingSession;
+			}
+		}
+		let password: string | undefined;
+		if (userName) {
+			// Seek password in secret storage
+			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+			password = await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
+		}
+
+		return this._finalizeSession(serverName, userName || "UnknownUser", password ?? "");
+	}
+
 	private async promptServerName(): Promise<string> {
 		if (!this._serverManagerExtension) {
 			throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
@@ -164,53 +211,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
 		}
 		return password;
-	}
-
-	// This function is called after `this.getSessions` is called, and only when:
-	// - `this.getSessions` returns nothing but `createIfNone` was `true` in call to `vscode.authentication.getSession`
-	// - `vscode.authentication.getSession` was called with `forceNewSession: true` or
-	//   `forceNewSession: {detail: "Reason message for modal dialog"}` (proposed API since 1.59, finalized in 1.63)
-	// - The end user initiates the "silent" auth flow via the Accounts menu
-	public async createSession(scopes: string[]): Promise<AuthenticationSession> {
-		await this._ensureInitialized();
-
-		const serverName = scopes[0] || await this.promptServerName();
-		const spec = await getServerSpec(serverName);
-		if (spec?.authorization instanceof OAuth2Authorization) {
-			const token = await performOAuth2Login({
-				authority: spec.authorization.oauth2.authority,
-				clientId: spec.authorization.oauth2.clientId,
-				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
-			});
-			if (!token) {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
-			}
-			return this._finalizeSession(serverName, "OAuth2User", token);
-		}
-		const userName = scopes[1] || await this.promptUserName(serverName);
-
-		// Return existing session if found
-		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-		const existingSession = this._sessions.find((s) => s.id === sessionId);
-		if (existingSession) {
-			if (this._checkedSessions.find((s) => s.id === sessionId)) {
-				return existingSession;
-			}
-
-			// Check if the session is still valid
-			if (await this._isStillValid(existingSession)) {
-				this._checkedSessions.push(existingSession);
-				return existingSession;
-			}
-		}
-		let password: string | undefined;
-		if (userName) {
-			// Seek password in secret storage
-			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-			password = await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
-		}
-
-		return this._finalizeSession(serverName, userName || "UnknownUser", password ?? "");
 	}
 
 	private async _finalizeSession(serverName: string, userName: string, password: string): Promise<AuthenticationSession> {
