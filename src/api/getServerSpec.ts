@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
-import { IServerSetting } from "../serverSetting";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { IServerSetting } from "../serverSetting";
+import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
 
 /**
  * Get a server specification.
@@ -75,9 +75,9 @@ export async function getServerSpec(
 	}
 	return {
 		...spec,
-		authorization: (oauth2 !== undefined)
-			? new OAuth2Authorization(oauth2)
-			: new PasswordAuthorization(username || "", password),
+		authorization: (oauth2 === undefined)
+			? new PasswordAuthorization(username || "", password)
+			: new OAuth2Authorization(oauth2)
 	};
 }
 
