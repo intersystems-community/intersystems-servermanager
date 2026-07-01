@@ -4,10 +4,10 @@
 import axios, { AxiosResponse } from "axios";
 import * as https from "https";
 import * as vscode from "vscode";
-import { getServerSpec } from "./api/getServerSpec";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
-import { getAccountFromParts } from "./commonActivate";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { getServerSpec } from "./api/getServerSpec";
+import { getAccountFromParts } from "./commonActivate";
 
 export interface IServerSession {
 	serverName: string;
@@ -94,17 +94,15 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
+				// Use AuthenticationProvider to get password (and possibly username) if not supplied by caller
 				await resolveCredentials(server);
 				if (server.auth.resolved()) {
-					const credentials = server.auth.credentials;
-					// There is a payload so we need to add content-type
-					credentials["headers"] = {
-						"Content-Type": "application/json",
-						...credentials["headers"],
-					};
+					// Either we had no cookies or they expired, so resend the request with basic auth
+					const { headers, ...credentials } = server.auth.credentials;
 					respdata = await axios.request(
 						{
 							httpsAgent,
+							headers: { ...headers, "Content-Type": "application/json" },
 							...credentials,
 							data,
 							method,
@@ -131,13 +129,13 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
+				// Use AuthenticationProvider to get password (and possibly username) if not supplied by caller
 				await resolveCredentials(server);
 				if (server.auth.resolved()) {
-					const credentials = server.auth.credentials;
 					respdata = await axios.request(
 						{
 							httpsAgent,
-							...credentials,
+							...server.auth.credentials,
 							method,
 							url: encodeURI(url),
 							withCredentials: true,
@@ -211,7 +209,7 @@ export async function logout(serverName: string) {
 }
 
 async function resolveCredentials(spec: IServerSpec): Promise<void> {
-	// Use authentication provider to get credentials when not already available
+	// This arises if setting says to use authentication provider
 	if (!spec.auth.resolved()) {
 		const scopes = [spec.name, spec.auth.username];
 		const account = getAccountFromParts(spec.name, spec.auth.username);
