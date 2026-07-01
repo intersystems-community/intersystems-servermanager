@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
+import { Authorization, IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
@@ -19,18 +19,6 @@ export let globalState: vscode.Memento;
 export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
 	const accountId = userName ? `${serverName}/${userName}` : undefined;
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
-}
-
-abstract class Authorization {
-	public abstract resolved(): this is ResolvedAuthorization;
-
-	public abstract resolve(accessToken: string, username: string): asserts this is ResolvedAuthorization;
-
-	public abstract get username(): string;
-	public abstract get password(): undefined | string;
-	public abstract get accessToken(): undefined | string;
-
-	public abstract clone(): Authorization;
 }
 
 export class PasswordAuthorization extends Authorization {
@@ -70,6 +58,10 @@ export class PasswordAuthorization extends Authorization {
 		return;
 	}
 
+	public clear(): asserts this is Authorization {
+		this._password = undefined;
+	}
+
 	public get credentials(): { auth: { username: string; password: string }; headers?: Record<string, string> } {
 		return {
 			auth: {
@@ -103,6 +95,10 @@ export class OAuth2Authorization extends Authorization {
 		this._bearer = accessToken;
 		this._username = _username;
 		return;
+	}
+
+	public clear(): asserts this is Authorization {
+		this._bearer = undefined;
 	}
 
 	public get username(): string {

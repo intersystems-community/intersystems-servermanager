@@ -434,6 +434,7 @@ async function serverFeatures(element: ServerTreeItem, params?: ServerParams): P
 			if (response?.status === 401) {
 				// Authentication error, so retry in case first attempt cleared a no-longer-valid stored password
 				serverSpec["password"] = undefined;
+				serverSpec.auth.clear() as void;
 				response = await makeRESTRequest("HEAD", serverSpec);
 			}
 			if (response?.status !== 200) {

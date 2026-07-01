@@ -71,18 +71,19 @@ export interface ServerManagerAPI {
 	): Authorization;
 }
 
-export class Authorization {
-	public resolved(): this is ResolvedAuthorization;
-	public resolve(accessToken: string, username: string): asserts this is ResolvedAuthorization;
-	public get username(): string;
-	public get password(): string | undefined;
-	public get accessToken(): string | undefined;
-	public clone(): Authorization;
-	public get httpAuthorizationHeader(): undefined | string;
-	public get credentials(): undefined | { auth?: { username: string; password: string }; headers?: Record<string, string> };
+export abstract class Authorization {
+	public abstract resolved(): this is ResolvedAuthorization;
+	public abstract resolve(accessToken: string, username: string): asserts this is ResolvedAuthorization;
+	public abstract clear(): asserts this is Authorization;
+
+	public abstract get username(): string;
+	public abstract get password(): undefined | string;
+	public abstract get accessToken(): undefined | string;
+
+	public abstract clone(): Authorization;
 }
 
-export class ResolvedAuthorization extends Authorization {
+export abstract class ResolvedAuthorization extends Authorization {
 	public get accessToken(): string;
 	public get httpAuthorizationHeader(): string;
 	public get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
