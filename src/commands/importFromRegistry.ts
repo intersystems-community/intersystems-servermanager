@@ -2,11 +2,11 @@ import * as vscode from "vscode";
 import { ServerManagerAuthenticationProvider } from "../authenticationProvider";
 
 // To avoid overhead querying the registry, cache responses (each time the command is run)
-const regQueryCache = new Map<string, any>();
+const regQueryCache = new Map<string, { data?: string }>();
 
 export async function importFromRegistry(secretStorage: vscode.SecretStorage, scope?: vscode.ConfigurationScope) {
 	const config = vscode.workspace.getConfiguration("intersystems", scope);
-	const serverDefinitions: any = config.get("servers");
+	const serverDefinitions: ServerDefinitions = config.get("servers") ?? {};
 
 	const newServerNames = new Array<string>();
 	const serversMissingUsernames = new Array<string>();
@@ -147,7 +147,7 @@ async function loadRegistryData(
 	return overwriteCount;
 }
 
-async function promptForUsernames(serverDefinitions: any, serversMissingUsernames: string[]): Promise<boolean> {
+async function promptForUsernames(serverDefinitions: ServerDefinitions, serversMissingUsernames: string[]): Promise<boolean> {
 	if (serversMissingUsernames.length) {
 		let serverName = serversMissingUsernames.splice(0, 1)[0];
 		let username = await vscode.window.showInputBox({
@@ -163,7 +163,7 @@ async function promptForUsernames(serverDefinitions: any, serversMissingUsername
 			// If unspecified, actually set to undefined to leave it empty in serverDefinitions
 			username = undefined;
 		}
-		serverDefinitions[serverName].username = username;
+		serverDefinitions[serverName]!.username = username;
 		if (serversMissingUsernames.length > 0) {
 			const reuseMessage = (username === undefined) ? `Prompt for username at connect time for all of them` : `Use '${username}' as the username for all of them`;
 			const items = [
@@ -204,7 +204,13 @@ async function promptForUsernames(serverDefinitions: any, serversMissingUsername
 	return true;
 }
 
-async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDefinitions: any, newServerNames: string[]): Promise<void> {
+export interface ServerDefinition {
+	username?: string;
+}
+
+export type ServerDefinitions = Record<string, ServerDefinition>;
+
+async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDefinitions: ServerDefinitions, newServerNames: string[]): Promise<void> {
 	let reusePassword;
 	let password: string | undefined = "";
 	const promptServerNames = new Array();
@@ -253,7 +259,7 @@ async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDef
 		}
 
 		if ((password !== "") && (password !== undefined)) {
-			const username = serverDefinitions[serverName].username;
+			const username = serverDefinitions[serverName]?.username!;
 			const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, username);
 			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
 			await secretStorage.store(credentialKey, password).then(() => {
