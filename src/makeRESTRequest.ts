@@ -164,7 +164,7 @@ export async function logout(serverName: string) {
 				httpsAgent,
 				method: "HEAD",
 				headers: {
-					Cookie: cookies.join(" "),
+					Cookie: cookies.join("; "),
 				},
 				url: encodeURI(url),
 				validateStatus: (status) => {

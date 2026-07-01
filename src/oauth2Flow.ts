@@ -111,7 +111,10 @@ export async function performOAuth2Login(config: IOAuth2Config): Promise<string 
 		}).toString(), {
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		});
-
+		if (!tokenResponse.data.access_token) {
+			vscode.window.showErrorMessage("OAuth2: No access token in response");
+			return undefined;
+		}
 		return tokenResponse.data.access_token;
 	} catch (err: any) {
 		const detail = err.response?.data?.error_description || err.message;

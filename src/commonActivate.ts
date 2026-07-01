@@ -106,8 +106,12 @@ export class OAuth2Authorization extends Authorization {
 		super()
 	}
 
-	public get httpAuthorizationHeader(): string {
-		return `Bearer ${this._bearer}`;
+	public get httpAuthorizationHeader(): string | undefined {
+		if (this.resolved()) {
+			return `Bearer ${this._bearer}`;
+		} else {
+			return undefined;
+		}
 	}
 
 	override resolved(): this is ResolvedAuthorization {
