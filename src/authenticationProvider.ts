@@ -98,7 +98,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return serverName;
 	}
 
-	private async promptUserName(serverName: string) {
+	private async promptUserName(serverName: string): Promise<string> {
 		// Prompt for the username.
 		const enteredUserName = await window.showInputBox({
 			ignoreFocusOut: true,
@@ -109,7 +109,61 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (enteredUserName === undefined) {
 			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
 		}
-		return enteredUserName || "UnknownUser";
+		return enteredUserName;
+	}
+
+	private async promptPassword(userName: string, serverName: string, credentialKey: string): Promise<string | undefined> {
+		const doInputBox = async (): Promise<string | undefined> => {
+			return await new Promise<string | undefined>((resolve, reject) => {
+				const inputBox = window.createInputBox();
+				inputBox.value = "";
+				inputBox.password = true;
+				inputBox.title = `${AUTHENTICATION_PROVIDER_LABEL}: Password for user '${userName}'`;
+				inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`;
+				inputBox.prompt = "Optionally use $(key) button above to store password";
+				inputBox.ignoreFocusOut = true;
+				inputBox.buttons = [
+					{
+						iconPath: new ThemeIcon("key"),
+						tooltip: "Store Password Securely in Workstation Keychain",
+					},
+				];
+
+				async function done(secretStorage?: SecretStorage) {
+					// Return the password, having stored it if storage was passed
+					const enteredPassword = inputBox.value;
+					if (secretStorage && enteredPassword) {
+						await secretStorage.store(credentialKey, enteredPassword);
+					}
+					// Resolve the promise and tidy up
+					resolve(enteredPassword);
+					inputBox.dispose();
+				}
+
+				inputBox.onDidTriggerButton((_button) => {
+					// We only added the one button, which stores the password
+					done(this.secretStorage);
+				});
+
+				inputBox.onDidAccept(() => {
+					// User pressed Enter
+					done();
+				});
+
+				inputBox.onDidHide(() => {
+					// User pressed Escape
+					resolve(undefined);
+					inputBox.dispose();
+				});
+
+				inputBox.show();
+			});
+		};
+		const password = await doInputBox();
+		if (!password) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
+		}
+		return password;
 	}
 
 	// This function is called after `this.getSessions` is called, and only when:
@@ -149,69 +203,14 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				return existingSession;
 			}
 		}
-
 		let password: string | undefined;
-
-		if (userName !== "UnknownUser") {
+		if (userName) {
 			// Seek password in secret storage
 			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-			password = await this.secretStorage.get(credentialKey);
-			if (!password) {
-				// Prompt for password
-				const doInputBox = async (): Promise<string | undefined> => {
-					return await new Promise<string | undefined>((resolve, reject) => {
-						const inputBox = window.createInputBox();
-						inputBox.value = "";
-						inputBox.password = true;
-						inputBox.title = `${AUTHENTICATION_PROVIDER_LABEL}: Password for user '${userName}'`;
-						inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`;
-						inputBox.prompt = "Optionally use $(key) button above to store password";
-						inputBox.ignoreFocusOut = true;
-						inputBox.buttons = [
-							{
-								iconPath: new ThemeIcon("key"),
-								tooltip: "Store Password Securely in Workstation Keychain",
-							},
-						];
-
-						async function done(secretStorage?: SecretStorage) {
-							// Return the password, having stored it if storage was passed
-							const enteredPassword = inputBox.value;
-							if (secretStorage && enteredPassword) {
-								await secretStorage.store(credentialKey, enteredPassword);
-							}
-							// Resolve the promise and tidy up
-							resolve(enteredPassword);
-							inputBox.dispose();
-						}
-
-						inputBox.onDidTriggerButton((_button) => {
-							// We only added the one button, which stores the password
-							done(this.secretStorage);
-						});
-
-						inputBox.onDidAccept(() => {
-							// User pressed Enter
-							done();
-						});
-
-						inputBox.onDidHide(() => {
-							// User pressed Escape
-							resolve(undefined);
-							inputBox.dispose();
-						});
-
-						inputBox.show();
-					});
-				};
-				password = await doInputBox();
-				if (!password) {
-					throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
-				}
-			}
+			password = await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
 		}
 
-		return this._finalizeSession(serverName, userName, password ?? "");
+		return this._finalizeSession(serverName, userName || "UnknownUser", password ?? "");
 	}
 
 	private async _finalizeSession(serverName: string, userName: string, password: string): Promise<AuthenticationSession> {
