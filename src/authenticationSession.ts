@@ -1,6 +1,6 @@
 import { AuthenticationSession, AuthenticationSessionAccountInformation } from "vscode";
 import { ServerManagerAuthenticationProvider } from "./authenticationProvider";
-import { ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
+import { ResolvedAuthorization } from "./commonActivate";
 
 export class ServerManagerAuthenticationSession implements AuthenticationSession {
 	public readonly id: string;

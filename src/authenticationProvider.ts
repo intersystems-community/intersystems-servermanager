@@ -15,13 +15,39 @@ import {
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { Authorization, globalState, OAuth2Authorization, PasswordAuthorization, ResolvedAuthorization } from "./commonActivate";
-import { getServerSpec } from "./api/getServerSpec";
+import { getAuthFromSetting, getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { AuthRelatedSetting } from "./serverSetting";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
+
+interface StrippedSession {
+	/** Session ID */
+	id: string;
+	serverName: string;
+	server: AuthRelatedSetting;
+}
+
+function isValidStrippedSession(data: unknown): data is StrippedSession {
+	if (!data || typeof data !== 'object') return false;
+	const session = data as Partial<StrippedSession>;
+	// Required fields
+	if (typeof session.id !== 'string' || !session.id) return false;
+	if (typeof session.serverName !== 'string' || !session.serverName) return false;
+	if (session.server && typeof session.server === 'object') {
+		const server = session.server as Partial<AuthRelatedSetting>;
+		if (typeof server.username !== 'string' && !server.oauth2) return false;
+		return true;
+	} else if (typeof session["userName"] === 'string' && session["username"]) {
+		session.server = { username: session["username"] }
+		return true
+	} else {
+		return false;
+	}
+}
 
 export class ServerManagerAuthenticationProvider implements AuthenticationProvider, Disposable {
 	public static id = AUTHENTICATION_PROVIDER;
@@ -101,12 +127,12 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				clientId: spec.auth.oauth2.clientId,
 				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
 			});
-			if (!accessToken) {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
-			}
 			const auth: Authorization = new OAuth2Authorization(spec.auth.oauth2);
-			auth.resolve({ accessToken: accessToken, username: "OAuth2User" });
-			return this._finalizeSession(serverName, auth);
+			if (auth.resolve({ accessToken: accessToken, username: "OAuth2User" })) {
+				return this._finalizeSession(serverName, auth);
+			} else {
+				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
+			};
 		} else {
 			const userName = scopes[1] || await this.promptUserName(serverName);
 			// Return existing session if found
@@ -125,8 +151,11 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			}
 			const password = userName && await this.seekPassword(sessionId, userName, serverName);
 			const auth: Authorization = new PasswordAuthorization();
-			auth.resolve({ accessToken: password, username: userName || "UnknownUser" });
-			return this._finalizeSession(serverName, auth);
+			if (auth.resolve({ accessToken: password, username: userName || "UnknownUser" })) {
+				return this._finalizeSession(serverName, auth);
+			} else {
+				throw new Error("Internal error: username or password is invalid");
+			};
 		}
 	}
 
@@ -361,10 +390,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 								} else {
 									this._sessions[index] = new ServerManagerAuthenticationSession(
 										session.serverName,
-										PasswordAuthorization.new(
+										new PasswordAuthorization(
 											session.userName,
 											password
-										)
+										) as ResolvedAuthorization
 									);
 								}
 							}
@@ -382,50 +411,48 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	}
 
 	private async _reloadSessions() {
-		const strippedSessions = globalState.get<ServerManagerAuthenticationSession[]>(
+		const strippedSessions = globalState.get<unknown[]>(
 			"authenticationProvider.strippedSessions",
 			[],
-		);
-
+		).filter(isValidStrippedSession);
 		// Build our array of sessions for which non-empty accessTokens were securely persisted
-		this._sessions = (await Promise.all(
+		const maybeSessions = await Promise.all(
 			strippedSessions.map(async (session) => {
 				const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
 				const accessToken = await this._secretStorage.get(credentialKey);
-				return new ServerManagerAuthenticationSession(session.serverName, PasswordAuthorization.new(session.userName, accessToken));
-			}),
-		)).filter((session) => session.accessToken).sort((a, b) => {
-			const aUserNameLowercase = a.userName.toLowerCase();
-			const bUserNameLowercase = b.userName.toLowerCase();
-			if (aUserNameLowercase < bUserNameLowercase) {
-				return -1;
-			}
-			if (aUserNameLowercase > bUserNameLowercase) {
+				const auth: Authorization = await getAuthFromSetting(session.server);
+				if (auth.resolve({ accessToken, username: auth.username })) {
+					return new ServerManagerAuthenticationSession(session.serverName, auth);
+				}
+			})
+		);
+		const sessions = maybeSessions.filter((session) => session !== undefined) as ServerManagerAuthenticationSession[];
+		this._sessions = sessions
+			.sort((a, b) => {
+				const aUserNameLowercase = a.userName.toLowerCase();
+				const bUserNameLowercase = b.userName.toLowerCase();
+				if (aUserNameLowercase < bUserNameLowercase) {
+					return -1;
+				}
+				if (aUserNameLowercase > bUserNameLowercase) {
+					return 1;
+				}
+				if (a.serverName < b.serverName) {
+					return -1;
+				}
 				return 1;
-			}
-			if (a.serverName < b.serverName) {
-				return -1;
-			}
-			return 1;
-		});
+			});
 	}
 
 	private async _storeStrippedSessions() {
-		// Build an array of sessions with passwords blanked
-		const strippedSessions = this._sessions.map((session) => {
-			return new ServerManagerAuthenticationSession(
-				session.serverName,
-				PasswordAuthorization.new(
-					session.userName,
-					""
-				),
-			);
-		});
-
-		// Persist it
+		// Build an array of sessions with accessToken blanked
 		await globalState.update(
 			"authenticationProvider.strippedSessions",
-			strippedSessions,
+			this._sessions.map((session): StrippedSession => ({
+				id: session.id,
+				serverName: session.serverName,
+				server: session.auth.setting,
+			})),
 		);
 	}
 }

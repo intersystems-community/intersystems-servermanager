@@ -9,7 +9,7 @@ import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { logout, serverSessions } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
-import { OAuth2Config } from "./serverSetting";
+import { AuthRelatedSetting, OAuth2Config } from "./serverSetting";
 
 export const extensionId = "intersystems-community.servermanager";
 export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscript";
@@ -23,12 +23,13 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
 
 export abstract class Authorization {
 	public abstract resolved(): this is ResolvedAuthorization;
-	public abstract resolve(params: { accessToken: string; username: string }): asserts this is ResolvedAuthorization;
+	public abstract resolve(params: { accessToken?: string; username?: string }): this is ResolvedAuthorization;
 	public abstract clear(): asserts this is Authorization;
 	public abstract get username(): string;
 	public abstract get password(): undefined | string;
 	public abstract get accessToken(): undefined | string;
 	public abstract clone(): Authorization;
+	public abstract get setting(): AuthRelatedSetting;
 }
 
 export abstract class ResolvedAuthorization extends Authorization {
@@ -40,12 +41,6 @@ export abstract class ResolvedAuthorization extends Authorization {
 export class PasswordAuthorization extends Authorization {
 	constructor(private _username?: string, private _password?: string) {
 		super()
-	}
-
-	public static new(username: string, password: string): ResolvedAuthorization {
-		const self: Authorization = new PasswordAuthorization();
-		self.resolve({ accessToken: password, username });
-		return self;
 	}
 
 	public get username(): string {
@@ -68,10 +63,10 @@ export class PasswordAuthorization extends Authorization {
 		return this.username !== "" && this._password !== undefined
 	}
 
-	override resolve({ accessToken, username }): asserts this is ResolvedAuthorization {
-		this._username = username;
-		this._password = accessToken;
-		return;
+	override resolve({ accessToken, username }): this is ResolvedAuthorization {
+		this._username = username ?? this._username;
+		this._password = accessToken ?? this._password;
+		return this.resolved();
 	}
 
 	public clear(): asserts this is Authorization {
@@ -91,10 +86,22 @@ export class PasswordAuthorization extends Authorization {
 	public clone(): PasswordAuthorization {
 		return new PasswordAuthorization(this._username, this._password)
 	}
+
+	public get setting(): AuthRelatedSetting {
+		return {
+			username: this._username,
+		}
+	}
 }
 
 export class OAuth2Authorization extends Authorization {
-	private _username: string = "OAuth2User";
+	public get setting(): AuthRelatedSetting {
+		return {
+			...this._username === undefined ? {} : { username: this._username },
+			oauth2: this.oauth2,
+		}
+	}
+	private _username?: string;
 	constructor(public readonly oauth2: OAuth2Config, private _bearer?: string) {
 		super()
 	}
@@ -107,10 +114,13 @@ export class OAuth2Authorization extends Authorization {
 		return this._bearer !== undefined
 	}
 
-	override resolve({ accessToken, username }): asserts this is ResolvedAuthorization {
-		this._bearer = accessToken;
-		this._username = username;
-		return;
+	override resolve({ accessToken, username }): this is ResolvedAuthorization {
+		// empty accessTokens are ignored.
+		if (accessToken) {
+			this._bearer = accessToken;
+		}
+		this._username = username ?? this._username;
+		return this.resolved();
 	}
 
 	public clear(): asserts this is Authorization {
@@ -118,7 +128,7 @@ export class OAuth2Authorization extends Authorization {
 	}
 
 	public get username(): string {
-		return this._username;
+		return this._username ?? "OAuth2User";
 	}
 
 	public get password(): undefined {

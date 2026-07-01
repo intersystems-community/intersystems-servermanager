@@ -454,7 +454,7 @@ async function specFromServerSummary(serverSummary: IServerName): Promise<IServe
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
 		if (!spec) {
-			return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" }, auth: PasswordAuthorization.new("", "") };
+			return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" }, auth: new PasswordAuthorization("", "") };
 		}
 		// Override with Docker-specific connection details
 		spec.webServer.host = "127.0.0.1";

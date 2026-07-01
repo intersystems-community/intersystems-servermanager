@@ -73,7 +73,7 @@ export interface ServerManagerAPI {
 
 export abstract class Authorization {
 	public abstract resolved(): this is ResolvedAuthorization;
-	public abstract resolve(params: { accessToken: string; username: string }): asserts this is ResolvedAuthorization;
+	public abstract resolve(params: { accessToken?: string; username?: string }): this is ResolvedAuthorization;
 	public abstract clear(): asserts this is Authorization;
 
 	public abstract get username(): string;

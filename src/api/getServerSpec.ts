@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
-import { IServerSetting } from "../serverSetting";
-import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
+import { AuthRelatedSetting, IServerSetting } from "../serverSetting";
+import { Authorization, OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
 
 /**
  * Get a server specification.
@@ -63,7 +63,7 @@ export async function getServerSpec(
 		};
 	}
 
-	const { oauth2, username, password, ...spec } = setting;
+	const { username, password, oauth2, ...spec } = setting;
 	spec.name = name;
 	spec.description = spec.description || "";
 	spec.webServer.scheme = spec.webServer.scheme || "http";
@@ -75,10 +75,15 @@ export async function getServerSpec(
 	}
 	return {
 		...spec,
-		auth: (oauth2 === undefined)
-			? new PasswordAuthorization(username, password)
-			: new OAuth2Authorization(oauth2)
+		auth: getAuthFromSetting({ username, password, oauth2 })
 	};
+}
+
+export function getAuthFromSetting(setting: AuthRelatedSetting): Authorization {
+	const { username, password, oauth2 } = setting;
+	return (oauth2 === undefined)
+		? new PasswordAuthorization(username, password)
+		: new OAuth2Authorization(oauth2)
 }
 
 /**
