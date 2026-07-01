@@ -14,7 +14,7 @@ export async function promptAuthMethod(): Promise<"password" | "oauth2" | undefi
 			{ label: "oauth2", description: "OAuth2/OpenID Connect (e.g., Auth0, Keycloak)" },
 		];
 		quickPick.activeItems = [quickPick.items[0]];
-		let result: "password" | "oauth2";
+		let result: "password" | "oauth2" = "password";
 		quickPick.onDidChangeSelection((items) => {
 			result = items[0].label as typeof result;
 		});
@@ -62,5 +62,5 @@ export async function promptOAuth2ClientId(serverName: string): Promise<string |
 		title: `OAuth2 Configuration for '${serverName}'`,
 		prompt: "Enter the OAuth2 client ID for this application",
 		placeHolder: "your-client-id",
-	}) || undefined;
+	});
 }

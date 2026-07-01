@@ -131,8 +131,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			};
 		} else {
 			const password = userName && await this.seekPassword(sessionId, userName, serverName);
-			const auth: Authorization = new PasswordAuthorization();
-			if (auth.resolve({ accessToken: password, username: userName || "UnknownUser" })) {
+			const auth: Authorization = new PasswordAuthorization(userName, password);
+			if (auth.resolved()) {
 				return this._finalizeSession(serverName, auth);
 			} else {
 				throw new Error("Internal error: username or password is invalid");
