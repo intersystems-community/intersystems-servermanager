@@ -74,9 +74,9 @@ export async function addServer(
 				let authDetails: Pick<IServerSetting, "username" | "oauth2">;
 				if (authMethod === undefined) return;
 				if (authMethod === "oauth2") {
-					const authority = await promptOAuth2Authority(name);
+					const authority = (await promptOAuth2Authority(name))?.trim();
 					if (!authority) return;
-					const clientId = await promptOAuth2ClientId(name);
+					const clientId = (await promptOAuth2ClientId(name))?.trim();
 					if (!clientId) return;
 					authDetails = { oauth2: { authority, clientId } };
 				} else {
