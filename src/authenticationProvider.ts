@@ -35,7 +35,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	public static label = AUTHENTICATION_PROVIDER_LABEL;
 	public static secretKeyPrefix = "credentialProvider:";
 	public static sessionId(serverName: string, userName: string): string {
-		const canonicalUserName = (userName || "").toLowerCase();
+		const canonicalUserName = userName.toLowerCase();
 		return `${serverName}/${canonicalUserName}`;
 	}
 	public static credentialKey(sessionId: string): string {
@@ -117,27 +117,23 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				return existingSession;
 			}
 		}
+		let auth: Authorization;
 		if (spec?.auth instanceof OAuth2Authorization) {
 			const accessToken = await performOAuth2Login({
 				authority: spec.auth.oauth2.authority,
 				clientId: spec.auth.oauth2.clientId,
 				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
 			});
-			const auth: Authorization = new OAuth2Authorization(spec.auth.oauth2);
-			if (auth.resolve({ accessToken: accessToken, username: "OAuth2User" })) {
-				return this._finalizeSession(serverName, auth);
-			} else {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
-			};
+			auth = new OAuth2Authorization(spec.auth.oauth2, accessToken);
 		} else {
 			const password = userName && await this.seekPassword(sessionId, userName, serverName);
-			const auth: Authorization = new PasswordAuthorization(userName, password);
-			if (auth.resolved()) {
-				return this._finalizeSession(serverName, auth);
-			} else {
-				throw new Error("Internal error: username or password is invalid");
-			};
+			auth = new PasswordAuthorization(userName, password);
 		}
+		if (auth.resolved()) {
+			return this._finalizeSession(serverName, auth);
+		} else {
+			throw new Error("Internal error: Authorization should already be resolved");
+		};
 	}
 
 	private async _finalizeSession(serverName: string, auth: ResolvedAuthorization): Promise<AuthenticationSession> {
@@ -254,7 +250,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 		const serverSpec: IServerSpec | undefined = await getServerSpec(session.serverName);
 		if (serverSpec) {
-			const auth = serverSpec.auth;
+			const auth = serverSpec.auth.clone();
 			auth.resolve({ accessToken: session.accessToken })
 			const response = await makeRESTRequest("HEAD", { ...serverSpec, auth }).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
@@ -401,7 +397,9 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			strippedSessions.map(async (session) => {
 				const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
 				const accessToken = await this._secretStorage.get(credentialKey);
-				return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
+				if (accessToken !== undefined) {
+					return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
+				}
 			})
 		);
 		const sessions = maybeSessions.filter((session) => session !== undefined) as ServerManagerAuthenticationSession[];
