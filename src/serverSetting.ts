@@ -5,7 +5,7 @@ export interface OAuth2Config {
 	clientId: string;
 }
 
-export interface IServerSetting extends Omit<IServerSpec, "authorization"> {
+export interface IServerSetting extends Omit<IServerSpec, "auth"> {
 	username?: string;
 	password?: string;
 	oauth2?: OAuth2Config

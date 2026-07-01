@@ -6,7 +6,7 @@ import * as https from "https";
 import * as vscode from "vscode";
 import { getServerSpec } from "./api/getServerSpec";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
-import { getAccountFromParts, OAuth2Authorization } from "./commonActivate";
+import { getAccountFromParts } from "./commonActivate";
 import { Authorization, IServerSpec, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 
 export interface IServerSession {

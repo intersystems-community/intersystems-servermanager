@@ -27,7 +27,7 @@ export interface IJSONServerSpec {
 	superServer?: ISuperServerSpec;
 	username?: string,
 	password?: string,
-	authorization: Authorization;
+	auth: Authorization;
 	description?: string;
 }
 

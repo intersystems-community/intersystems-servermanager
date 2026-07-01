@@ -95,16 +95,16 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 		const serverName = scopes[0] || await this.promptServerName();
 		const spec = await getServerSpec(serverName);
-		if (spec?.authorization instanceof OAuth2Authorization) {
+		if (spec?.auth instanceof OAuth2Authorization) {
 			const token = await performOAuth2Login({
-				authority: spec.authorization.oauth2.authority,
-				clientId: spec.authorization.oauth2.clientId,
+				authority: spec.auth.oauth2.authority,
+				clientId: spec.auth.oauth2.clientId,
 				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
 			});
 			if (!token) {
 				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
 			}
-			const auth: Authorization = new OAuth2Authorization(spec.authorization.oauth2);
+			const auth: Authorization = new OAuth2Authorization(spec.auth.oauth2);
 			auth.resolve(token, "OAuth2User");
 			return this._finalizeSession(serverName, auth);
 		} else {
