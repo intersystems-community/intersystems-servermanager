@@ -76,7 +76,7 @@ export async function getServerSpec(
 	return {
 		...spec,
 		auth: (oauth2 === undefined)
-			? new PasswordAuthorization(username || "", password)
+			? new PasswordAuthorization(username, password)
 			: new OAuth2Authorization(oauth2)
 	};
 }

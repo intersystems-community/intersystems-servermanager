@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { promptAuthMethod, promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
 import { getServerNames } from "./getServerNames";
+import { IServerSetting } from "../serverSetting";
 
 export async function addServer(
 	scope?: vscode.ConfigurationScope,
@@ -70,7 +71,7 @@ export async function addServer(
 					pathPrefix = pathPrefix.slice(0, -1);
 				}
 				const authMethod = await promptAuthMethod();
-				let authDetails: { username?: string; oauth2?: { authority: string; clientId: string; } };
+				let authDetails: Pick<IServerSetting, "username" | "oauth2">;
 				if (authMethod === undefined) return;
 				if (authMethod === "oauth2") {
 					const authority = await promptOAuth2Authority(name);

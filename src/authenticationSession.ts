@@ -8,17 +8,16 @@ export class ServerManagerAuthenticationSession implements AuthenticationSession
 	public readonly scopes: string[];
 	constructor(
 		public readonly serverName: string,
-		public readonly authorization: ResolvedAuthorization,
+		public readonly auth: ResolvedAuthorization,
 	) {
-		const userName = authorization.username;
-		this.id = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-		this.account = { id: `${serverName}/${userName}`, label: `${userName} on ${serverName}` };
-		this.scopes = [serverName, userName];
+		this.id = ServerManagerAuthenticationProvider.sessionId(serverName, auth.username);
+		this.account = { id: `${serverName}/${auth.username}`, label: `${auth.username} on ${serverName}` };
+		this.scopes = [serverName, (auth.username)];
 	}
 	public get accessToken() {
-		return this.authorization.accessToken;
+		return this.auth.accessToken;
 	}
 	public get userName() {
-		return this.authorization.username;
+		return this.auth.username;
 	}
 }

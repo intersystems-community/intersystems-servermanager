@@ -509,8 +509,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			return spec;
 		},
 
-		getAccount(serverSpec: { name: string, username?: string }): vscode.AuthenticationSessionAccountInformation | undefined {
-			return getAccountFromParts(serverSpec.name, serverSpec["username"]);
+		getAccount(serverSpec: Pick<IServerSpec, "name" | "username">): vscode.AuthenticationSessionAccountInformation | undefined {
+			return getAccountFromParts(serverSpec.name, serverSpec.username);
 		},
 
 		onDidChangePassword(
