@@ -18,7 +18,6 @@ import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commo
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -85,6 +84,20 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return sessions || [];
 	}
 
+	private async promptServerName(): Promise<string> {
+		if (!this._serverManagerExtension) {
+			throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
+		}
+		if (!this._serverManagerExtension.isActive) {
+			await this._serverManagerExtension.activate();
+		}
+		const serverName = await this._serverManagerExtension.exports.pickServer() ?? "";
+		if (!serverName) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Server name is required.`);
+		}
+		return serverName;
+	}
+
 	// This function is called after `this.getSessions` is called, and only when:
 	// - `this.getSessions` returns nothing but `createIfNone` was `true` in call to `vscode.authentication.getSession`
 	// - `vscode.authentication.getSession` was called with `forceNewSession: true` or
@@ -93,21 +106,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	public async createSession(scopes: string[]): Promise<AuthenticationSession> {
 		await this._ensureInitialized();
 
-		let serverName = scopes[0] ?? "";
-		if (!serverName) {
-			// Prompt for the server name.
-			if (!this._serverManagerExtension) {
-				throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
-			}
-			if (!this._serverManagerExtension.isActive) {
-				await this._serverManagerExtension.activate();
-			}
-			serverName = await this._serverManagerExtension.exports.pickServer() ?? "";
-			if (!serverName) {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Server name is required.`);
-			}
-		}
-
+		const serverName = scopes[0] ?? await this.promptServerName();
 		const spec = await getServerSpec(serverName);
 		let userName = scopes[1] ?? "";
 
