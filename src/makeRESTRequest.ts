@@ -226,10 +226,10 @@ async function resolveCredentials(spec: IServerSpec): Promise<void> {
 			);
 		}
 		if (session) {
-			spec.auth.resolve(
-				session.accessToken,
-				session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1],
-			)
+			spec.auth.resolve({
+				accessToken: session.accessToken,
+				username: session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1],
+			})
 		}
 	}
 }

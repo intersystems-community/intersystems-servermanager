@@ -14,11 +14,11 @@ import {
 	workspace,
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
+import { Authorization, globalState, OAuth2Authorization, PasswordAuthorization, ResolvedAuthorization } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
-import { Authorization, IServerSpec, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -96,16 +96,16 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		const serverName = scopes[0] || await this.promptServerName();
 		const spec = await getServerSpec(serverName);
 		if (spec?.auth instanceof OAuth2Authorization) {
-			const token = await performOAuth2Login({
+			const accessToken = await performOAuth2Login({
 				authority: spec.auth.oauth2.authority,
 				clientId: spec.auth.oauth2.clientId,
 				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
 			});
-			if (!token) {
+			if (!accessToken) {
 				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
 			}
 			const auth: Authorization = new OAuth2Authorization(spec.auth.oauth2);
-			auth.resolve(token, "OAuth2User");
+			auth.resolve({ accessToken: accessToken, username: "OAuth2User" });
 			return this._finalizeSession(serverName, auth);
 		} else {
 			const userName = scopes[1] || await this.promptUserName(serverName);
@@ -125,7 +125,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			}
 			const password = userName && await this.seekPassword(sessionId, userName, serverName);
 			const auth: Authorization = new PasswordAuthorization();
-			auth.resolve(userName || "UnknownUser", password);
+			auth.resolve({ accessToken: password, username: userName || "UnknownUser" });
 			return this._finalizeSession(serverName, auth);
 		}
 	}
