@@ -14,10 +14,11 @@ import {
 	workspace,
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState, OAuth2Authorization } from "./commonActivate";
+import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
+import { Authorization, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -103,31 +104,50 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			if (!token) {
 				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
 			}
-			return this._finalizeSession(serverName, "OAuth2User", token);
-		}
-		const userName = scopes[1] || await this.promptUserName(serverName);
-		// Return existing session if found
-		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-		const existingSession = this._sessions.find((s) => s.id === sessionId);
-		if (existingSession) {
-			if (this._checkedSessions.find((s) => s.id === sessionId)) {
-				return existingSession;
-			}
+			const auth: Authorization = new OAuth2Authorization(spec.authorization.oauth2);
+			auth.resolve(token, "OAuth2User");
+			return this._finalizeSession(serverName, auth);
+		} else {
+			const userName = scopes[1] || await this.promptUserName(serverName);
+			// Return existing session if found
+			const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
+			const existingSession = this._sessions.find((s) => s.id === sessionId);
+			if (existingSession) {
+				if (this._checkedSessions.find((s) => s.id === sessionId)) {
+					return existingSession;
+				}
 
-			// Check if the session is still valid
-			if (await this._isStillValid(existingSession)) {
-				this._checkedSessions.push(existingSession);
-				return existingSession;
+				// Check if the session is still valid
+				if (await this._isStillValid(existingSession)) {
+					this._checkedSessions.push(existingSession);
+					return existingSession;
+				}
 			}
+			const password = userName && await this.seekPassword(sessionId, userName, serverName);
+			const auth: Authorization = new PasswordAuthorization();
+			auth.resolve(userName || "UnknownUser", password);
+			return this._finalizeSession(serverName, auth);
 		}
-		const password = userName && await this.seekPassword(sessionId, userName, serverName);
-		return this._finalizeSession(serverName, userName || "UnknownUser", password ?? "");
 	}
 
-	// Seek password in secret storage
-	private async seekPassword(sessionId: string, userName: string, serverName: string): Promise<string | undefined> {
-		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-		return await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
+	private async _finalizeSession(serverName: string, auth: ResolvedAuthorization): Promise<AuthenticationSession> {
+		// We have all we need to create the session object
+		const session = new ServerManagerAuthenticationSession(serverName, auth);
+		// Update this._sessions and raise the event to notify
+		const added: AuthenticationSession[] = [];
+		const changed: AuthenticationSession[] = [];
+		const index = this._sessions.findIndex((item) => item.id === session.id);
+		if (index !== -1) {
+			this._sessions[index] = session;
+			changed.push(session);
+		} else {
+			// No point re-sorting here because onDidChangeSessions always appends added items to the provider's entries in the Accounts menu
+			this._sessions.push(session);
+			added.push(session);
+		}
+		await this._storeStrippedSessions();
+		this._onDidChangeSessions.fire({ added, removed: [], changed });
+		return session;
 	}
 
 	private async promptServerName(): Promise<string> {
@@ -158,7 +178,13 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return enteredUserName;
 	}
 
-	private async promptPassword(userName: string, serverName: string, credentialKey: string): Promise<string | undefined> {
+	private async seekPassword(sessionId: string, userName: string, serverName: string): Promise<string> {
+		// Seek password in secret storage
+		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+		return await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
+	}
+
+	private async promptPassword(userName: string, serverName: string, credentialKey: string): Promise<string> {
 		const doInputBox = async (): Promise<string | undefined> => {
 			return await new Promise<string | undefined>((resolve, reject) => {
 				const inputBox = window.createInputBox();
@@ -212,33 +238,14 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return password;
 	}
 
-	private async _finalizeSession(serverName: string, userName: string, password: string): Promise<AuthenticationSession> {
-		// We have all we need to create the session object
-		const session = new ServerManagerAuthenticationSession(serverName, userName, password);
-		// Update this._sessions and raise the event to notify
-		const added: AuthenticationSession[] = [];
-		const changed: AuthenticationSession[] = [];
-		const index = this._sessions.findIndex((item) => item.id === session.id);
-		if (index !== -1) {
-			this._sessions[index] = session;
-			changed.push(session);
-		} else {
-			// No point re-sorting here because onDidChangeSessions always appends added items to the provider's entries in the Accounts menu
-			this._sessions.push(session);
-			added.push(session);
-		}
-		await this._storeStrippedSessions();
-		this._onDidChangeSessions.fire({ added, removed: [], changed });
-		return session;
-	}
-
 	private async _isStillValid(session: ServerManagerAuthenticationSession): Promise<boolean> {
 		if (this._checkedSessions.find((s) => s.id === session.id)) {
 			return true;
 		}
 		const serverSpec = await getServerSpec(session.serverName);
 		if (serverSpec) {
-			serverSpec.authorization.resolve(session.accessToken, session.userName);
+			const auth: Authorization = serverSpec.authorization;
+			auth.resolve(session.accessToken, session.userName);
 			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
@@ -356,8 +363,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 								} else {
 									this._sessions[index] = new ServerManagerAuthenticationSession(
 										session.serverName,
-										session.userName,
-										password,
+										PasswordAuthorization.new(
+											session.userName,
+											password
+										)
 									);
 								}
 							}
@@ -385,7 +394,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			strippedSessions.map(async (session) => {
 				const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
 				const accessToken = await this._secretStorage.get(credentialKey);
-				return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
+				return new ServerManagerAuthenticationSession(session.serverName, PasswordAuthorization.new(session.userName, accessToken));
 			}),
 		)).filter((session) => session.accessToken).sort((a, b) => {
 			const aUserNameLowercase = a.userName.toLowerCase();
@@ -408,8 +417,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		const strippedSessions = this._sessions.map((session) => {
 			return new ServerManagerAuthenticationSession(
 				session.serverName,
-				session.userName,
-				"",
+				PasswordAuthorization.new(
+					session.userName,
+					""
+				),
 			);
 		});
 

@@ -24,24 +24,36 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
 abstract class Authorization {
 	public abstract resolved(): this is ResolvedAuthorization;
 
-	public abstract resolve(accessToken: string, username?: string): this is ResolvedAuthorization;
+	public abstract resolve(accessToken: string, username: string): asserts this is ResolvedAuthorization;
 
 	public abstract get username(): string;
+	public abstract get password(): undefined | string;
+	public abstract get accessToken(): undefined | string;
 
 	public abstract clone(): Authorization;
 }
 
 export class PasswordAuthorization extends Authorization {
-	constructor(private _username: string, private _password?: string) {
+	constructor(private _username?: string, private _password?: string) {
 		super()
 	}
 
+	public static new(username: string, password: string): ResolvedAuthorization {
+		const self: Authorization = new PasswordAuthorization();
+		self.resolve(username, password);
+		return self;
+	}
+
 	public get username(): string {
-		return this._username;
+		return this._username || "";
 	}
 
 	public get password(): string | undefined {
 		return this._password;
+	}
+
+	public get accessToken(): string | undefined {
+		return this._password
 	}
 
 	public get httpAuthorizationHeader(): string {
@@ -52,17 +64,17 @@ export class PasswordAuthorization extends Authorization {
 		return this.username !== "" && this._password !== undefined
 	}
 
-	override resolve(accessToken: string, username?: string): this is ResolvedAuthorization {
-		this._username = username ?? this._username;
+	override resolve(accessToken: string, username: string): asserts this is ResolvedAuthorization {
+		this._username = username;
 		this._password = accessToken;
-		return true;
+		return;
 	}
 
 	public get credentials(): { auth: { username: string; password: string }; headers?: Record<string, string> } {
 		return {
 			auth: {
-				username: this._username,
-				password: this._password!,
+				username: this.username,
+				password: this.password!,
 			},
 			headers: {}
 		};
@@ -74,6 +86,7 @@ export class PasswordAuthorization extends Authorization {
 }
 
 export class OAuth2Authorization extends Authorization {
+	private _username: string = "OAuth2User";
 	constructor(public readonly oauth2: OAuth2Config, private _bearer?: string) {
 		super()
 	}
@@ -86,17 +99,24 @@ export class OAuth2Authorization extends Authorization {
 		return this._bearer !== undefined
 	}
 
-	override resolve(accessToken: string): this is ResolvedAuthorization {
+	override resolve(accessToken: string, _username: string): asserts this is ResolvedAuthorization {
 		this._bearer = accessToken;
-		return true;
+		this._username = _username;
+		return;
 	}
 
 	public get username(): string {
-		return "OAuth2User";
+		return this._username;
 	}
+
 	public get password(): undefined {
 		return undefined;
 	}
+
+	public get accessToken(): string | undefined {
+		return this._bearer
+	}
+
 
 	public get credentials(): { auth?: { username: string; password: string }; headers: Record<string, string> } {
 		return {

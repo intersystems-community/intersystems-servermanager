@@ -1,5 +1,6 @@
 import { AuthenticationSession, AuthenticationSessionAccountInformation } from "vscode";
 import { ServerManagerAuthenticationProvider } from "./authenticationProvider";
+import { ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 
 export class ServerManagerAuthenticationSession implements AuthenticationSession {
 	public readonly id: string;
@@ -7,11 +8,17 @@ export class ServerManagerAuthenticationSession implements AuthenticationSession
 	public readonly scopes: string[];
 	constructor(
 		public readonly serverName: string,
-		public readonly userName: string,
-		public readonly accessToken: string,
+		private readonly authorization: ResolvedAuthorization,
 	) {
+		const userName = authorization.username;
 		this.id = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
 		this.account = { id: `${serverName}/${userName}`, label: `${userName} on ${serverName}` };
 		this.scopes = [serverName, userName];
+	}
+	public get accessToken() {
+		return this.authorization.accessToken;
+	}
+	public get userName() {
+		return this.authorization.username;
 	}
 }

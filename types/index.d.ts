@@ -73,15 +73,17 @@ export interface ServerManagerAPI {
 
 export class Authorization {
 	public resolved(): this is ResolvedAuthorization;
-	public resolve(accessToken: string, username?: string): this is ResolvedAuthorization;
+	public resolve(accessToken: string, username: string): asserts this is ResolvedAuthorization;
 	public get username(): string;
 	public get password(): string | undefined;
+	public get accessToken(): string | undefined;
 	public clone(): Authorization;
 	public get httpAuthorizationHeader(): undefined | string;
 	public get credentials(): undefined | { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }
 
 export class ResolvedAuthorization extends Authorization {
+	public get accessToken(): string;
 	public get httpAuthorizationHeader(): string;
 	public get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }
