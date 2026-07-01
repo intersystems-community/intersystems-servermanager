@@ -185,7 +185,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (enteredUserName === undefined) {
 			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
 		}
-		return enteredUserName;
+		return enteredUserName || "UnknownUser";
 	}
 
 	private async seekPassword(sessionId: string, userName: string, serverName: string): Promise<string> {
@@ -407,8 +407,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		const sessions = maybeSessions.filter((session) => session !== undefined) as ServerManagerAuthenticationSession[];
 		this._sessions = sessions
 			.sort((a, b) => {
-				const aUserNameLowercase = (a.userName || "").toLowerCase();
-				const bUserNameLowercase = (b.userName || "").toLowerCase();
+				const aUserNameLowercase = a.userName.toLowerCase();
+				const bUserNameLowercase = b.userName.toLowerCase();
 				if (aUserNameLowercase < bUserNameLowercase) {
 					return -1;
 				}
@@ -423,7 +423,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	}
 
 	private async _storeStrippedSessions() {
-		// Build an array of sessions with accessToken blanked
+		// Persist an array of sessions with accessToken blanked
 		await globalState.update(
 			"authenticationProvider.strippedSessions",
 			this._sessions.map((session): StrippedSession => {
