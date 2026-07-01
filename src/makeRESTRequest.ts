@@ -7,7 +7,7 @@ import * as vscode from "vscode";
 import { getServerSpec } from "./api/getServerSpec";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { getAccountFromParts } from "./commonActivate";
-import { Authorization, IServerSpec, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export interface IServerSession {
 	serverName: string;
@@ -39,13 +39,6 @@ function updateCookies(oldCookies: string[], newCookies: string[]): string[] {
 function getCookies(server: IServerSpec): string[] {
 	return serverSessions.get(server.name)?.cookies ?? [];
 }
-interface Credentials {
-	headers?: Record<string, string>;
-	auth?: {
-		password: string,
-		username: string,
-	};
-};
 
 /**
  * Make a REST request to an InterSystems server.
