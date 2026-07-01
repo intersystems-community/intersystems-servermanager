@@ -101,7 +101,22 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		await this._ensureInitialized();
 
 		const serverName = scopes[0] || await this.promptServerName();
-		const spec = await getServerSpec(serverName);
+		const spec = await getServerSpec(serverName)
+		const userName = scopes[1] || spec?.username || await this.promptUserName(serverName);
+		// Return existing session if found
+		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
+		const existingSession = this._sessions.find((s) => s.id === sessionId);
+		if (existingSession) {
+			if (this._checkedSessions.find((s) => s.id === sessionId)) {
+				return existingSession;
+			}
+
+			// Check if the session is still valid
+			if (await this._isStillValid(existingSession)) {
+				this._checkedSessions.push(existingSession);
+				return existingSession;
+			}
+		}
 		if (spec?.auth instanceof OAuth2Authorization) {
 			const accessToken = await performOAuth2Login({
 				authority: spec.auth.oauth2.authority,
@@ -115,21 +130,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: OAuth2 login failed or was cancelled.`);
 			};
 		} else {
-			const userName = scopes[1] || await this.promptUserName(serverName);
-			// Return existing session if found
-			const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-			const existingSession = this._sessions.find((s) => s.id === sessionId);
-			if (existingSession) {
-				if (this._checkedSessions.find((s) => s.id === sessionId)) {
-					return existingSession;
-				}
-
-				// Check if the session is still valid
-				if (await this._isStillValid(existingSession)) {
-					this._checkedSessions.push(existingSession);
-					return existingSession;
-				}
-			}
 			const password = userName && await this.seekPassword(sessionId, userName, serverName);
 			const auth: Authorization = new PasswordAuthorization();
 			if (auth.resolve({ accessToken: password, username: userName || "UnknownUser" })) {
