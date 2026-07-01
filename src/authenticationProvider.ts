@@ -14,7 +14,7 @@ import {
 	workspace,
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
+import { globalState, OAuth2Authorization } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
@@ -106,7 +106,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			return this._finalizeSession(serverName, "OAuth2User", token);
 		}
 		const userName = scopes[1] || await this.promptUserName(serverName);
-
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
 		const existingSession = this._sessions.find((s) => s.id === sessionId);
@@ -121,14 +120,14 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				return existingSession;
 			}
 		}
-		let password: string | undefined;
-		if (userName) {
-			// Seek password in secret storage
-			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-			password = await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
-		}
-
+		const password = userName && await this.seekPassword(sessionId, userName, serverName);
 		return this._finalizeSession(serverName, userName || "UnknownUser", password ?? "");
+	}
+
+	// Seek password in secret storage
+	private async seekPassword(sessionId: string, userName: string, serverName: string): Promise<string | undefined> {
+		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+		return await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
 	}
 
 	private async promptServerName(): Promise<string> {
@@ -238,8 +237,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			return true;
 		}
 		const serverSpec = await getServerSpec(session.serverName);
-		if (serverSpec?.authorization instanceof PasswordAuthorization) {
-			serverSpec.authorization = new PasswordAuthorization(session.userName, session.accessToken);
+		if (serverSpec) {
+			serverSpec.authorization.resolve(session.accessToken, session.userName);
 			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
