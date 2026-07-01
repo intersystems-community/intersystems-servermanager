@@ -108,11 +108,9 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			}
 		}
 
-		const serverSpec = await getServerSpec(serverName);
-		return this._createSession(serverName, scopes[1] ?? "", serverSpec);
-	}
+		const spec = await getServerSpec(serverName);
+		let userName = scopes[1] ?? "";
 
-	private async _createSession(serverName: string, scopeUserName: string, spec?: IServerSpec): Promise<AuthenticationSession> {
 		if (spec?.authorization instanceof OAuth2Authorization) {
 			const token = await performOAuth2Login({
 				authority: spec.authorization.oauth2.authority,
@@ -125,7 +123,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			return this._finalizeSession(serverName, "OAuth2User", token);
 		}
 
-		let userName = scopeUserName;
 		if (!userName) {
 			// Prompt for the username.
 			const enteredUserName = await window.showInputBox({
