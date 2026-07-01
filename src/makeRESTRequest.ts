@@ -154,14 +154,13 @@ export async function makeRESTRequest(
 			}
 		}
 
-		const authorization = server.auth;
 		cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
 
 		// Only store the session for a serverName the first time because subsequent requests
 		// to a server with no username defined must not lose initially-recorded username
 		const session = serverSessions.get(server.name);
 		if (!session) {
-			serverSessions.set(server.name, { serverName: server.name, username: authorization.username || "", cookies });
+			serverSessions.set(server.name, { serverName: server.name, username: server.auth.username || "", cookies });
 		} else {
 			serverSessions.set(server.name, { ...session, cookies });
 		}
