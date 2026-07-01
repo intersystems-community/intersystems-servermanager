@@ -1,7 +1,7 @@
 // Derived from
 //  https://github.com/intersystems/language-server/blob/bdeea88d1900a3aff35d5ac373436899f3904a7e/server/src/server.ts
 
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import * as https from "https";
 import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
@@ -72,94 +72,54 @@ export async function makeRESTRequest(
 		url += "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
 	}
 
+
+	const request: AxiosRequestConfig & { headers: {} } = {
+		httpsAgent,
+		headers: {},
+		method,
+		url: encodeURI(url),
+		validateStatus: (status) => {
+			return status < 500;
+		},
+		withCredentials: true,
+	};
+	if (data !== undefined) {
+		request["headers"]["Content-Type"] = "application/json";
+		request["data"] = data
+	}
+
 	// Make the request
 	try {
-		let respdata: AxiosResponse;
-		if (data !== undefined) {
-			// There is a data payload
+		let respdata;
+		// Cookie attempt
+		if (cookies.length > 0) {
+			request.headers["Cookie"] = cookies.join("; ")
 			respdata = await axios.request(
-				{
-					httpsAgent,
-					data,
-					headers: {
-						"Content-Type": "application/json",
-						"Cookie": cookies.join(" ")
-					},
-					method,
-					url: encodeURI(url),
-					validateStatus: (status) => {
-						return status < 500;
-					},
-					withCredentials: true,
-				},
+				request,
 			);
-			if (respdata.status === 401) {
-				// Use AuthenticationProvider to get password (and possibly username) if not supplied by caller
-				await resolveCredentials(server);
-				if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
-					// Either we had no cookies or they expired, so resend the request with basic auth
-					respdata = await axios.request(
-						{
-							httpsAgent,
-							auth: {
-								password: server.password,
-								username: server.username,
-							},
-							data,
-							headers: {
-								"Content-Type": "application/json",
-							},
-							method,
-							url: encodeURI(url),
-							withCredentials: true,
-						},
-					);
-				}
-			}
-		} else {
-			// No data payload
-			respdata = await axios.request(
-				{
-					httpsAgent,
-					method,
-					headers: {
-						"Cookie": cookies.join(" ")
-					},
-					url: encodeURI(url),
-					validateStatus: (status) => {
-						return status < 500;
-					},
-					withCredentials: true,
-				},
-			);
-			if (respdata.status === 401) {
-				// Use AuthenticationProvider to get password (and possibly username) if not supplied by caller
-				await resolveCredentials(server);
-				if (typeof server.username !== "undefined" && typeof server.password !== "undefined") {
-					// Either we had no cookies or they expired, so resend the request with basic auth
-					respdata = await axios.request(
-						{
-							httpsAgent,
-							auth: {
-								password: server.password,
-								username: server.username,
-							},
-							method,
-							url: encodeURI(url),
-							withCredentials: true,
-						},
-					);
-				}
+			if (respdata?.status === 401) {
+				delete request.headers["Cookie"]
+				respdata = undefined;
 			}
 		}
-
-		cookies = updateCookies(cookies, respdata.headers['set-cookie'] || []);
-
+		// Credential attempt
+		if (respdata === undefined) {
+			await resolveCredentials(server);
+			if (server.auth.resolved()) {
+				for (const [k, v] of Object.entries(server.auth.credentials)) {
+					request[k] = Object.assign({}, request[k], v)
+				}
+				respdata = await axios.request(request);
+			} else {
+				throw Error("Internal error: Credentials were not resolved")
+			}
+		}
+		cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
 		// Only store the session for a serverName the first time because subsequent requests
 		// to a server with no username defined must not lose initially-recorded username
 		const session = serverSessions.get(server.name);
 		if (!session) {
-			serverSessions.set(server.name, { serverName: server.name, username: server.username || '', cookies });
+			serverSessions.set(server.name, { serverName: server.name, username: server.auth.username || "", cookies });
 		} else {
 			serverSessions.set(server.name, { ...session, cookies });
 		}
@@ -187,7 +147,7 @@ export async function logout(serverName: string) {
 	const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
 
 	// Get the cookies
-	let cookies: string[] = getCookies(server);
+	const cookies: string[] = getCookies(server);
 
 	// Build the URL
 	let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
@@ -204,7 +164,7 @@ export async function logout(serverName: string) {
 				httpsAgent,
 				method: "HEAD",
 				headers: {
-					"Cookie": cookies.join(" ")
+					Cookie: cookies.join("; "),
 				},
 				url: encodeURI(url),
 				validateStatus: (status) => {
@@ -216,11 +176,11 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(serverSpec: IServerSpec) {
+async function resolveCredentials(spec: IServerSpec): Promise<void> {
 	// This arises if setting says to use authentication provider
-	if (typeof serverSpec.password === "undefined") {
-		const scopes = [serverSpec.name, (serverSpec.username || "")];
-		const account = getAccountFromParts(serverSpec.name, serverSpec.username);
+	if (!spec.auth.resolved()) {
+		const scopes = [spec.name, spec.auth.username];
+		const account = getAccountFromParts(spec.name, spec.auth.username);
 		let session = await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
 			scopes,
@@ -233,10 +193,16 @@ async function resolveCredentials(serverSpec: IServerSpec) {
 				{ createIfNone: true, account },
 			);
 		}
-		if (session) {
-			serverSpec.username = session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1];
-			serverSpec.password = session.accessToken;
+		if (session && session.accessToken) {
+			const username = session.scopes[1];
+			spec.auth.resolve({
+				accessToken: session.accessToken,
+				username: username?.toLowerCase() !== "unknownuser" ? (username || "") : "",
+			})
 		}
+	}
+	if (!spec.auth.resolved()) {
+		throw new Error("Internal error: Credentials were not resolved");
 	}
 }
 

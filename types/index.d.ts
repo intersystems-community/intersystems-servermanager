@@ -27,6 +27,7 @@ export interface IJSONServerSpec {
 	superServer?: ISuperServerSpec;
 	username?: string;
 	password?: string;
+	auth: Authorization;
 	description?: string;
 }
 
@@ -58,9 +59,32 @@ export interface ServerManagerAPI {
 	): Promise<IServerSpec | undefined>;
 
 	getAccount(
-		serverSpec: IServerSpec
+		serverSpec: Pick<IServerSpec, "name" | "username">,
 	): vscode.AuthenticationSessionAccountInformation | undefined;
 
 	onDidChangePassword(
 	): vscode.Event<string>;
+
+	makeAuthorization(
+		username?: string,
+		password?: string,
+	): Authorization;
+}
+
+export abstract class Authorization {
+	public abstract resolved(): this is ResolvedAuthorization;
+	public abstract resolve(params: { accessToken?: string; username?: string }): this is ResolvedAuthorization;
+	public abstract clear(): asserts this is Authorization;
+
+	public abstract get username(): string;
+	public abstract get password(): undefined | string;
+	public abstract get accessToken(): undefined | string;
+
+	public abstract clone(): Authorization;
+}
+
+export abstract class ResolvedAuthorization extends Authorization {
+	public get accessToken(): string;
+	public get httpAuthorizationHeader(): string;
+	public get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }

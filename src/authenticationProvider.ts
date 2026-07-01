@@ -14,12 +14,21 @@ import {
 	workspace,
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState } from "./commonActivate";
+import { Authorization, globalState, OAuth2Authorization, PasswordAuthorization, ResolvedAuthorization } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
+import { performOAuth2Login } from "./oauth2Flow";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
+
+interface StrippedSession {
+	/** Session ID */
+	id: string;
+	serverName: string;
+	userName: string;
+}
 
 export class ServerManagerAuthenticationProvider implements AuthenticationProvider, Disposable {
 	public static id = AUTHENTICATION_PROVIDER;
@@ -63,7 +72,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 		// Filter to return only those that match all supplied scopes, which are positional and case-insensitive.
 		for (let index = 0; index < scopes.length; index++) {
-			sessions = sessions.filter((session) => session.scopes[index].toLowerCase() === scopes[index].toLowerCase());
+			sessions = sessions.filter((session) => session.scopes[index]?.toLowerCase() === scopes[index]?.toLowerCase());
 		}
 
 		if (options.account) {
@@ -71,7 +80,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			const serverName = accountParts.shift();
 			const userName = accountParts.join('/');
 			if (serverName && userName) {
-				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1].toLowerCase() === userName.toLowerCase());
+				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1]?.toLowerCase() === userName.toLowerCase());
 			}
 		}
 
@@ -91,39 +100,12 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	public async createSession(scopes: string[]): Promise<AuthenticationSession> {
 		await this._ensureInitialized();
 
-		let serverName = scopes[0] ?? "";
-		if (!serverName) {
-			// Prompt for the server name.
-			if (!this._serverManagerExtension) {
-				throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
-			}
-			if (!this._serverManagerExtension.isActive) {
-				await this._serverManagerExtension.activate();
-			}
-			serverName = await this._serverManagerExtension.exports.pickServer() ?? "";
-			if (!serverName) {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Server name is required.`);
-			}
-		}
-
-		let userName = scopes[1] ?? "";
-		if (!userName) {
-			// Prompt for the username.
-			const enteredUserName = await window.showInputBox({
-				ignoreFocusOut: true,
-				placeHolder: `Username on server '${serverName}'`,
-				prompt: "Enter the username to access the InterSystems server with. Leave blank for unauthenticated access as 'UnknownUser'.",
-				title: `${AUTHENTICATION_PROVIDER_LABEL}: Username on InterSystems server '${serverName}'`,
-			});
-			if (typeof enteredUserName === "undefined") {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
-			}
-			userName = enteredUserName === "" ? "UnknownUser" : enteredUserName;
-		}
-
+		const serverName = scopes[0] || await this.promptServerName();
+		const spec = await getServerSpec(serverName)
+		const userName = scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-		let existingSession = this._sessions.find((s) => s.id === sessionId);
+		const existingSession = this._sessions.find((s) => s.id === sessionId);
 		if (existingSession) {
 			if (this._checkedSessions.find((s) => s.id === sessionId)) {
 				return existingSession;
@@ -135,70 +117,28 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				return existingSession;
 			}
 		}
-
-		let password: string | undefined = "";
-
-		if (userName !== "UnknownUser") {
-			// Seek password in secret storage
-			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-			password = await this.secretStorage.get(credentialKey);
-			if (!password) {
-				// Prompt for password
-				const doInputBox = async (): Promise<string | undefined> => {
-					return await new Promise<string | undefined>((resolve, reject) => {
-						const inputBox = window.createInputBox();
-						inputBox.value = "";
-						inputBox.password = true;
-						inputBox.title = `${AUTHENTICATION_PROVIDER_LABEL}: Password for user '${userName}'`;
-						inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`;
-						inputBox.prompt = "Optionally use $(key) button above to store password";
-						inputBox.ignoreFocusOut = true;
-						inputBox.buttons = [
-							{
-								iconPath: new ThemeIcon("key"),
-								tooltip: "Store Password Securely in Workstation Keychain",
-							},
-						];
-
-						async function done(secretStorage?: SecretStorage) {
-							// Return the password, having stored it if storage was passed
-							const enteredPassword = inputBox.value;
-							if (secretStorage && enteredPassword) {
-								await secretStorage.store(credentialKey, enteredPassword);
-							}
-							// Resolve the promise and tidy up
-							resolve(enteredPassword);
-							inputBox.dispose();
-						}
-
-						inputBox.onDidTriggerButton((_button) => {
-							// We only added the one button, which stores the password
-							done(this.secretStorage);
-						});
-
-						inputBox.onDidAccept(() => {
-							// User pressed Enter
-							done();
-						});
-
-						inputBox.onDidHide(() => {
-							// User pressed Escape
-							resolve(undefined);
-							inputBox.dispose();
-						});
-
-						inputBox.show();
-					});
-				};
-				password = await doInputBox();
-				if (!password) {
-					throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
-				}
-			}
+		let auth: Authorization;
+		if (spec?.auth instanceof OAuth2Authorization) {
+			const accessToken = await performOAuth2Login({
+				authority: spec.auth.oauth2.authority,
+				clientId: spec.auth.oauth2.clientId,
+				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
+			});
+			auth = new OAuth2Authorization(spec.auth.oauth2, accessToken);
+		} else {
+			const password = userName && await this.seekPassword(sessionId, userName, serverName);
+			auth = new PasswordAuthorization(userName, password);
 		}
+		if (auth.resolved()) {
+			return this._finalizeSession(serverName, auth);
+		} else {
+			throw new Error("Internal error: Authorization should already be resolved");
+		};
+	}
 
+	private async _finalizeSession(serverName: string, auth: ResolvedAuthorization): Promise<AuthenticationSession> {
 		// We have all we need to create the session object
-		const session = new ServerManagerAuthenticationSession(serverName, userName, password);
+		const session = new ServerManagerAuthenticationSession(serverName, auth.username, auth.accessToken);
 		// Update this._sessions and raise the event to notify
 		const added: AuthenticationSession[] = [];
 		const changed: AuthenticationSession[] = [];
@@ -216,15 +156,103 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return session;
 	}
 
+	private async promptServerName(): Promise<string> {
+		if (!this._serverManagerExtension) {
+			throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
+		}
+		if (!this._serverManagerExtension.isActive) {
+			await this._serverManagerExtension.activate();
+		}
+		const serverName = await this._serverManagerExtension.exports.pickServer() ?? "";
+		if (!serverName) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Server name is required.`);
+		}
+		return serverName;
+	}
+
+	private async promptUserName(serverName: string): Promise<string> {
+		// Prompt for the username.
+		const enteredUserName = await window.showInputBox({
+			ignoreFocusOut: true,
+			placeHolder: `Username on server '${serverName}'`,
+			prompt: "Enter the username to access the InterSystems server with. Leave blank for unauthenticated access as 'UnknownUser'.",
+			title: `${AUTHENTICATION_PROVIDER_LABEL}: Username on InterSystems server '${serverName}'`,
+		});
+		if (enteredUserName === undefined) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
+		}
+		return enteredUserName || "UnknownUser";
+	}
+
+	private async seekPassword(sessionId: string, userName: string, serverName: string): Promise<string> {
+		// Seek password in secret storage
+		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+		return await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
+	}
+
+	private async promptPassword(userName: string, serverName: string, credentialKey: string): Promise<string> {
+		const doInputBox = async (): Promise<string | undefined> => {
+			return await new Promise<string | undefined>((resolve, reject) => {
+				const inputBox = window.createInputBox();
+				inputBox.value = "";
+				inputBox.password = true;
+				inputBox.title = `${AUTHENTICATION_PROVIDER_LABEL}: Password for user '${userName}'`;
+				inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`;
+				inputBox.prompt = "Optionally use $(key) button above to store password";
+				inputBox.ignoreFocusOut = true;
+				inputBox.buttons = [
+					{
+						iconPath: new ThemeIcon("key"),
+						tooltip: "Store Password Securely in Workstation Keychain",
+					},
+				];
+
+				async function done(secretStorage?: SecretStorage) {
+					// Return the password, having stored it if storage was passed
+					const enteredPassword = inputBox.value;
+					if (secretStorage && enteredPassword) {
+						await secretStorage.store(credentialKey, enteredPassword);
+					}
+					// Resolve the promise and tidy up
+					resolve(enteredPassword);
+					inputBox.dispose();
+				}
+
+				inputBox.onDidTriggerButton((_button) => {
+					// We only added the one button, which stores the password
+					done(this.secretStorage);
+				});
+
+				inputBox.onDidAccept(() => {
+					// User pressed Enter
+					done();
+				});
+
+				inputBox.onDidHide(() => {
+					// User pressed Escape
+					resolve(undefined);
+					inputBox.dispose();
+				});
+
+				inputBox.show();
+			});
+		};
+		const password = await doInputBox();
+		if (!password) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
+		}
+		return password;
+	}
+
 	private async _isStillValid(session: ServerManagerAuthenticationSession): Promise<boolean> {
 		if (this._checkedSessions.find((s) => s.id === session.id)) {
 			return true;
 		}
-		const serverSpec = await getServerSpec(session.serverName);
+		const serverSpec: IServerSpec | undefined = await getServerSpec(session.serverName);
 		if (serverSpec) {
-			serverSpec.username = session.userName;
-			serverSpec.password = session.accessToken;
-			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
+			const auth = serverSpec.auth.clone();
+			auth.resolve({ accessToken: session.accessToken })
+			const response = await makeRESTRequest("HEAD", { ...serverSpec, auth }).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
 				return false;
@@ -302,7 +330,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 					`Do you want to keep the stored passwords or delete them?`,
 					{
 						detail: `${storedPasswordCredKeys.length == sessionIds.length ? "All" : "Some"
-							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true
+							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true,
 					},
 					{ title: "Keep", isCloseAffordance: true },
 					{ title: "Delete", isCloseAffordance: false },
@@ -342,7 +370,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 									this._sessions[index] = new ServerManagerAuthenticationSession(
 										session.serverName,
 										session.userName,
-										password,
+										password
 									);
 								}
 							}
@@ -360,48 +388,46 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	}
 
 	private async _reloadSessions() {
-		const strippedSessions = globalState.get<ServerManagerAuthenticationSession[]>(
+		const strippedSessions = globalState.get<StrippedSession[]>(
 			"authenticationProvider.strippedSessions",
 			[],
 		);
-
 		// Build our array of sessions for which non-empty accessTokens were securely persisted
-		this._sessions = (await Promise.all(
+		const maybeSessions = await Promise.all(
 			strippedSessions.map(async (session) => {
 				const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
 				const accessToken = await this._secretStorage.get(credentialKey);
-				return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
-			}),
-		)).filter((session) => session.accessToken).sort((a, b) => {
-			const aUserNameLowercase = a.userName.toLowerCase();
-			const bUserNameLowercase = b.userName.toLowerCase();
-			if (aUserNameLowercase < bUserNameLowercase) {
-				return -1;
-			}
-			if (aUserNameLowercase > bUserNameLowercase) {
+				if (accessToken !== undefined) {
+					return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
+				}
+			})
+		);
+		const sessions = maybeSessions.filter((session) => session !== undefined) as ServerManagerAuthenticationSession[];
+		this._sessions = sessions
+			.sort((a, b) => {
+				const aUserNameLowercase = a.userName.toLowerCase();
+				const bUserNameLowercase = b.userName.toLowerCase();
+				if (aUserNameLowercase < bUserNameLowercase) {
+					return -1;
+				}
+				if (aUserNameLowercase > bUserNameLowercase) {
+					return 1;
+				}
+				if (a.serverName < b.serverName) {
+					return -1;
+				}
 				return 1;
-			}
-			if (a.serverName < b.serverName) {
-				return -1;
-			}
-			return 1;
-		});
+			});
 	}
 
 	private async _storeStrippedSessions() {
-		// Build an array of sessions with passwords blanked
-		const strippedSessions = this._sessions.map((session) => {
-			return new ServerManagerAuthenticationSession(
-				session.serverName,
-				session.userName,
-				"",
-			);
-		});
-
-		// Persist it
+		// Persist an array of sessions with accessToken blanked
 		await globalState.update(
 			"authenticationProvider.strippedSessions",
-			strippedSessions,
+			this._sessions.map((session): StrippedSession => {
+				const { accessToken: _, ...strippedSession } = session;
+				return strippedSession;
+			}),
 		);
 	}
 }

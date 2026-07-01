@@ -209,6 +209,52 @@
                   "description": {
                     "type": "string",
                     "description": "Optional description of the server."
+                  },
+                  "authMethod": {
+                    "type": "string",
+                    "description": "Authentication method to use when connecting to this server.",
+                    "enum": [
+                      "password",
+                      "oauth2"
+                    ],
+                    "enumDescriptions": [
+                      "Username and password authentication (default)",
+                      "OAuth2/OpenID Connect authentication (e.g., Auth0, Keycloak)"
+                    ],
+                    "default": "password"
+                  },
+                  "oauth2": {
+                    "type": "object",
+                    "description": "OAuth2/OpenID Connect configuration. Required when authMethod is 'oauth2'.",
+                    "properties": {
+                      "authority": {
+                        "type": "string",
+                        "description": "OAuth2 authority URL (issuer) from your identity provider.",
+                        "pattern": "^https?://",
+                        "examples": [
+                          "https://your-domain.auth0.com",
+                          "https://login.microsoftonline.com/YOUR-TENANT-ID/v2.0"
+                        ]
+                      },
+                      "clientId": {
+                        "type": "string",
+                        "description": "OAuth2 client ID for this application.",
+                        "minLength": 1
+                      },
+                      "scopes": {
+                        "type": "array",
+                        "description": "Optional additional scopes to request beyond 'openid profile email'.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      }
+                    },
+                    "required": [
+                      "authority",
+                      "clientId"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [

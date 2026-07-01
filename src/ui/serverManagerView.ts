@@ -4,7 +4,7 @@ import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
 import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { makeRESTRequest } from "../makeRESTRequest";
-import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
+import { OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
 
 const SETTINGS_VERSION = "v1";
 
@@ -433,16 +433,16 @@ async function serverFeatures(element: ServerTreeItem, params?: ServerParams): P
 			let response = await makeRESTRequest("HEAD", serverSpec);
 			if (response?.status === 401) {
 				// Authentication error, so retry in case first attempt cleared a no-longer-valid stored password
-				serverSpec.password = undefined;
+				serverSpec.auth.clear() as void;
 				response = await makeRESTRequest("HEAD", serverSpec);
 			}
 			if (response?.status !== 200) {
-				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.auth.username || 'UnknownUser', `${response.status} ${response.statusText}`));
 			} else {
-				children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.username || 'UnknownUser'));
+				children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.auth.username || 'UnknownUser'));
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.auth.username || 'UnknownUser', errorStr as string));
 		}
 	}
 	return children;
@@ -450,11 +450,18 @@ async function serverFeatures(element: ServerTreeItem, params?: ServerParams): P
 
 async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec | undefined> {
 	const { name, description, detail, scope } = serverSummary;
+	let spec = await getServerSpec(name, scope);
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
-		return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" } };
+		if (spec === undefined) {
+			return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" }, auth: new PasswordAuthorization("", "") }
+		} else {
+			spec.webServer = {
+				scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: ""
+			}
+		}
 	}
-	return getServerSpec(name, scope);
+	return spec;
 }
 
 // tslint:disable-next-line: max-classes-per-file
@@ -526,7 +533,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: ServerParams):
 		try {
 			const response = await makeRESTRequest("GET", serverSpec);
 			if (response?.status !== 200) {
-				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.auth.username || 'UnknownUser', `${response.status} ${response.statusText}`));
 			} else {
 				const serverApiVersion = response.data.result.content.api;
 				response.data.result.content.namespaces.map((namespace: string) => {
@@ -534,7 +541,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: ServerParams):
 				});
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.auth.username || 'UnknownUser', errorStr as string));
 		}
 	}
 
@@ -636,7 +643,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: ServerParam
 			if (response.data.result.content === undefined) {
 				let message;
 				if (response.data.status?.errors[0]?.code === 5540) {
-					message = `To allow user '${serverSpec.username}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${serverSpec.username}"`;
+					message = `To allow user '${serverSpec.auth.username || 'UnknownUser'}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${serverSpec.auth.username || 'UnknownUser'}"`;
 				} else {
 					message = response.data.status.summary;
 				}
