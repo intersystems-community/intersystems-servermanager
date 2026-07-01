@@ -102,7 +102,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 		const serverName = scopes[0] || await this.promptServerName();
 		const spec = await getServerSpec(serverName)
-		const userName = scopes[1] || spec?.username || await this.promptUserName(serverName);
+		const userName = scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
 		const existingSession = this._sessions.find((s) => s.id === sessionId);

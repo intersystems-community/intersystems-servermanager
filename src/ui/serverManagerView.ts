@@ -450,11 +450,18 @@ async function serverFeatures(element: ServerTreeItem, params?: ServerParams): P
 
 async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec | undefined> {
 	const { name, description, detail, scope } = serverSummary;
+	let spec = await getServerSpec(name, scope);
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
-		return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" }, auth: new PasswordAuthorization("", "") };
+		if (spec === undefined) {
+			return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" }, auth: new PasswordAuthorization("", "") }
+		} else {
+			spec.webServer = {
+				scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: ""
+			}
+		}
 	}
-	return await getServerSpec(name, scope);
+	return spec;
 }
 
 // tslint:disable-next-line: max-classes-per-file
