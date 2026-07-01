@@ -57,7 +57,7 @@ interface Credentials {
  */
 export async function makeRESTRequest(
 	method: "HEAD" | "GET" | "POST",
-	server: IServerSpec & { authorization: ResolvedAuthorization },
+	server: IServerSpec,
 	endpoint?: IAtelierRESTEndpoint,
 	data?: any,
 ): Promise<AxiosResponse> {
@@ -148,7 +148,7 @@ export async function makeRESTRequest(
 			}
 		}
 
-		const authorization = server.authorization;
+		const authorization = server.auth;
 		cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
 
 		// Only store the session for a serverName the first time because subsequent requests
@@ -212,9 +212,9 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(spec: IServerSpec & { authorization: ResolvedAuthorization }): Promise<Credentials | undefined> {
+async function resolveCredentials(spec: IServerSpec): Promise<Credentials | undefined> {
 	// Use authentication provider to get credentials when not already available
-	const authorization: Authorization = spec.authorization;
+	const authorization: Authorization = spec.auth;
 	if (!authorization.resolved()) {
 		const scopes = [spec.name, authorization.username];
 		const account = getAccountFromParts(spec.name, authorization.username);
