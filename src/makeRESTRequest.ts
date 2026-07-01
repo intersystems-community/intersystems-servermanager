@@ -51,7 +51,7 @@ interface Credentials {
  * Make a REST request to an InterSystems server.
  *
  * @param method The REST method.
- * @param server The server setting to send the request to (internal type with OAuth2 config).
+ * @param server The server to send the request to.
  * @param endpoint Optional endpoint object. If omitted the request will be to /api/atelier/
  * @param data Optional request data. Usually passed for POST requests.
  */
@@ -101,22 +101,25 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				const credentials = await resolveCredentials(server) ?? {};
-				// There is a payload so we need to add content-type
-				credentials["headers"] = {
-					"Content-Type": "application/json",
-					...credentials["headers"],
-				};
-				respdata = await axios.request(
-					{
-						httpsAgent,
-						data,
-						method,
-						url: encodeURI(url),
-						withCredentials: true,
-						...credentials,
-					},
-				);
+				await resolveCredentials(server);
+				if (server.auth.resolved()) {
+					const credentials = server.auth.credentials;
+					// There is a payload so we need to add content-type
+					credentials["headers"] = {
+						"Content-Type": "application/json",
+						...credentials["headers"],
+					};
+					respdata = await axios.request(
+						{
+							httpsAgent,
+							...credentials,
+							data,
+							method,
+							url: encodeURI(url),
+							withCredentials: true,
+						},
+					);
+				}
 			}
 		} else {
 			// No data payload
@@ -135,16 +138,19 @@ export async function makeRESTRequest(
 				},
 			);
 			if (respdata.status === 401) {
-				const credentials = await resolveCredentials(server) ?? {};
-				respdata = await axios.request(
-					{
-						httpsAgent,
-						method,
-						url: encodeURI(url),
-						withCredentials: true,
-						...credentials,
-					},
-				);
+				await resolveCredentials(server);
+				if (server.auth.resolved()) {
+					const credentials = server.auth.credentials;
+					respdata = await axios.request(
+						{
+							httpsAgent,
+							...credentials,
+							method,
+							url: encodeURI(url),
+							withCredentials: true,
+						},
+					);
+				}
 			}
 		}
 
@@ -212,12 +218,11 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(spec: IServerSpec): Promise<Credentials | undefined> {
+async function resolveCredentials(spec: IServerSpec): Promise<void> {
 	// Use authentication provider to get credentials when not already available
-	const authorization: Authorization = spec.auth;
-	if (!authorization.resolved()) {
-		const scopes = [spec.name, authorization.username];
-		const account = getAccountFromParts(spec.name, authorization.username);
+	if (!spec.auth.resolved()) {
+		const scopes = [spec.name, spec.auth.username];
+		const account = getAccountFromParts(spec.name, spec.auth.username);
 		let session = await vscode.authentication.getSession(
 			AUTHENTICATION_PROVIDER,
 			scopes,
@@ -231,16 +236,11 @@ async function resolveCredentials(spec: IServerSpec): Promise<Credentials | unde
 			);
 		}
 		if (session) {
-			authorization.resolve(
+			spec.auth.resolve(
 				session.accessToken,
 				session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1],
 			)
 		}
-	}
-	if (authorization.resolved()) {
-		return authorization.credentials
-	} else {
-		return;
 	}
 }
 
