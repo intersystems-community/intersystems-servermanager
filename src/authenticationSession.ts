@@ -8,7 +8,7 @@ export class ServerManagerAuthenticationSession implements AuthenticationSession
 	public readonly scopes: string[];
 	constructor(
 		public readonly serverName: string,
-		private readonly authorization: ResolvedAuthorization,
+		public readonly authorization: ResolvedAuthorization,
 	) {
 		const userName = authorization.username;
 		this.id = ServerManagerAuthenticationProvider.sessionId(serverName, userName);

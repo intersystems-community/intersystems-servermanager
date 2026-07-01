@@ -6,8 +6,8 @@ import * as https from "https";
 import * as vscode from "vscode";
 import { getServerSpec } from "./api/getServerSpec";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
-import { getAccountFromParts, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { getAccountFromParts, OAuth2Authorization } from "./commonActivate";
+import { Authorization, IServerSpec, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 
 export interface IServerSession {
 	serverName: string;
@@ -57,7 +57,7 @@ interface Credentials {
  */
 export async function makeRESTRequest(
 	method: "HEAD" | "GET" | "POST",
-	server: IServerSpec,
+	server: IServerSpec & { authorization: ResolvedAuthorization },
 	endpoint?: IAtelierRESTEndpoint,
 	data?: any,
 ): Promise<AxiosResponse> {
@@ -149,17 +149,15 @@ export async function makeRESTRequest(
 		}
 
 		const authorization = server.authorization;
-		if (authorization.resolved()) {
-			cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
+		cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
 
-			// Only store the session for a serverName the first time because subsequent requests
-			// to a server with no username defined must not lose initially-recorded username
-			const session = serverSessions.get(server.name);
-			if (!session) {
-				serverSessions.set(server.name, { serverName: server.name, username: authorization.username || "", cookies });
-			} else {
-				serverSessions.set(server.name, { ...session, cookies });
-			}
+		// Only store the session for a serverName the first time because subsequent requests
+		// to a server with no username defined must not lose initially-recorded username
+		const session = serverSessions.get(server.name);
+		if (!session) {
+			serverSessions.set(server.name, { serverName: server.name, username: authorization.username || "", cookies });
+		} else {
+			serverSessions.set(server.name, { ...session, cookies });
 		}
 		return respdata;
 	} catch (error) {
@@ -214,31 +212,10 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(spec: IServerSpec): Promise<Credentials | undefined> {
+async function resolveCredentials(spec: IServerSpec & { authorization: ResolvedAuthorization }): Promise<Credentials | undefined> {
 	// Use authentication provider to get credentials when not already available
-	if (spec.authorization instanceof OAuth2Authorization) {
-		const account = getAccountFromParts(spec.name);
-		let session = await vscode.authentication.getSession(
-			AUTHENTICATION_PROVIDER,
-			[spec.name],
-			{ silent: true, account },
-		);
-		if (!session) {
-			session = await vscode.authentication.getSession(
-				AUTHENTICATION_PROVIDER,
-				[spec.name],
-				{ createIfNone: true, account },
-			);
-		}
-		if (!session) { return; }
-		if (spec.authorization.resolve(session.accessToken)) {
-			return spec.authorization.credentials;
-		} else {
-			return;
-		}
-	}
-	let authorization = spec.authorization as PasswordAuthorization;
-	if (!spec.authorization.resolved()) {
+	const authorization: Authorization = spec.authorization;
+	if (!authorization.resolved()) {
 		const scopes = [spec.name, authorization.username];
 		const account = getAccountFromParts(spec.name, authorization.username);
 		let session = await vscode.authentication.getSession(

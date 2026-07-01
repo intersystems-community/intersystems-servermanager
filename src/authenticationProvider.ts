@@ -18,7 +18,7 @@ import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commo
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
-import { Authorization, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
+import { Authorization, IServerSpec, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -242,11 +242,9 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (this._checkedSessions.find((s) => s.id === session.id)) {
 			return true;
 		}
-		const serverSpec = await getServerSpec(session.serverName);
+		const serverSpec: IServerSpec | undefined = await getServerSpec(session.serverName);
 		if (serverSpec) {
-			const auth: Authorization = serverSpec.authorization;
-			auth.resolve(session.accessToken, session.userName);
-			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
+			const response = await makeRESTRequest("HEAD", { ...serverSpec, authorization: session.authorization }).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
 				return false;
