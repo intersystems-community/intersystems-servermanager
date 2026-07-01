@@ -1,6 +1,5 @@
 import { AuthenticationSession, AuthenticationSessionAccountInformation } from "vscode";
 import { ServerManagerAuthenticationProvider } from "./authenticationProvider";
-import { ResolvedAuthorization } from "./commonActivate";
 
 export class ServerManagerAuthenticationSession implements AuthenticationSession {
 	public readonly id: string;
@@ -8,16 +7,11 @@ export class ServerManagerAuthenticationSession implements AuthenticationSession
 	public readonly scopes: string[];
 	constructor(
 		public readonly serverName: string,
-		public readonly auth: ResolvedAuthorization,
+		public readonly userName: string,
+		public readonly accessToken: string,
 	) {
-		this.id = ServerManagerAuthenticationProvider.sessionId(serverName, auth.username);
-		this.account = { id: `${serverName}/${auth.username}`, label: `${auth.username} on ${serverName}` };
-		this.scopes = [serverName, (auth.username)];
-	}
-	public get accessToken() {
-		return this.auth.accessToken;
-	}
-	public get userName() {
-		return this.auth.username;
+		this.id = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
+		this.account = { id: `${serverName}/${userName}`, label: `${userName} on ${serverName}` };
+		this.scopes = [serverName, userName];
 	}
 }

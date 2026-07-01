@@ -111,7 +111,7 @@ export class OAuth2Authorization extends Authorization {
 	}
 
 	override resolved(): this is ResolvedAuthorization {
-		return this._bearer !== undefined
+		return this._bearer ? true : false;
 	}
 
 	override resolve({ accessToken, username }): this is ResolvedAuthorization {

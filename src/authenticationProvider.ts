@@ -15,11 +15,10 @@ import {
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { Authorization, globalState, OAuth2Authorization, PasswordAuthorization, ResolvedAuthorization } from "./commonActivate";
-import { getAuthFromSetting, getServerSpec } from "./api/getServerSpec";
+import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
 import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
-import { AuthRelatedSetting } from "./serverSetting";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -28,25 +27,7 @@ interface StrippedSession {
 	/** Session ID */
 	id: string;
 	serverName: string;
-	server: AuthRelatedSetting;
-}
-
-function isValidStrippedSession(data: unknown): data is StrippedSession {
-	if (!data || typeof data !== 'object') return false;
-	const session = data as Partial<StrippedSession>;
-	// Required fields
-	if (typeof session.id !== 'string' || !session.id) return false;
-	if (typeof session.serverName !== 'string' || !session.serverName) return false;
-	if (session.server && typeof session.server === 'object') {
-		const server = session.server as Partial<AuthRelatedSetting>;
-		if (typeof server.username !== 'string' && !server.oauth2) return false;
-		return true;
-	} else if (typeof session["userName"] === 'string' && session["username"]) {
-		session.server = { username: session["username"] }
-		return true
-	} else {
-		return false;
-	}
+	userName: string;
 }
 
 export class ServerManagerAuthenticationProvider implements AuthenticationProvider, Disposable {
@@ -54,7 +35,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	public static label = AUTHENTICATION_PROVIDER_LABEL;
 	public static secretKeyPrefix = "credentialProvider:";
 	public static sessionId(serverName: string, userName: string): string {
-		const canonicalUserName = userName.toLowerCase();
+		const canonicalUserName = (userName || "").toLowerCase();
 		return `${serverName}/${canonicalUserName}`;
 	}
 	public static credentialKey(sessionId: string): string {
@@ -91,7 +72,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 		// Filter to return only those that match all supplied scopes, which are positional and case-insensitive.
 		for (let index = 0; index < scopes.length; index++) {
-			sessions = sessions.filter((session) => session.scopes[index].toLowerCase() === scopes[index].toLowerCase());
+			sessions = sessions.filter((session) => session.scopes[index]?.toLowerCase() === scopes[index]?.toLowerCase());
 		}
 
 		if (options.account) {
@@ -99,7 +80,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			const serverName = accountParts.shift();
 			const userName = accountParts.join('/');
 			if (serverName && userName) {
-				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1].toLowerCase() === userName.toLowerCase());
+				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1]?.toLowerCase() === userName.toLowerCase());
 			}
 		}
 
@@ -161,7 +142,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 	private async _finalizeSession(serverName: string, auth: ResolvedAuthorization): Promise<AuthenticationSession> {
 		// We have all we need to create the session object
-		const session = new ServerManagerAuthenticationSession(serverName, auth);
+		const session = new ServerManagerAuthenticationSession(serverName, auth.username, auth.accessToken);
 		// Update this._sessions and raise the event to notify
 		const added: AuthenticationSession[] = [];
 		const changed: AuthenticationSession[] = [];
@@ -273,7 +254,9 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 		const serverSpec: IServerSpec | undefined = await getServerSpec(session.serverName);
 		if (serverSpec) {
-			const response = await makeRESTRequest("HEAD", { ...serverSpec, auth: session.auth }).catch(() => { /* Swallow errors */ });
+			const auth = serverSpec.auth;
+			auth.resolve({ accessToken: session.accessToken })
+			const response = await makeRESTRequest("HEAD", { ...serverSpec, auth }).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
 				return false;
@@ -390,10 +373,8 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 								} else {
 									this._sessions[index] = new ServerManagerAuthenticationSession(
 										session.serverName,
-										new PasswordAuthorization(
-											session.userName,
-											password
-										) as ResolvedAuthorization
+										session.userName,
+										password
 									);
 								}
 							}
@@ -411,26 +392,23 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	}
 
 	private async _reloadSessions() {
-		const strippedSessions = globalState.get<unknown[]>(
+		const strippedSessions = globalState.get<StrippedSession[]>(
 			"authenticationProvider.strippedSessions",
 			[],
-		).filter(isValidStrippedSession);
+		);
 		// Build our array of sessions for which non-empty accessTokens were securely persisted
 		const maybeSessions = await Promise.all(
 			strippedSessions.map(async (session) => {
 				const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
 				const accessToken = await this._secretStorage.get(credentialKey);
-				const auth: Authorization = await getAuthFromSetting(session.server);
-				if (auth.resolve({ accessToken, username: auth.username })) {
-					return new ServerManagerAuthenticationSession(session.serverName, auth);
-				}
+				return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
 			})
 		);
 		const sessions = maybeSessions.filter((session) => session !== undefined) as ServerManagerAuthenticationSession[];
 		this._sessions = sessions
 			.sort((a, b) => {
-				const aUserNameLowercase = a.userName.toLowerCase();
-				const bUserNameLowercase = b.userName.toLowerCase();
+				const aUserNameLowercase = (a.userName || "").toLowerCase();
+				const bUserNameLowercase = (b.userName || "").toLowerCase();
 				if (aUserNameLowercase < bUserNameLowercase) {
 					return -1;
 				}
@@ -448,11 +426,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		// Build an array of sessions with accessToken blanked
 		await globalState.update(
 			"authenticationProvider.strippedSessions",
-			this._sessions.map((session): StrippedSession => ({
-				id: session.id,
-				serverName: session.serverName,
-				server: session.auth.setting,
-			})),
+			this._sessions.map((session): StrippedSession => {
+				const { accessToken: _, ...strippedSession } = session;
+				return strippedSession;
+			}),
 		);
 	}
 }
