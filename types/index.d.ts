@@ -25,6 +25,8 @@ export interface ISuperServerSpec {
 export interface IJSONServerSpec {
 	webServer: IWebServerSpec;
 	superServer?: ISuperServerSpec;
+	username?: string,
+	password?: string,
 	authorization: Authorization;
 	description?: string;
 }
@@ -57,7 +59,7 @@ export interface ServerManagerAPI {
 	): Promise<IServerSpec | undefined>;
 
 	getAccount(
-		serverSpec: { name: string, username?: string }
+		serverSpec: Pick<IServerSpec, "name" | "username">,
 	): vscode.AuthenticationSessionAccountInformation | undefined;
 
 	onDidChangePassword(
