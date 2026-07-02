@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { IServerName } from "@intersystems-community/intersystems-servermanager";
-import { legacyEmbeddedServer } from "./getServerSpec";
 import { IServerSetting } from "../serverSetting";
+import { legacyEmbeddedServer } from "./getServerSpec";
 
 export function getServerSummary(name: string, scope?: vscode.ConfigurationScope): IServerName | undefined {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
