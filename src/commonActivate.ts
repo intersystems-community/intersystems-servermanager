@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IServerName, IServerSpec, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
+import { Authorization, IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
@@ -21,26 +21,8 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
 }
 
-export abstract class Authorization {
-	public abstract resolved(): this is ResolvedAuthorization;
-	public abstract resolve(params: { accessToken?: string; username?: string }): this is ResolvedAuthorization;
-	public abstract clear(): asserts this is Authorization;
-	public abstract get username(): string;
-	public abstract get password(): undefined | string;
-	public abstract get accessToken(): undefined | string;
-	public abstract clone(): Authorization;
-	public abstract get setting(): AuthRelatedSetting;
-}
-
-export abstract class ResolvedAuthorization extends Authorization {
-	public abstract get accessToken(): string;
-	public abstract get httpAuthorizationHeader(): string;
-	public abstract get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
-}
-
-export class PasswordAuthorization extends Authorization {
+export class PasswordAuthorization implements Authorization {
 	constructor(private _username?: string, private _password?: string) {
-		super()
 	}
 
 	public get username(): string {
@@ -59,11 +41,11 @@ export class PasswordAuthorization extends Authorization {
 		return `Basic ${Buffer.from(`${this._username}:${this._password}`).toString("base64")}`;
 	}
 
-	override resolved(): this is ResolvedAuthorization {
+	public resolved(): this is ResolvedAuthorization {
 		return this.username !== "" && this._password !== undefined
 	}
 
-	override resolve({ accessToken, username }): this is ResolvedAuthorization {
+	public resolve({ accessToken, username }): this is ResolvedAuthorization {
 		this._username = username ?? this._username;
 		this._password = accessToken ?? this._password;
 		return this.resolved();
@@ -94,7 +76,7 @@ export class PasswordAuthorization extends Authorization {
 	}
 }
 
-export class OAuth2Authorization extends Authorization {
+export class OAuth2Authorization implements Authorization {
 	public get setting(): AuthRelatedSetting {
 		return {
 			...this._username === undefined ? {} : { username: this._username },
@@ -103,7 +85,6 @@ export class OAuth2Authorization extends Authorization {
 	}
 	private _username?: string;
 	constructor(public readonly oauth2: OAuth2Config, private _bearer?: string) {
-		super()
 	}
 
 	public get httpAuthorizationHeader(): string | undefined {
@@ -112,11 +93,11 @@ export class OAuth2Authorization extends Authorization {
 		}
 	}
 
-	override resolved(): this is ResolvedAuthorization {
+	public resolved(): this is ResolvedAuthorization {
 		return this._bearer ? true : false;
 	}
 
-	override resolve({ accessToken, username }): this is ResolvedAuthorization {
+	public resolve({ accessToken, username }): this is ResolvedAuthorization {
 		// empty accessTokens are ignored.
 		if (accessToken) {
 			this._bearer = accessToken;
@@ -546,10 +527,6 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		onDidChangePassword(
 		): vscode.Event<string> {
 			return _onDidChangePassword.event;
-		},
-
-		makeAuthorization(username, password) {
-			return new PasswordAuthorization(username ?? "", password)
 		},
 
 	};

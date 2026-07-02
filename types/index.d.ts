@@ -70,27 +70,24 @@ export interface ServerManagerAPI {
 
 	onDidChangePassword(
 	): vscode.Event<string>;
-
-	makeAuthorization(
-		username?: string,
-		password?: string,
-	): Authorization;
 }
 
-export abstract class Authorization {
-	public abstract resolved(): this is ResolvedAuthorization;
-	public abstract resolve(params: { accessToken?: string; username?: string }): this is ResolvedAuthorization;
-	public abstract clear(): asserts this is Authorization;
+export interface Authorization {
+	resolved(): this is ResolvedAuthorization;
+	resolve(params: { accessToken?: string; username?: string }): this is ResolvedAuthorization;
+	clear(): asserts this is Authorization;
+	clone(): Authorization;
 
-	public abstract get username(): string;
-	public abstract get password(): undefined | string;
-	public abstract get accessToken(): undefined | string;
+	get username(): string;
+	get password(): undefined | string;
 
-	public abstract clone(): Authorization;
+	get accessToken(): undefined | string;
+	get httpAuthorizationHeader(): undefined | string;
+	get credentials(): undefined | { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }
 
-export abstract class ResolvedAuthorization extends Authorization {
-	public get accessToken(): string;
-	public get httpAuthorizationHeader(): string;
-	public get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
+export interface ResolvedAuthorization extends Authorization {
+	get accessToken(): string;
+	get httpAuthorizationHeader(): string;
+	get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }

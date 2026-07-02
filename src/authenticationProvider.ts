@@ -14,10 +14,11 @@ import {
 	workspace,
 } from "vscode";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { Authorization, globalState, OAuth2Authorization, PasswordAuthorization, ResolvedAuthorization } from "./commonActivate";
+import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
+import { Authorization, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
