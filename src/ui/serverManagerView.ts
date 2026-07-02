@@ -643,7 +643,8 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: ServerParam
 			if (response.data.result.content === undefined) {
 				let message;
 				if (response.data.status?.errors[0]?.code === 5540) {
-					message = `To allow user '${serverSpec.auth.username || 'UnknownUser'}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${serverSpec.auth.username || 'UnknownUser'}"`;
+					const username = serverSpec.auth.username || 'UnknownUser';
+					message = `To allow user '${username}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${username}"`;
 				} else {
 					message = response.data.status.summary;
 				}
