@@ -25,7 +25,13 @@ export interface ISuperServerSpec {
 export interface IJSONServerSpec {
 	webServer: IWebServerSpec;
 	superServer?: ISuperServerSpec;
+	/**
+	 * @deprecated Use `auth.username` instead. Get credentials from the `auth` property.
+	 */
 	username?: string;
+	/**
+	 * @deprecated Use `auth.password` instead. Get credentials from the `auth` property.
+	 */
 	password?: string;
 	auth: Authorization;
 	description?: string;
