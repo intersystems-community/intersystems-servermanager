@@ -73,7 +73,7 @@ export async function makeRESTRequest(
 	}
 
 
-	const request: AxiosRequestConfig & { headers: {} } = {
+	const request: AxiosRequestConfig & { headers: {}, data?: any } = {
 		httpsAgent,
 		headers: {},
 		method,
@@ -84,14 +84,13 @@ export async function makeRESTRequest(
 		withCredentials: true,
 	};
 	if (data !== undefined) {
-		request["headers"]["Content-Type"] = "application/json";
-		request["data"] = data
+		request.headers["Content-Type"] = "application/json";
+		request.data = data
 	}
-
 	// Make the request
 	try {
 		let respdata;
-		// Cookie attempt
+		// Make the request w/ cookies if applicable
 		if (cookies.length > 0) {
 			request.headers["Cookie"] = cookies.join("; ")
 			respdata = await axios.request(
@@ -102,17 +101,20 @@ export async function makeRESTRequest(
 				respdata = undefined;
 			}
 		}
-		// Credential attempt
+		// Make the request w/ credentials
 		if (respdata === undefined) {
 			await resolveCredentials(server);
-			if (server.auth.resolved()) {
-				for (const [k, v] of Object.entries(server.auth.credentials)) {
-					request[k] = Object.assign({}, request[k], v)
-				}
-				respdata = await axios.request(request);
-			} else {
+			if (!server.auth.resolved()) {
 				throw Error("Internal error: Credentials were not resolved")
 			}
+			for (const [k, v] of Object.entries(server.auth.credentials)) {
+				if (typeof v === "object") {
+					request[k] = Object.assign({}, request[k], v)
+				} else {
+					request[k] = v
+				}
+			}
+			respdata = await axios.request(request);
 		}
 		cookies = updateCookies(cookies, respdata.headers["set-cookie"] || []);
 		// Only store the session for a serverName the first time because subsequent requests
