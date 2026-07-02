@@ -22,37 +22,41 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
 }
 
 export class PasswordAuthorization implements Authorization {
-	constructor(private _username?: string, private _password?: string) {
+	#username?: string;
+	#password?: string;
+	constructor(username?: string, password?: string) {
+		this.#username = username;
+		this.#password = password;
 	}
 
 	public get username(): string {
-		return this._username || "";
+		return this.#username || "";
 	}
 
 	public get password(): string | undefined {
-		return this._password;
+		return this.#password;
 	}
 
 	public get accessToken(): string | undefined {
-		return this._password
+		return this.#password
 	}
 
 	public get httpAuthorizationHeader(): string {
-		return `Basic ${Buffer.from(`${this._username}:${this._password}`).toString("base64")}`;
+		return `Basic ${Buffer.from(`${this.#username}:${this.#password}`).toString("base64")}`;
 	}
 
 	public resolved(): this is ResolvedAuthorization {
-		return this.username !== "" && this._password !== undefined
+		return this.username !== "" && this.#password !== undefined
 	}
 
 	public resolve({ accessToken, username }): this is ResolvedAuthorization {
-		this._username = username ?? this._username;
-		this._password = accessToken ?? this._password;
+		this.#username = username ?? this.#username;
+		this.#password = accessToken ?? this.#password;
 		return this.resolved();
 	}
 
 	public clear(): asserts this is Authorization {
-		this._password = undefined;
+		this.#password = undefined;
 	}
 
 	public get credentials(): { auth: { username: string; password: string }; headers?: Record<string, string> } {
@@ -66,52 +70,55 @@ export class PasswordAuthorization implements Authorization {
 	}
 
 	public clone(): PasswordAuthorization {
-		return new PasswordAuthorization(this._username, this._password)
+		return new PasswordAuthorization(this.#username, this.#password)
 	}
 
 	public get setting(): AuthRelatedSetting {
 		return {
-			username: this._username,
+			username: this.#username,
 		}
 	}
 }
 
 export class OAuth2Authorization implements Authorization {
+	#username?: string;
+	#bearer?: string;
+
 	public get setting(): AuthRelatedSetting {
 		return {
-			...this._username === undefined ? {} : { username: this._username },
+			...this.#username === undefined ? {} : { username: this.#username },
 			oauth2: this.oauth2,
 		}
 	}
-	private _username?: string;
-	constructor(public readonly oauth2: OAuth2Config, private _bearer?: string) {
+	constructor(public readonly oauth2: OAuth2Config, bearer?: string) {
+		this.#bearer = bearer
 	}
 
 	public get httpAuthorizationHeader(): string | undefined {
 		if (this.resolved()) {
-			return `Bearer ${this._bearer}`;
+			return `Bearer ${this.#bearer}`;
 		}
 	}
 
 	public resolved(): this is ResolvedAuthorization {
-		return this._bearer ? true : false;
+		return this.#bearer ? true : false;
 	}
 
 	public resolve({ accessToken, username }): this is ResolvedAuthorization {
 		// empty accessTokens are ignored.
 		if (accessToken) {
-			this._bearer = accessToken;
+			this.#bearer = accessToken;
 		}
-		this._username = username ?? this._username;
+		this.#username = username ?? this.#username;
 		return this.resolved();
 	}
 
 	public clear(): asserts this is Authorization {
-		this._bearer = undefined;
+		this.#bearer = undefined;
 	}
 
 	public get username(): string {
-		return this._username ?? "OAuth2User";
+		return this.#username ?? "OAuth2User";
 	}
 
 	public get password(): undefined {
@@ -119,7 +126,7 @@ export class OAuth2Authorization implements Authorization {
 	}
 
 	public get accessToken(): string | undefined {
-		return this._bearer
+		return this.#bearer
 	}
 
 
@@ -134,7 +141,7 @@ export class OAuth2Authorization implements Authorization {
 	}
 
 	public clone(): OAuth2Authorization {
-		return new OAuth2Authorization(this.oauth2, this._bearer)
+		return new OAuth2Authorization(this.oauth2, this.#bearer)
 	}
 }
 
