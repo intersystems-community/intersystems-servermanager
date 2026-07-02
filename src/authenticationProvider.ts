@@ -105,17 +105,9 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		const userName = scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-		const existingSession = this._sessions.find((s) => s.id === sessionId);
-		if (existingSession) {
-			if (this._checkedSessions.find((s) => s.id === sessionId)) {
-				return existingSession;
-			}
-
-			// Check if the session is still valid
-			if (await this._isStillValid(existingSession)) {
-				this._checkedSessions.push(existingSession);
-				return existingSession;
-			}
+		const existingSession = await this.findExistingSession(sessionId);
+		if (existingSession !== undefined) {
+			return existingSession;
 		}
 		let auth: Authorization;
 		if (spec?.auth instanceof OAuth2Authorization) {
@@ -182,6 +174,21 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
 		}
 		return enteredUserName || "UnknownUser";
+	}
+
+	private async findExistingSession(sessionId: string): Promise<AuthenticationSession | undefined> {
+		const existingSession = this._sessions.find((s) => s.id === sessionId);
+		if (existingSession) {
+			if (this._checkedSessions.find((s) => s.id === sessionId)) {
+				return existingSession;
+			}
+
+			// Check if the session is still valid
+			if (await this._isStillValid(existingSession)) {
+				this._checkedSessions.push(existingSession);
+				return existingSession;
+			}
+		}
 	}
 
 	private async seekPassword(sessionId: string, userName: string, serverName: string): Promise<string> {
