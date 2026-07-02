@@ -210,19 +210,6 @@
                     "type": "string",
                     "description": "Optional description of the server."
                   },
-                  "authMethod": {
-                    "type": "string",
-                    "description": "Authentication method to use when connecting to this server.",
-                    "enum": [
-                      "password",
-                      "oauth2"
-                    ],
-                    "enumDescriptions": [
-                      "Username and password authentication (default)",
-                      "OAuth2/OpenID Connect authentication (e.g., Auth0, Keycloak)"
-                    ],
-                    "default": "password"
-                  },
                   "oauth2": {
                     "type": "object",
                     "description": "OAuth2/OpenID Connect configuration. Required when authMethod is 'oauth2'.",
