@@ -33,12 +33,16 @@ export interface IJSONServerSpec {
 	 * @deprecated Use `auth.password` instead. Get credentials from the `auth` property.
 	 */
 	password?: string;
-	auth: Authorization;
+	auth?: Authorization;
 	description?: string;
 }
 
 export interface IServerSpec extends IJSONServerSpec {
 	name: string;
+}
+
+export interface IServerSpecWithAuth extends IServerSpec {
+	auth: Authorization;
 }
 
 export interface ServerManagerAPI {
@@ -62,7 +66,7 @@ export interface ServerManagerAPI {
 		scope?: vscode.ConfigurationScope,
 		flushCredentialCache?: boolean,
 		options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
-	): Promise<IServerSpec | undefined>;
+	): Promise<IServerSpecWithAuth | undefined>;
 
 	getAccount(
 		serverSpec: Pick<IServerSpec, "name" | "username">,

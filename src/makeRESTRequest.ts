@@ -5,7 +5,7 @@ import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import * as https from "https";
 import * as vscode from "vscode";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpec, IServerSpecWithAuth } from "@intersystems-community/intersystems-servermanager";
 import { getServerSpec } from "./api/getServerSpec";
 import { getAccountFromParts } from "./commonActivate";
 
@@ -50,7 +50,7 @@ function getCookies(server: IServerSpec): string[] {
  */
 export async function makeRESTRequest(
 	method: "HEAD" | "GET" | "POST",
-	server: IServerSpec,
+	server: IServerSpecWithAuth,
 	endpoint?: IAtelierRESTEndpoint,
 	data?: any,
 ): Promise<AxiosResponse> {
@@ -178,7 +178,7 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(spec: IServerSpec): Promise<void> {
+async function resolveCredentials(spec: IServerSpecWithAuth): Promise<void> {
 	// This arises if setting says to use authentication provider
 	if (!spec.auth.resolved()) {
 		const scopes = [spec.name, spec.auth.username];

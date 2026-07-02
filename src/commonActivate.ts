@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Authorization, IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
+import { Authorization, IServerName, IServerSpec, IServerSpecWithAuth, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
@@ -500,14 +500,14 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		 * @param scope Settings scope to look in.
 		 * @param flushCredentialCache Obsolete, has no effect.
 		 * @param options
-		 * @returns { IServerSpec } Server specification object.
+		 * @returns { IServerSpecWithAuth } Server specification object.
 		 */
 		async getServerSpec(
 			name: string,
 			scope?: vscode.ConfigurationScope,
 			flushCredentialCache: boolean = false,
 			options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
-		): Promise<IServerSpec | undefined> {
+		): Promise<IServerSpecWithAuth | undefined> {
 			const spec = await getServerSpec(name, scope);
 			if (spec === undefined) {
 				return undefined;
