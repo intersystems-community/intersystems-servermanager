@@ -196,15 +196,11 @@ async function resolveCredentials(spec: IServerSpec): Promise<void> {
 			);
 		}
 		if (session && session.accessToken) {
-			const username = session.scopes[1];
 			spec.auth.resolve({
 				accessToken: session.accessToken,
-				username: username?.toLowerCase() !== "unknownuser" ? (username || "") : "",
+				username: session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1],
 			})
 		}
-	}
-	if (!spec.auth.resolved()) {
-		throw new Error("Internal error: Credentials were not resolved");
 	}
 }
 
