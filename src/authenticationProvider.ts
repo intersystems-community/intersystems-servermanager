@@ -128,26 +128,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		};
 	}
 
-	private async _finalizeSession(serverName: string, auth: ResolvedAuthorization): Promise<AuthenticationSession> {
-		// We have all we need to create the session object
-		const session = new ServerManagerAuthenticationSession(serverName, auth.username, auth.accessToken);
-		// Update this._sessions and raise the event to notify
-		const added: AuthenticationSession[] = [];
-		const changed: AuthenticationSession[] = [];
-		const index = this._sessions.findIndex((item) => item.id === session.id);
-		if (index !== -1) {
-			this._sessions[index] = session;
-			changed.push(session);
-		} else {
-			// No point re-sorting here because onDidChangeSessions always appends added items to the provider's entries in the Accounts menu
-			this._sessions.push(session);
-			added.push(session);
-		}
-		await this._storeStrippedSessions();
-		this._onDidChangeSessions.fire({ added, removed: [], changed });
-		return session;
-	}
-
 	private async promptServerName(): Promise<string> {
 		if (!this._serverManagerExtension) {
 			throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
@@ -249,6 +229,26 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
 		}
 		return password;
+	}
+
+	private async _finalizeSession(serverName: string, auth: ResolvedAuthorization): Promise<AuthenticationSession> {
+		// We have all we need to create the session object
+		const session = new ServerManagerAuthenticationSession(serverName, auth.username, auth.accessToken);
+		// Update this._sessions and raise the event to notify
+		const added: AuthenticationSession[] = [];
+		const changed: AuthenticationSession[] = [];
+		const index = this._sessions.findIndex((item) => item.id === session.id);
+		if (index !== -1) {
+			this._sessions[index] = session;
+			changed.push(session);
+		} else {
+			// No point re-sorting here because onDidChangeSessions always appends added items to the provider's entries in the Accounts menu
+			this._sessions.push(session);
+			added.push(session);
+		}
+		await this._storeStrippedSessions();
+		this._onDidChangeSessions.fire({ added, removed: [], changed });
+		return session;
 	}
 
 	private async _isStillValid(session: ServerManagerAuthenticationSession): Promise<boolean> {
