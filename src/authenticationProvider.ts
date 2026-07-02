@@ -18,7 +18,6 @@ import { Authorization, globalState, OAuth2Authorization, PasswordAuthorization,
 import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -255,7 +254,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (this._checkedSessions.find((s) => s.id === session.id)) {
 			return true;
 		}
-		const serverSpec: IServerSpec | undefined = await getServerSpec(session.serverName);
+		const serverSpec = await getServerSpec(session.serverName);
 		if (serverSpec) {
 			const auth = serverSpec.auth.clone();
 			auth.resolve({ accessToken: session.accessToken })
