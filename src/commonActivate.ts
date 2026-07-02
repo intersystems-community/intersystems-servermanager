@@ -529,6 +529,10 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			return _onDidChangePassword.event;
 		},
 
+		defaultAuth(): Authorization {
+			return new PasswordAuthorization()
+		}
+
 	};
 
 	// 'export' the API

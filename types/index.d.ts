@@ -74,6 +74,8 @@ export interface ServerManagerAPI {
 
 	onDidChangePassword(
 	): vscode.Event<string>;
+
+	defaultAuth(): Authorization;
 }
 
 export interface Authorization {
