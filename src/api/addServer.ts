@@ -89,7 +89,11 @@ export async function addServer(
 					});
 					if (username === undefined) return;
 					username = username.trim();
-					authDetails = { username };
+					if (username) {
+						authDetails = { username };
+					} else {
+						authDetails = {}
+					}
 				}
 				const scheme = await new Promise<string | undefined>((resolve) => {
 					let result: string;
