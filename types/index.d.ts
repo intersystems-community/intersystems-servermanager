@@ -97,3 +97,26 @@ export interface ResolvedAuthorization extends Authorization {
 	get httpAuthorizationHeader(): string;
 	get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }
+
+export interface ServerForUri {
+	serverName: string;
+	active: boolean;
+	apiVersion: number;
+	serverVersion: string;
+	scheme: "http" | "https";
+	https?: boolean;
+	host: string;
+	port: number;
+	superserverPort?: number;
+	pathPrefix: string;
+	auth: Authorization;
+	namespace: string;
+}
+
+export interface VSCodeObjectScriptAPI {
+	serverForUri: (uri: vscode.Uri) => ServerForUri;
+	asyncServerForUri: (uri: vscode.Uri) => Promise<ServerForUri>;
+	serverDocumentUriForUri(uri: vscode.Uri): vscode.Uri;
+	onDidChangeConnection(): vscode.Event<void>;
+	getUriForDocument(document: string): vscode.Uri;
+}
