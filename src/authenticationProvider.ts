@@ -398,17 +398,14 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			[],
 		);
 		// Build our array of sessions for which non-empty accessTokens were securely persisted
-		const maybeSessions = await Promise.all(
+		this._sessions = (await Promise.all(
 			strippedSessions.map(async (session) => {
 				const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
 				const accessToken = await this._secretStorage.get(credentialKey);
-				if (accessToken !== undefined) {
-					return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
-				}
-			})
-		);
-		const sessions = maybeSessions.filter((session) => session !== undefined) as ServerManagerAuthenticationSession[];
-		this._sessions = sessions
+				if (accessToken === undefined) return [];
+				return [new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken)];
+			})))
+			.flat(1)
 			.sort((a, b) => {
 				const aUserNameLowercase = a.userName.toLowerCase();
 				const bUserNameLowercase = b.userName.toLowerCase();
