@@ -110,16 +110,29 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			return existingSession;
 		}
 		let auth: Authorization;
-		if (spec?.auth instanceof OAuth2Authorization) {
-			const accessToken = await performOAuth2Login({
-				authority: spec.auth.oauth2.authority,
-				clientId: spec.auth.oauth2.clientId,
-				audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
-			});
-			auth = new OAuth2Authorization(spec.auth.oauth2, accessToken);
+		if (spec?.auth.resolved()) {
+			auth = spec.auth;
 		} else {
-			const password = userName && await this.seekPassword(sessionId, userName, serverName);
-			auth = new PasswordAuthorization(userName, password);
+			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+			let accessToken = await this.secretStorage.get(credentialKey);
+			if (accessToken === undefined) {
+				if (spec?.auth instanceof OAuth2Authorization) {
+					accessToken = await performOAuth2Login({
+						authority: spec?.auth.oauth2.authority,
+						clientId: spec?.auth.oauth2.clientId,
+						audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
+					});
+					if (this.secretStorage && accessToken) {
+						await this.secretStorage?.store(credentialKey, accessToken);
+					}
+				} else {
+					// Password is "" if userName is ""
+					accessToken = userName && await this.promptPassword(userName, serverName, credentialKey);
+				}
+
+			}
+			auth = spec?.auth.clone() ?? new PasswordAuthorization();
+			auth.resolve({ username: userName, accessToken })
 		}
 		if (auth.resolved()) {
 			return this._finalizeSession(serverName, auth);
@@ -169,12 +182,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				return existingSession;
 			}
 		}
-	}
-
-	private async seekPassword(sessionId: string, userName: string, serverName: string): Promise<string> {
-		// Seek password in secret storage
-		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-		return await this.secretStorage.get(credentialKey) ?? await this.promptPassword(userName, serverName, credentialKey);
 	}
 
 	private async promptPassword(userName: string, serverName: string, credentialKey: string): Promise<string> {

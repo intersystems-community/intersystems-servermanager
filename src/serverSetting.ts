@@ -6,7 +6,6 @@ export interface OAuth2Config {
 }
 
 export interface IServerSetting extends Omit<IServerSpec, "auth"> {
-	password?: string;
 	oauth2?: OAuth2Config
 };
 
