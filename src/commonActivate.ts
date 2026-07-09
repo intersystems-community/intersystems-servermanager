@@ -22,8 +22,8 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
 }
 
 export class PasswordAuthorization implements Authorization {
-	public #username?: string;
-	public #password?: string;
+	#username?: string;
+	#password?: string;
 	constructor(username?: string, password?: string) {
 		this.#username = username;
 		this.#password = password;
@@ -75,8 +75,8 @@ export class PasswordAuthorization implements Authorization {
 }
 
 export class OAuth2Authorization implements Authorization {
-	public #username?: string;
-	public #bearer?: string;
+	#username?: string;
+	#bearer?: string;
 	constructor(public readonly oauth2: OAuth2Config, bearer?: string) {
 		this.#bearer = bearer;
 	}
