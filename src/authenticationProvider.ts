@@ -264,7 +264,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 		const serverSpec = await getServerSpec(session.serverName);
 		if (serverSpec) {
-			serverSpec.auth.resolve({ accessToken: session.accessToken })
+			serverSpec.auth.resolve({ accessToken: session.accessToken, username: session.userName })
 			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
