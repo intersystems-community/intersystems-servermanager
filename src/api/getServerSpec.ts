@@ -45,8 +45,8 @@ export async function getServerSpec(
 				port,
 				pathPrefix,
 			},
-			username,
-			password,
+			username: username ?? auth?.username,
+			password: (password ?? auth?.password) || undefined,
 			auth: auth ?? new PasswordAuthorization(username, password),
 			description: `Server for workspace folder "${name}"`,
 		};
@@ -64,6 +64,8 @@ export async function getServerSpec(
 	}
 	return {
 		...spec,
+		username,
+		password: password || undefined,
 		auth: oauth2 === undefined
 			? new PasswordAuthorization(username, password)
 			: new OAuth2Authorization(oauth2)
