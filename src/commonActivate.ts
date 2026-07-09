@@ -9,7 +9,7 @@ import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { logout, serverSessions } from "./makeRESTRequest";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
-import { AuthRelatedSetting, OAuth2Config } from "./serverSetting";
+import { OAuth2Config } from "./serverSetting";
 
 export const extensionId = "intersystems-community.servermanager";
 export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscript";
@@ -72,24 +72,11 @@ export class PasswordAuthorization implements Authorization {
 	public clone(): PasswordAuthorization {
 		return new PasswordAuthorization(this.#username, this.#password)
 	}
-
-	public get setting(): AuthRelatedSetting {
-		return {
-			username: this.#username,
-		}
-	}
 }
 
 export class OAuth2Authorization implements Authorization {
 	#username?: string;
 	#bearer?: string;
-
-	public get setting(): AuthRelatedSetting {
-		return {
-			...this.#username === undefined ? {} : { username: this.#username },
-			oauth2: this.oauth2,
-		}
-	}
 	constructor(public readonly oauth2: OAuth2Config, bearer?: string) {
 		this.#bearer = bearer
 	}

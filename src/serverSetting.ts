@@ -5,8 +5,9 @@ export interface OAuth2Config {
 	clientId: string;
 }
 
-export interface IServerSetting extends Omit<IServerSpec, "auth"> {
+export interface IServerSetting extends Omit<IServerSpec, "auth" | "username" | "password"> {
+	// username and password are deprecated in IServerSpec but not in IServerSetting
+	username?: string;
+	password?: string;
 	oauth2?: OAuth2Config
 };
-
-export type AuthRelatedSetting = Pick<IServerSetting, "username" | "password" | "oauth2">;

@@ -132,7 +132,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 			}
 			auth = spec?.auth.clone() ?? new PasswordAuthorization();
-			auth.resolve({ username: userName, accessToken })
+			auth.resolve({ username: userName || "UnknownUser", accessToken })
 		}
 		if (auth.resolved()) {
 			return this._finalizeSession(serverName, auth);
@@ -166,7 +166,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (enteredUserName === undefined) {
 			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
 		}
-		return enteredUserName || "UnknownUser";
+		return enteredUserName;
 	}
 
 	private async findExistingSession(sessionId: string): Promise<AuthenticationSession | undefined> {

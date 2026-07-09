@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IServerSpecWithAuth } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpecWithAuth, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
 import { IServerSetting } from "../serverSetting";
 import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
 
@@ -25,40 +25,29 @@ export async function getServerSpec(
 
 		// It is the name of a workspace root folder
 		// Get the server details from the ObjectScript extension if available
-		const objectScriptExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
-		if (!objectScriptExtension) {
-			return undefined;
-		}
-		if (!objectScriptExtension.isActive) {
+		const objectScriptExtension = vscode.extensions.getExtension<VSCodeObjectScriptAPI>(OBJECTSCRIPT_EXTENSIONID);
+		if (!objectScriptExtension?.isActive) {
 			// Activating it here would cause a deadlock because the activate method of the ObjectScript extension itself calls our getServerSpec API
 			return undefined;
 		}
-		let serverForUri: {
-			serverName: string;
-			scheme: string;
-			host: string;
-			port: number;
-			pathPrefix: string;
-			username: string;
-			password?: string;
-		};
-		if (objectScriptExtension.exports.asyncServerForUri) {
-			serverForUri = await objectScriptExtension.exports.asyncServerForUri(folder.uri);
-		} else {
-			serverForUri = objectScriptExtension.exports.serverForUri(folder.uri);
-		}
+		const serverForUri = objectScriptExtension.exports.asyncServerForUri
+			? await objectScriptExtension.exports.asyncServerForUri(folder.uri)
+			: objectScriptExtension.exports.serverForUri(folder.uri);
 		if (!serverForUri) {
 			return undefined;
 		}
+		const { serverName, scheme, host, port, pathPrefix, auth, username, password } = serverForUri;
 		return {
-			name: serverForUri.serverName,
+			name: serverName,
 			webServer: {
-				scheme: serverForUri.scheme,
-				host: serverForUri.host,
-				port: serverForUri.port,
-				pathPrefix: serverForUri.pathPrefix,
+				scheme,
+				host,
+				port,
+				pathPrefix,
 			},
-			auth: new PasswordAuthorization(serverForUri.username, serverForUri.password),
+			username,
+			password,
+			auth: auth ?? new PasswordAuthorization(username, password),
 			description: `Server for workspace folder "${name}"`,
 		};
 	}

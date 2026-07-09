@@ -109,13 +109,21 @@ export interface ServerForUri {
 	port: number;
 	superserverPort?: number;
 	pathPrefix: string;
-	auth: Authorization;
+	auth?: Authorization;
+	/**
+	 * @deprecated Use `auth.username` instead. Get credentials from the `auth` property.
+	 */
+	username?: string;
+	/**
+	 * @deprecated Use `auth.password` instead. Get credentials from the `auth` property.
+	 */
+	password?: string;
 	namespace: string;
 }
 
 export interface VSCodeObjectScriptAPI {
-	serverForUri: (uri: vscode.Uri) => ServerForUri;
-	asyncServerForUri: (uri: vscode.Uri) => Promise<ServerForUri>;
+	serverForUri: (uri: vscode.Uri) => ServerForUri | undefined;
+	asyncServerForUri: (uri: vscode.Uri) => Promise<ServerForUri | undefined>;
 	serverDocumentUriForUri(uri: vscode.Uri): vscode.Uri;
 	onDidChangeConnection(): vscode.Event<void>;
 	getUriForDocument(document: string): vscode.Uri;
