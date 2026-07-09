@@ -1,3 +1,4 @@
+import { Authorization, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 import {
 	authentication,
 	AuthenticationProvider,
@@ -13,12 +14,11 @@ import {
 	window,
 	workspace,
 } from "vscode";
+import { getServerSpec } from "./api/getServerSpec";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
-import { getServerSpec } from "./api/getServerSpec";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { performOAuth2Login } from "./oauth2Flow";
-import { Authorization, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
@@ -31,6 +31,9 @@ interface StrippedSession {
 }
 
 export class ServerManagerAuthenticationProvider implements AuthenticationProvider, Disposable {
+	get onDidChangeSessions(): Event<AuthenticationProviderAuthenticationSessionsChangeEvent> {
+		return this._onDidChangeSessions.event;
+	}
 	public static id = AUTHENTICATION_PROVIDER;
 	public static label = AUTHENTICATION_PROVIDER_LABEL;
 	public static secretKeyPrefix = "credentialProvider:";
@@ -52,9 +55,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	private _serverManagerExtension = extensions.getExtension("intersystems-community.servermanager");
 
 	private _onDidChangeSessions = new EventEmitter<AuthenticationProviderAuthenticationSessionsChangeEvent>();
-	get onDidChangeSessions(): Event<AuthenticationProviderAuthenticationSessionsChangeEvent> {
-		return this._onDidChangeSessions.event;
-	}
 
 	constructor(private readonly secretStorage: SecretStorage) {
 		this._secretStorage = secretStorage;
@@ -78,7 +78,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (options.account) {
 			const accountParts = options.account.id.split("/");
 			const serverName = accountParts.shift();
-			const userName = accountParts.join('/');
+			const userName = accountParts.join("/");
 			if (serverName && userName) {
 				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1].toLowerCase() === userName.toLowerCase());
 			}
@@ -101,7 +101,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		await this._ensureInitialized();
 
 		const serverName = scopes[0] || await this.promptServerName();
-		const spec = await getServerSpec(serverName)
+		const spec = await getServerSpec(serverName);
 		const userName = scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
@@ -120,7 +120,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 					accessToken = await performOAuth2Login({
 						authority: spec?.auth.oauth2.authority,
 						clientId: spec?.auth.oauth2.clientId,
-						audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`
+						audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`,
 					});
 					if (this.secretStorage && accessToken) {
 						await this.secretStorage?.store(credentialKey, accessToken);
@@ -132,13 +132,57 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 			}
 			auth = spec?.auth.clone() ?? new PasswordAuthorization();
-			auth.resolve({ username: userName || "UnknownUser", accessToken })
+			auth.resolve({ username: userName || "UnknownUser", accessToken });
 		}
 		if (auth.resolved()) {
 			return this._finalizeSession(serverName, auth);
 		} else {
 			throw new Error("Internal error: Authorization should already be resolved");
-		};
+		}
+	}
+
+	// This function is called when the end user signs out of the account.
+	public async removeSession(sessionId: string): Promise<void> {
+		this._removeSession(sessionId);
+	}
+
+	public async removeSessions(sessionIds: string[]): Promise<void> {
+		const storedPasswordCredKeys: string[] = [];
+		const removed: AuthenticationSession[] = [];
+		await Promise.allSettled(sessionIds.map(async (sessionId) => {
+			const index = this._sessions.findIndex((item) => item.id === sessionId);
+			const session = this._sessions[index];
+			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+			if (await this.secretStorage.get(credentialKey) !== undefined) {
+				storedPasswordCredKeys.push(credentialKey);
+			}
+			if (index > -1) {
+				this._sessions.splice(index, 1);
+			}
+			removed.push(session);
+		}));
+		if (storedPasswordCredKeys.length) {
+			const passwordOption = workspace.getConfiguration("intersystemsServerManager.credentialsProvider")
+				.get<string>("deletePasswordOnSignout", "ask");
+			let deletePasswords = (passwordOption === "always");
+			if (passwordOption === "ask") {
+				const choice = await window.showWarningMessage(
+					`Do you want to keep the stored passwords or delete them?`,
+					{
+						detail: `${storedPasswordCredKeys.length == sessionIds.length ? "All" : "Some"
+							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true,
+					},
+					{ title: "Keep", isCloseAffordance: true },
+					{ title: "Delete", isCloseAffordance: false },
+				);
+				deletePasswords = (choice?.title === "Delete");
+			}
+			if (deletePasswords) {
+				await Promise.allSettled(storedPasswordCredKeys.map((e) => this.secretStorage.delete(e)));
+			}
+		}
+		await this._storeStrippedSessions();
+		this._onDidChangeSessions.fire({ added: [], removed, changed: [] });
 	}
 
 	private async promptServerName(): Promise<string> {
@@ -264,7 +308,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 		const serverSpec = await getServerSpec(session.serverName);
 		if (serverSpec) {
-			serverSpec.auth.resolve({ accessToken: session.accessToken, username: session.userName })
+			serverSpec.auth.resolve({ accessToken: session.accessToken, username: session.userName });
 			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
 			if (response?.status == 401) {
 				await this._removeSession(session.id, true);
@@ -275,11 +319,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 		this._checkedSessions.push(session);
 		return true;
-	}
-
-	// This function is called when the end user signs out of the account.
-	public async removeSession(sessionId: string): Promise<void> {
-		this._removeSession(sessionId);
 	}
 
 	private async _removeSession(sessionId: string, alwaysDeletePassword = false): Promise<void> {
@@ -319,45 +358,6 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		this._onDidChangeSessions.fire({ added: [], removed: [session], changed: [] });
 	}
 
-	public async removeSessions(sessionIds: string[]): Promise<void> {
-		const storedPasswordCredKeys: string[] = [];
-		const removed: AuthenticationSession[] = [];
-		await Promise.allSettled(sessionIds.map(async (sessionId) => {
-			const index = this._sessions.findIndex((item) => item.id === sessionId);
-			const session = this._sessions[index];
-			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-			if (await this.secretStorage.get(credentialKey) !== undefined) {
-				storedPasswordCredKeys.push(credentialKey);
-			}
-			if (index > -1) {
-				this._sessions.splice(index, 1);
-			}
-			removed.push(session);
-		}));
-		if (storedPasswordCredKeys.length) {
-			const passwordOption = workspace.getConfiguration("intersystemsServerManager.credentialsProvider")
-				.get<string>("deletePasswordOnSignout", "ask");
-			let deletePasswords = (passwordOption === "always");
-			if (passwordOption === "ask") {
-				const choice = await window.showWarningMessage(
-					`Do you want to keep the stored passwords or delete them?`,
-					{
-						detail: `${storedPasswordCredKeys.length == sessionIds.length ? "All" : "Some"
-							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true,
-					},
-					{ title: "Keep", isCloseAffordance: true },
-					{ title: "Delete", isCloseAffordance: false },
-				);
-				deletePasswords = (choice?.title === "Delete");
-			}
-			if (deletePasswords) {
-				await Promise.allSettled(storedPasswordCredKeys.map((e) => this.secretStorage.delete(e)));
-			}
-		}
-		await this._storeStrippedSessions();
-		this._onDidChangeSessions.fire({ added: [], removed, changed: [] });
-	}
-
 	private async _ensureInitialized(): Promise<void> {
 		if (this._initializedDisposable === undefined) {
 
@@ -383,7 +383,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 									this._sessions[index] = new ServerManagerAuthenticationSession(
 										session.serverName,
 										session.userName,
-										password
+										password,
 									);
 								}
 							}
@@ -410,7 +410,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			strippedSessions.map(async (session) => {
 				const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
 				const accessToken = await this._secretStorage.get(credentialKey);
-				if (accessToken === undefined) return [];
+				if (accessToken === undefined) { return []; }
 				return [new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken)];
 			})))
 			.flat(1)

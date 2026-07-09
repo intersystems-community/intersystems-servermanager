@@ -1,7 +1,7 @@
-import * as vscode from "vscode";
 import { IServerSpecWithAuth, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
-import { IServerSetting } from "../serverSetting";
+import * as vscode from "vscode";
 import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
+import { IServerSetting } from "../serverSetting";
 
 /**
  * Get a server specification.
@@ -18,7 +18,7 @@ export async function getServerSpec(
 	const setting = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSetting | undefined || legacyEmbeddedServer(name);
 	// Unknown server
 	if (!setting) {
-		const folder = vscode.workspace.workspaceFolders?.find(f => f.name === name);
+		const folder = vscode.workspace.workspaceFolders?.find((f) => f.name === name);
 		if (!folder) {
 			return undefined;
 		}
@@ -83,32 +83,31 @@ export async function getServerSpec(
 export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
 	return {
 		"default~iris": {
-			"name": "default~iris",
-			"webServer": {
-				"scheme": "http",
-				"host": "127.0.0.1",
-				"port": 52773
+			name: "default~iris",
+			webServer: {
+				scheme: "http",
+				host: "127.0.0.1",
+				port: 52773,
 			},
-			"description": "Connection to local InterSystems IRIS™ installed with default settings."
+			description: "Connection to local InterSystems IRIS™ installed with default settings.",
 		},
 		"default~cache": {
-			"name": "default~cache",
-			"webServer": {
-				"scheme": "http",
-				"host": "127.0.0.1",
-				"port": 57772
+			name: "default~cache",
+			webServer: {
+				scheme: "http",
+				host: "127.0.0.1",
+				port: 57772,
 			},
-			"description": "Connection to local InterSystems Caché installed with default settings."
+			description: "Connection to local InterSystems Caché installed with default settings.",
 		},
 		"default~ensemble": {
-			"name": "default~ensemble",
-			"webServer": {
-				"scheme": "http",
-				"host": "127.0.0.1",
-				"port": 57772
+			name: "default~ensemble",
+			webServer: {
+				scheme: "http",
+				host: "127.0.0.1",
+				port: 57772,
 			},
-			"description": "Connection to local InterSystems Ensemble installed with default settings."
-		}
+			description: "Connection to local InterSystems Ensemble installed with default settings.",
+		},
 	}[name];
 }
-

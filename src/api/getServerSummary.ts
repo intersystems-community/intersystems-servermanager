@@ -1,5 +1,5 @@
-import * as vscode from "vscode";
 import { IServerName } from "@intersystems-community/intersystems-servermanager";
+import * as vscode from "vscode";
 import { IServerSetting } from "../serverSetting";
 import { legacyEmbeddedServer } from "./getServerSpec";
 

@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import { promptAuthMethod, promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
-import { getServerNames } from "./getServerNames";
 import { IServerSetting } from "../serverSetting";
+import { getServerNames } from "./getServerNames";
 
 export async function addServer(
 	scope?: vscode.ConfigurationScope,
-	target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global
+	target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global,
 ): Promise<string | undefined> {
 	const serverNames = getServerNames(scope);
 	const name = await vscode.window.showInputBox({
@@ -24,12 +24,12 @@ export async function addServer(
 			return null;
 		},
 	});
-	if (name === undefined) return;
+	if (name === undefined) { return; }
 	let description = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
 		title: "Optionally enter a description",
 	});
-	if (description === undefined) return;
+	if (description === undefined) { return; }
 	description = description.trim();
 	let host = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
@@ -38,7 +38,7 @@ export async function addServer(
 			return value.trim().length ? undefined : "Required";
 		},
 	});
-	if (host === undefined) return;
+	if (host === undefined) { return; }
 	host = host.trim();
 	const port = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
@@ -53,13 +53,13 @@ export async function addServer(
 				: "Required, 1-65535";
 		},
 	});
-	if (port === undefined) return;
+	if (port === undefined) { return; }
 	let pathPrefix = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
 		title:
 			"Optionally enter the path prefix of the instance",
 	});
-	if (pathPrefix === undefined) return;
+	if (pathPrefix === undefined) { return; }
 	pathPrefix = pathPrefix.trim();
 	if (!pathPrefix.startsWith("/")) {
 		pathPrefix = "/" + pathPrefix;
@@ -68,13 +68,13 @@ export async function addServer(
 		pathPrefix = pathPrefix.slice(0, -1);
 	}
 	const authMethod = await promptAuthMethod();
-	if (authMethod === undefined) return;
+	if (authMethod === undefined) { return; }
 	let authDetails: Pick<IServerSetting, "username" | "oauth2">;
 	if (authMethod === "oauth2") {
 		const authority = (await promptOAuth2Authority(name))?.trim();
-		if (!authority) return;
+		if (!authority) { return; }
 		const clientId = (await promptOAuth2ClientId(name))?.trim();
-		if (!clientId) return;
+		if (!clientId) { return; }
 		authDetails = { oauth2: { authority, clientId } };
 	} else {
 		let username = await vscode.window.showInputBox({
@@ -84,12 +84,12 @@ export async function addServer(
 			prompt:
 				"Leave empty to be prompted when connecting.",
 		});
-		if (username === undefined) return;
+		if (username === undefined) { return; }
 		username = username.trim();
 		if (username) {
 			authDetails = { username };
 		} else {
-			authDetails = {}
+			authDetails = {};
 		}
 	}
 	const scheme = await new Promise<string | undefined>((resolve) => {
@@ -113,7 +113,7 @@ export async function addServer(
 		});
 		quickPick.show();
 	});
-	if (scheme === undefined) return;
+	if (scheme === undefined) { return; }
 	const levelStr =
 		target == vscode.ConfigurationTarget.WorkspaceFolder
 			? "workspace-folder"

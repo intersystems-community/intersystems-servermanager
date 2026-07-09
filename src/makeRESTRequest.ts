@@ -1,12 +1,12 @@
 // Derived from
 //  https://github.com/intersystems/language-server/blob/bdeea88d1900a3aff35d5ac373436899f3904a7e/server/src/server.ts
 
+import { IServerSpec, IServerSpecWithAuth } from "@intersystems-community/intersystems-servermanager";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import * as https from "https";
 import * as vscode from "vscode";
-import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
-import { IServerSpec, IServerSpecWithAuth } from "@intersystems-community/intersystems-servermanager";
 import { getServerSpec } from "./api/getServerSpec";
+import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { getAccountFromParts } from "./commonActivate";
 
 export interface IServerSession {
@@ -72,7 +72,6 @@ export async function makeRESTRequest(
 		url += "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
 	}
 
-
 	const request: AxiosRequestConfig & { headers: {}, data?: any } = {
 		httpsAgent,
 		headers: {},
@@ -85,19 +84,19 @@ export async function makeRESTRequest(
 	};
 	if (data !== undefined) {
 		request.headers["Content-Type"] = "application/json";
-		request.data = data
+		request.data = data;
 	}
 	// Make the request
 	try {
 		let respdata;
 		// Make the request w/ cookies if applicable
 		if (cookies.length > 0) {
-			request.headers["Cookie"] = cookies.join("; ")
+			request.headers.Cookie = cookies.join("; ");
 			respdata = await axios.request(
 				request,
 			);
 			if (respdata?.status === 401) {
-				delete request.headers["Cookie"]
+				delete request.headers.Cookie;
 				respdata = undefined;
 			}
 		}
@@ -105,13 +104,13 @@ export async function makeRESTRequest(
 		if (respdata === undefined) {
 			await resolveCredentials(server);
 			if (!server.auth.resolved()) {
-				throw Error("Internal error: Credentials were not resolved")
+				throw Error("Internal error: Credentials were not resolved");
 			}
 			for (const [k, v] of Object.entries(server.auth.credentials)) {
 				if (typeof v === "object") {
-					request[k] = Object.assign({}, request[k], v)
+					request[k] = Object.assign({}, request[k], v);
 				} else {
-					request[k] = v
+					request[k] = v;
 				}
 			}
 			respdata = await axios.request(request);
@@ -199,7 +198,7 @@ async function resolveCredentials(spec: IServerSpecWithAuth): Promise<void> {
 			spec.auth.resolve({
 				accessToken: session.accessToken,
 				username: session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1],
-			})
+			});
 		}
 	}
 }
