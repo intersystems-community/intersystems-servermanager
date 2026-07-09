@@ -62,13 +62,14 @@ export async function getServerSpec(
 		// Fall back to default if appropriate
 		spec.superServer.host = spec.superServer.host || spec.webServer.host;
 	}
+	const auth = oauth2
+		? new OAuth2Authorization(oauth2)
+		: new PasswordAuthorization(username, password || undefined);
 	return {
 		...spec,
-		username,
-		password: password || undefined,
-		auth: oauth2 === undefined
-			? new PasswordAuthorization(username, password)
-			: new OAuth2Authorization(oauth2)
+		auth,
+		username: auth.username,
+		password: auth.password,
 	};
 }
 
