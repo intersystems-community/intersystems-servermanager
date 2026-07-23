@@ -1,9 +1,6 @@
 import * as vscode from "vscode";
 
-/**
- * Prompt the user to select an authentication method (password or oauth2).
- * Returns "password", "oauth2", or undefined if cancelled.
- */
+/** Prompt for the authentication method, or undefined if cancelled. */
 export async function promptAuthMethod(): Promise<"password" | "oauth2" | undefined> {
 	return await new Promise((resolve) => {
 		const quickPick = vscode.window.createQuickPick();
@@ -31,10 +28,7 @@ export async function promptAuthMethod(): Promise<"password" | "oauth2" | undefi
 	});
 }
 
-/**
- * Prompt the user for the OAuth2 authority URL.
- * Returns the trimmed URL without trailing slash, or undefined if cancelled.
- */
+/** Prompt for the OAuth2 authority URL, trimmed of any trailing slash. */
 export async function promptOAuth2Authority(serverName: string): Promise<string | undefined> {
 	const entered = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
@@ -52,10 +46,7 @@ export async function promptOAuth2Authority(serverName: string): Promise<string 
 	return entered.replace(/\/+$/, "");
 }
 
-/**
- * Prompt the user for the OAuth2 client ID.
- * Returns the entered value, or undefined if cancelled.
- */
+/** Prompt for the OAuth2 client ID. */
 export async function promptOAuth2ClientId(serverName: string): Promise<string | undefined> {
 	return await vscode.window.showInputBox({
 		ignoreFocusOut: true,

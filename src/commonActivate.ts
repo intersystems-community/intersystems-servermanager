@@ -7,6 +7,7 @@ import { getServerSpec } from "./api/getServerSpec";
 import { getServerSummary } from "./api/getServerSummary";
 import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
+import { initLogger } from "./logger";
 import { logout, serverSessions } from "./makeRESTRequest";
 import { OAuth2Config } from "./serverSetting";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
@@ -140,6 +141,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 
 	// Other parts of this extension will use this to persist state
 	globalState = context.globalState;
+
+	initLogger(context);
 
 	/** Helper function for adding a workspace folder */
 	const addWorkspaceFolderAsync = async (readonly: boolean, csp: boolean, namespaceTreeItem?: ServerTreeItem, project?: string, webApp?: string) => {
@@ -444,7 +447,9 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			}
 			const picks = await vscode.window.showQuickPick(sessions.map((s) => s.account), { canPickMany: true, title: "Pick the accounts to sign out of" });
 			if (!picks?.length) { return; }
-			return authProvider.removeSessions(picks.map((p) => p.id));
+			// Map picked accounts back to session ids: account.id preserves username case whereas session.id lowercases it.
+			const pickedIds = new Set(picks.map((p) => p.id));
+			return authProvider.removeSessions(sessions.filter((s) => pickedIds.has(s.account.id)).map((s) => s.id));
 		}),
 		// Listen for relevant configuration changes
 		vscode.workspace.onDidChangeConfiguration((e) => {
