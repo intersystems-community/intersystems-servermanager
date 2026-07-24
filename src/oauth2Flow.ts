@@ -26,7 +26,7 @@ async function discoverEndpoints(label: string, authority: string): Promise<{ au
 		};
 	} catch (err: any) {
 		log(`OAuth2 [${label}]: discovery failed - ${err.message}`);
-		vscode.window.showErrorMessage(`OAuth2: Failed to discover endpoints from ${discoveryUrl}`);
+		vscode.window.showErrorMessage(`OAuth2: Failed to discover endpoints from ${discoveryUrl}`, "Dismiss");
 		return undefined;
 	}
 }
@@ -83,10 +83,10 @@ export async function performOAuth2Login(label: string, config: IOAuth2Config): 
 				clearTimeout(timeoutHandle);
 
 				if (error) {
-					vscode.window.showErrorMessage(`OAuth2 error: ${error} - ${query.get("error_description") || ""}`, { modal: true });
+					vscode.window.showErrorMessage(`OAuth2 error: ${error} - ${query.get("error_description") || ""}`, { modal: true }, "Dismiss");
 					resolve(undefined);
 				} else if (returnedState !== state) {
-					vscode.window.showErrorMessage("OAuth2: State mismatch. Possible CSRF attack.", { modal: true });
+					vscode.window.showErrorMessage("OAuth2: State mismatch. Possible CSRF attack.", { modal: true }, "Dismiss");
 					resolve(undefined);
 				} else {
 					resolve(code || undefined);
@@ -97,7 +97,7 @@ export async function performOAuth2Login(label: string, config: IOAuth2Config): 
 		// Auto-cancel after 2 minutes
 		const timeoutHandle = setTimeout(() => {
 			disposable.dispose();
-			vscode.window.showWarningMessage("OAuth2: Login timed out. Please try again.", { modal: true });
+			vscode.window.showWarningMessage("OAuth2: Login timed out. Please try again.", { modal: true }, "Dismiss");
 			resolve(undefined);
 		}, 120000);
 	});
@@ -119,13 +119,13 @@ export async function performOAuth2Login(label: string, config: IOAuth2Config): 
 		});
 		const tokenSet = tokenSetFromResponse(label, tokenResponse.data);
 		if (!tokenSet) {
-			vscode.window.showErrorMessage("OAuth2: No access token in response");
+			vscode.window.showErrorMessage("OAuth2: No access token in response", "Dismiss");
 		}
 		return tokenSet;
 	} catch (err: any) {
 		const detail = err.response?.data?.error_description || err.message;
 		log(`OAuth2 [${label}]: token exchange failed - ${detail}`);
-		vscode.window.showErrorMessage(`OAuth2: Token exchange failed - ${detail}`);
+		vscode.window.showErrorMessage(`OAuth2: Token exchange failed - ${detail}`, "Dismiss");
 		return undefined;
 	}
 }
