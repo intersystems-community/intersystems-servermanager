@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { promptAuthMethod, promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
+import { promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
 import { IServerSetting } from "../serverSetting";
 import { getServerNames } from "./getServerNames";
 
@@ -67,7 +67,13 @@ export async function addServer(
 	if (pathPrefix.endsWith("/")) {
 		pathPrefix = pathPrefix.slice(0, -1);
 	}
-	const authMethod = await promptAuthMethod();
+	const authMethod = (await vscode.window.showQuickPick(
+		[
+			{ label: "password", description: "Classic username/password authentication" },
+			{ label: "oauth2", description: "OAuth2/OpenID Connect (e.g., Auth0, Keycloak)" },
+		],
+		{ ignoreFocusOut: true, title: "Select the authentication method" },
+	))?.label;
 	if (authMethod === undefined) { return; }
 	let authDetails: Pick<IServerSetting, "username" | "oauth2">;
 	if (authMethod === "oauth2") {
