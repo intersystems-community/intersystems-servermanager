@@ -34,7 +34,6 @@ export async function promptOAuth2Authority(serverName: string): Promise<string 
 		ignoreFocusOut: true,
 		title: `OAuth2 Configuration for '${serverName}'`,
 		prompt: "Enter the OAuth2 authority URL (issuer)",
-		placeHolder: "https://your-identity-provider.com",
 		validateInput: (v) => {
 			if (!v.startsWith("https://") && !v.startsWith("http://")) {
 				return "Must be a URL starting with https:// or http://";
@@ -52,6 +51,5 @@ export async function promptOAuth2ClientId(serverName: string): Promise<string |
 		ignoreFocusOut: true,
 		title: `OAuth2 Configuration for '${serverName}'`,
 		prompt: "Enter the OAuth2 client ID for this application",
-		placeHolder: "your-client-id",
 	});
 }
