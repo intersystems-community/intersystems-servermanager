@@ -17,7 +17,7 @@ import {
 import { getServerSpec } from "./api/getServerSpec";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
-import { log } from "./logger";
+import { logger } from "./logger";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { IOAuth2Config, performOAuth2Login, refreshOAuth2Token } from "./oauth2Flow";
 
@@ -140,7 +140,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 					if (accessToken) {
 						await this.secretStorage.store(credentialKey, accessToken);
 						await this._storeOAuth2Secret(sessionId, tokenSet);
-						log(`OAuth2 [${sessionId}]: login complete, ${tokenSet?.refreshToken ? "refresh token stored" : "no refresh token"}`);
+						logger?.info(`OAuth2 [${sessionId}]: login complete, ${tokenSet?.refreshToken ? "refresh token stored" : "no refresh token"}`);
 					}
 				} else {
 					// Password is "" if userName is ""
@@ -337,17 +337,17 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			const isOAuth2 = serverSpec.auth instanceof OAuth2Authorization;
 			// Proactively renew an expired OAuth2 access token so we don't send a request we know will fail
 			if (isOAuth2 && await this._isAccessTokenExpired(session.id)) {
-				log(`OAuth2 [${session.id}]: access token expired, refreshing proactively`);
+				logger?.debug(`OAuth2 [${session.id}]: access token expired, refreshing proactively`);
 				session = await this._tryRefresh(session, serverSpec) ?? session;
 			}
 			serverSpec.auth.resolve({ accessToken: session.accessToken, username: session.userName });
 			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => undefined);
 			if (response?.status == 401) {
 				// Before giving up and forcing an interactive login, try to renew via refresh token
-				if (isOAuth2) { log(`OAuth2 [${session.id}]: got 401, attempting refresh`); }
+				if (isOAuth2) { logger?.debug(`OAuth2 [${session.id}]: got 401, attempting refresh`); }
 				const refreshed = isOAuth2 ? await this._tryRefresh(session, serverSpec) : undefined;
 				if (!refreshed) {
-					if (isOAuth2) { log(`OAuth2 [${session.id}]: refresh unavailable, signing out (re-login required)`); }
+					if (isOAuth2) { logger?.warn(`OAuth2 [${session.id}]: refresh unavailable, signing out (re-login required)`); }
 					await this._removeSession(session.id, true);
 					return false;
 				}
@@ -397,7 +397,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	private async _doRefresh(sessionId: string, serverSpec: IServerSpecWithAuth): Promise<string | undefined> {
 		const secret = await this._getOAuth2Secret(sessionId);
 		if (!secret?.refreshToken) {
-			log(`OAuth2 [${sessionId}]: no refresh token stored`);
+			logger?.debug(`OAuth2 [${sessionId}]: no refresh token stored`);
 			return undefined;
 		}
 		const tokenSet = await refreshOAuth2Token(sessionId, ServerManagerAuthenticationProvider.oauth2Config(serverSpec), secret.refreshToken);
@@ -405,7 +405,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
 		await this.secretStorage.store(credentialKey, tokenSet.accessToken);
 		await this._storeOAuth2Secret(sessionId, tokenSet);
-		log(`OAuth2 [${sessionId}]: access token refreshed successfully`);
+		logger?.info(`OAuth2 [${sessionId}]: access token refreshed successfully`);
 		return tokenSet.accessToken;
 	}
 

@@ -1,15 +1,11 @@
 import * as vscode from "vscode";
 
-let channel: vscode.OutputChannel | undefined;
+export let logger: vscode.LogOutputChannel | undefined;
 
-/** Create the "Server Manager" output channel. Call once during activation. */
+/** Create the "InterSystems Server Manager" log channel. Call once during activation. */
 export function initLogger(context: vscode.ExtensionContext): void {
-	if (!channel) {
-		channel = vscode.window.createOutputChannel("InterSystems Server Manager");
-		context.subscriptions.push(channel);
+	if (!logger) {
+		logger = vscode.window.createOutputChannel("InterSystems Server Manager", { log: true });
+		context.subscriptions.push(logger);
 	}
-}
-
-export function log(message: string): void {
-	channel?.appendLine(`[${new Date().toISOString()}] ${message}`);
 }

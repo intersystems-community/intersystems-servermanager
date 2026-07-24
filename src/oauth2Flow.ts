@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as vscode from "vscode";
-import { log } from "./logger";
+import { logger } from "./logger";
 
 export interface IOAuth2Config {
 	authority: string;
@@ -25,7 +25,7 @@ async function discoverEndpoints(label: string, authority: string): Promise<{ au
 			tokenEndpoint: discovery.data.token_endpoint,
 		};
 	} catch (err: any) {
-		log(`OAuth2 [${label}]: discovery failed - ${err.message}`);
+		logger?.error(`OAuth2 [${label}]: discovery failed - ${err.message}`);
 		vscode.window.showErrorMessage(`OAuth2: Failed to discover endpoints from ${discoveryUrl}`, "Dismiss");
 		return undefined;
 	}
@@ -33,7 +33,7 @@ async function discoverEndpoints(label: string, authority: string): Promise<{ au
 
 function tokenSetFromResponse(label: string, data: any): IOAuth2TokenSet | undefined {
 	if (!data.access_token) { return undefined; }
-	log(`OAuth2 [${label}]: received token (expires_in=${data.expires_in ?? "n/a"}, refresh_token ${data.refresh_token ? "present" : "absent"})`);
+	logger?.debug(`OAuth2 [${label}]: received token (expires_in=${data.expires_in ?? "n/a"}, refresh_token ${data.refresh_token ? "present" : "absent"})`);
 	return {
 		accessToken: data.access_token,
 		refreshToken: data.refresh_token,
@@ -48,7 +48,7 @@ function tokenSetFromResponse(label: string, data: any): IOAuth2TokenSet | undef
  * listen for the callback, exchange the code for an access token (and refresh token if issued).
  */
 export async function performOAuth2Login(label: string, config: IOAuth2Config): Promise<IOAuth2TokenSet | undefined> {
-	log(`OAuth2 [${label}]: starting interactive login`);
+	logger?.info(`OAuth2 [${label}]: starting interactive login`);
 	const codeVerifier = generateCodeVerifier();
 	const codeChallenge = await generateCodeChallenge(codeVerifier);
 	const state = generateRandomHex(32); // CSRF protection
@@ -124,7 +124,7 @@ export async function performOAuth2Login(label: string, config: IOAuth2Config): 
 		return tokenSet;
 	} catch (err: any) {
 		const detail = err.response?.data?.error_description || err.message;
-		log(`OAuth2 [${label}]: token exchange failed - ${detail}`);
+		logger?.error(`OAuth2 [${label}]: token exchange failed - ${detail}`);
 		vscode.window.showErrorMessage(`OAuth2: Token exchange failed - ${detail}`, "Dismiss");
 		return undefined;
 	}
@@ -135,7 +135,7 @@ export async function performOAuth2Login(label: string, config: IOAuth2Config): 
  * @returns The new token set (carrying the rotated or existing refresh token), or undefined if the refresh token is invalid/expired.
  */
 export async function refreshOAuth2Token(label: string, config: IOAuth2Config, refreshToken: string): Promise<IOAuth2TokenSet | undefined> {
-	log(`OAuth2 [${label}]: refreshing access token`);
+	logger?.info(`OAuth2 [${label}]: refreshing access token`);
 	const endpoints = await discoverEndpoints(label, config.authority);
 	if (!endpoints) { return undefined; }
 	try {
@@ -152,7 +152,7 @@ export async function refreshOAuth2Token(label: string, config: IOAuth2Config, r
 		return tokenSet;
 	} catch (err: any) {
 		// Refresh token expired or revoked - caller falls back to interactive login
-		log(`OAuth2 [${label}]: refresh failed - ${err.response?.data?.error_description || err.message}`);
+		logger?.error(`OAuth2 [${label}]: refresh failed - ${err.response?.data?.error_description || err.message}`);
 		return undefined;
 	}
 }
