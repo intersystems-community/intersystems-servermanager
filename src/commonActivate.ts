@@ -106,7 +106,7 @@ export class OAuth2Authorization implements Authorization {
 	}
 
 	public get username(): string {
-		return this.#username ?? "OAuth2User";
+		return this.#username ?? "*OAuth2User*";
 	}
 
 	public get password(): undefined {
