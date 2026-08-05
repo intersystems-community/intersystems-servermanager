@@ -70,7 +70,7 @@ export async function addServer(
 	}
 	const authMethod = (await vscode.window.showQuickPick(
 		[
-			{ label: "Basic Auth", description: "Classic username/password authentication" },
+			{ label: "Basic", description: "Username/password" },
 			{ label: "OAuth2", description: "OAuth2/OpenID Connect (e.g., Auth0, Keycloak)" },
 			{ label: "Unauthenticated", description: "Prompt for username and password only when needed" },
 		] as const,
