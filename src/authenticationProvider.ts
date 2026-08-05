@@ -16,7 +16,7 @@ import {
 } from "vscode";
 import { getServerSpec } from "./api/getServerSpec";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState, OAuth2Authorization, PasswordAuthorization } from "./commonActivate";
+import { globalState, OAuth2Authorization, BasicAuthorization } from "./commonActivate";
 import { logger } from "./logger";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { IOAuth2Config, performOAuth2Login, refreshOAuth2Token } from "./oauth2Flow";
@@ -77,7 +77,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 
 	private _onDidChangeSessions = new EventEmitter<AuthenticationProviderAuthenticationSessionsChangeEvent>();
 
-	constructor(private readonly secretStorage: SecretStorage) {}
+	constructor(private readonly secretStorage: SecretStorage) { }
 
 	public dispose(): void {
 
@@ -148,7 +148,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				}
 
 			}
-			auth = spec?.auth.clone() ?? new PasswordAuthorization();
+			auth = spec?.auth.clone() ?? new BasicAuthorization();
 			auth.resolve({ username: userName || "UnknownUser", accessToken });
 		}
 		if (auth.resolved()) {

@@ -3,6 +3,7 @@ import { promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
 import { IServerSetting } from "../serverSetting";
 import { getServerNames } from "./getServerNames";
 
+
 export async function addServer(
 	scope?: vscode.ConfigurationScope,
 	target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global,
@@ -69,20 +70,21 @@ export async function addServer(
 	}
 	const authMethod = (await vscode.window.showQuickPick(
 		[
-			{ label: "password", description: "Classic username/password authentication" },
-			{ label: "oauth2", description: "OAuth2/OpenID Connect (e.g., Auth0, Keycloak)" },
-		],
+			{ label: "Basic Auth", description: "Classic username/password authentication" },
+			{ label: "OAuth2", description: "OAuth2/OpenID Connect (e.g., Auth0, Keycloak)" },
+			{ label: "Unauthenticated", description: "Prompt for username and password only when needed" },
+		] as const,
 		{ ignoreFocusOut: true, title: "Select the authentication method" },
 	))?.label;
 	if (authMethod === undefined) { return; }
 	let authDetails: Pick<IServerSetting, "username" | "oauth2">;
-	if (authMethod === "oauth2") {
+	if (authMethod === "OAuth2") {
 		const authority = (await promptOAuth2Authority(name))?.trim();
 		if (!authority) { return; }
 		const clientId = (await promptOAuth2ClientId(name))?.trim();
 		if (!clientId) { return; }
 		authDetails = { oauth2: { authority, clientId } };
-	} else {
+	} else if (authMethod === "Basic Auth") {
 		let username = await vscode.window.showInputBox({
 			ignoreFocusOut: true,
 			title:
@@ -92,11 +94,11 @@ export async function addServer(
 		});
 		if (username === undefined) { return; }
 		username = username.trim();
-		if (username) {
-			authDetails = { username };
-		} else {
-			authDetails = {};
-		}
+		authDetails = { username };
+	} else if (authMethod === "Unauthenticated") {
+		authDetails = {}
+	} else {
+		throw Error(`Unreachable! ${authMethod} must be either "Basic Auth", "OAuth2", or "Unauthenticated".`)
 	}
 	const scheme = await new Promise<string | undefined>((resolve) => {
 		let result: string;

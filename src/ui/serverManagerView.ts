@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
 import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
-import { OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
+import { OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
 import { makeRESTRequest } from "../makeRESTRequest";
 
 const SETTINGS_VERSION = "v1";
@@ -454,7 +454,7 @@ async function specFromServerSummary(serverSummary: IServerName): Promise<IServe
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
 		if (spec === undefined) {
-			return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" }, auth: new PasswordAuthorization("", "") };
+			return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" }, auth: new BasicAuthorization() };
 		} else {
 			spec.webServer = {
 				scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "",

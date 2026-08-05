@@ -22,7 +22,7 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
 }
 
-export class PasswordAuthorization implements Authorization {
+export class BasicAuthorization implements Authorization {
 	#username?: string;
 	#password?: string;
 	constructor(username?: string, password?: string) {
@@ -70,8 +70,8 @@ export class PasswordAuthorization implements Authorization {
 		};
 	}
 
-	public clone(): PasswordAuthorization {
-		return new PasswordAuthorization(this.#username, this.#password);
+	public clone(): BasicAuthorization {
+		return new BasicAuthorization(this.#username, this.#password);
 	}
 }
 
@@ -531,7 +531,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		},
 
 		defaultAuth(): Authorization {
-			return new PasswordAuthorization();
+			return new BasicAuthorization();
 		},
 
 	};

@@ -1,6 +1,6 @@
 import { IServerSpecWithAuth, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
-import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, PasswordAuthorization } from "../commonActivate";
+import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
 import { IServerSetting } from "../serverSetting";
 
 /**
@@ -47,7 +47,7 @@ export async function getServerSpec(
 			},
 			username: username ?? auth?.username,
 			password: (password ?? auth?.password) || undefined,
-			auth: auth ?? new PasswordAuthorization(username, password),
+			auth: auth ?? new BasicAuthorization(username, password),
 			description: `Server for workspace folder "${name}"`,
 		};
 	}
@@ -64,7 +64,7 @@ export async function getServerSpec(
 	}
 	const auth = oauth2
 		? new OAuth2Authorization(oauth2)
-		: new PasswordAuthorization(username, password || undefined);
+		: new BasicAuthorization(username, password);
 	return {
 		...spec,
 		auth,
