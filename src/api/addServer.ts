@@ -72,7 +72,7 @@ export async function addServer(
 		[
 			{ label: "Basic", description: "Username/password" },
 			{ label: "OAuth2", description: "OAuth2/OpenID Connect (e.g., Auth0, Keycloak)" },
-			{ label: "Unauthenticated", description: "Prompt for username and password only when needed" },
+			{ label: "Unauthenticated", description: "Not recommended. Only use when your server is configured to allow it." },
 		] as const,
 		{ ignoreFocusOut: true, title: "Select the authentication method" },
 	))?.label;
