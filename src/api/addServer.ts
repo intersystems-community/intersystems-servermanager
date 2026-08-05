@@ -84,7 +84,7 @@ export async function addServer(
 		const clientId = (await promptOAuth2ClientId(name))?.trim();
 		if (!clientId) { return; }
 		authDetails = { oauth2: { authority, clientId } };
-	} else if (authMethod === "Basic Auth") {
+	} else if (authMethod === "Basic") {
 		let username = await vscode.window.showInputBox({
 			ignoreFocusOut: true,
 			title:
