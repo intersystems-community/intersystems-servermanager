@@ -41,10 +41,12 @@ export interface IServerSpec extends IJSONServerSpec {
 	name: string;
 }
 
+/** IServerSpec with `auth` guaranteed to be present. */
 export interface IServerSpecWithAuth extends IServerSpec {
 	auth: Authorization;
 }
 
+/** API to the Server Manager extension */
 export interface ServerManagerAPI {
 	pickServer(
 		scope?: vscode.ConfigurationScope,
@@ -75,15 +77,27 @@ export interface ServerManagerAPI {
 	onDidChangePassword(
 	): vscode.Event<string>;
 
+	/** Authorization to use when a server definition has no `auth` of its own.
+	 * This creates a Basic Auth that needs to be resolved with username and password.
+	 */
 	defaultAuth(): Authorization;
 }
 
+/**
+ * Represents a server's authentication state and how to apply it to a request.
+ * Implementations exist for basic auth (username/password) and OAuth2 (bearer token).
+ */
 export interface Authorization {
+	/** Whether enough credentials are present to authenticate a request. */
 	resolved(): this is ResolvedAuthorization;
+	/** Supplies missing credentials (e.g. from a prompt or token exchange); returns the new `resolved()` state. */
 	resolve(params: { accessToken?: string; username?: string }): this is ResolvedAuthorization;
+	/** Discards the resolved secret (password/token), reverting to an unresolved state. */
 	clear(): asserts this is Authorization;
+	/** Returns an independent copy carrying the same credentials. */
 	clone(): Authorization;
 
+	/** The IRIS username or "*OAuth2*" if authorized with OAuth2 */
 	get username(): string;
 	get password(): undefined | string;
 
@@ -92,6 +106,7 @@ export interface Authorization {
 	get credentials(): undefined | { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }
 
+/** Narrowed `Authorization` known to hold usable credentials, per `resolved()`. */
 export interface ResolvedAuthorization extends Authorization {
 	get accessToken(): string;
 	get httpAuthorizationHeader(): string;
@@ -121,6 +136,7 @@ export interface ServerForUri {
 	namespace: string;
 }
 
+/** API to the VSCode ObjectScript extension */
 export interface VSCodeObjectScriptAPI {
 	serverForUri: (uri: vscode.Uri) => ServerForUri | undefined;
 	asyncServerForUri: (uri: vscode.Uri) => Promise<ServerForUri | undefined>;
