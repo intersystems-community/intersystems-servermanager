@@ -1,6 +1,6 @@
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { Uri } from "vscode";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import { extensionId } from "../commonActivate";
 
 export async function getPortalUri(

@@ -53,7 +53,7 @@
     "node-cmd": "^5.0.0"
   },
   "devDependencies": {
-    "@intersystems-community/intersystems-servermanager": "^3.10.2",
+    "@intersystems-community/intersystems-servermanager": "^3.14.0",
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^20.14.0",
@@ -209,6 +209,39 @@
                   "description": {
                     "type": "string",
                     "description": "Optional description of the server."
+                  },
+                  "oauth2": {
+                    "type": "object",
+                    "description": "OAuth2/OpenID Connect configuration. Required when authMethod is 'oauth2'.",
+                    "properties": {
+                      "authority": {
+                        "type": "string",
+                        "description": "OAuth2 authority URL (issuer) from your identity provider.",
+                        "pattern": "^https?://",
+                        "examples": [
+                          "https://your-domain.auth0.com",
+                          "https://login.microsoftonline.com/YOUR-TENANT-ID/v2.0"
+                        ]
+                      },
+                      "clientId": {
+                        "type": "string",
+                        "description": "OAuth2 client ID for this application.",
+                        "minLength": 1
+                      },
+                      "scopes": {
+                        "type": "array",
+                        "description": "Optional additional scopes to request beyond 'openid profile email'.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      }
+                    },
+                    "required": [
+                      "authority",
+                      "clientId"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [

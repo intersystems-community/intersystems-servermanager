@@ -1,10 +1,10 @@
+import { IServerName, IServerSpecWithAuth } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
 import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
-import { IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
 import { makeRESTRequest } from "../makeRESTRequest";
-import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
 
 const SETTINGS_VERSION = "v1";
 
@@ -215,7 +215,7 @@ export interface ServerParams {
 	sorted?: boolean;
 	serverSummary?: IServerName;
 	serverName?: string;
-	serverSpec?: IServerSpec;
+	serverSpec?: IServerSpecWithAuth;
 	serverApiVersion?: number;
 	ns?: string;
 }
@@ -237,9 +237,9 @@ interface ISMItem {
 export class SMTreeItem extends vscode.TreeItem {
 
 	public readonly parent: SMTreeItem | undefined;
+	public readonly params?: ServerParams;
 	// tslint:disable-next-line: ban-types
 	private readonly _getChildren?: Function;
-	public readonly params?: ServerParams;
 
 	constructor(item: ISMItem) {
 		const collapsibleState = item.getChildren
@@ -280,12 +280,12 @@ function allServers(treeItem: SMTreeItem, params?: ServerParams): ServerTreeItem
 	}));
 	// Add children for servers defined at the workspace folder level
 	vscode.workspace.workspaceFolders?.map((wf) => {
-		if (["isfs", "isfs-readonly"].includes(wf.uri.scheme)) return;
+		if (["isfs", "isfs-readonly"].includes(wf.uri.scheme)) { return; }
 		children.push(...getServerNames(wf).filter((wfs) => !wsServerNames.some((wss) => wss.name == wfs.name)).map((wfs) => {
 			return new ServerTreeItem({ label: `${wfs.name} (${wf.name})`, id: wfs.name, parent: treeItem }, wfs);
 		}));
 	});
-	if (params?.sorted) children.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+	if (params?.sorted) { children.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0); }
 	return children;
 }
 
@@ -346,7 +346,7 @@ async function currentServers(element: SMTreeItem, params?: ServerParams): Promi
 				new ServerTreeItem({ parent: element, label: `docker:${port}`, id: name }, serverSummary),
 			);
 		}
-	})
+	});
 
 	return Array.from(children.values()).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 }
@@ -423,7 +423,7 @@ async function serverFeatures(element: ServerTreeItem, params?: ServerParams): P
 	const children: FeatureTreeItem[] = [];
 
 	if (params?.serverSummary) {
-		let serverSpec = await specFromServerSummary(params.serverSummary);
+		const serverSpec = await specFromServerSummary(params.serverSummary);
 		if (!serverSpec) {
 			return undefined;
 		}
@@ -433,28 +433,35 @@ async function serverFeatures(element: ServerTreeItem, params?: ServerParams): P
 			let response = await makeRESTRequest("HEAD", serverSpec);
 			if (response?.status === 401) {
 				// Authentication error, so retry in case first attempt cleared a no-longer-valid stored password
-				serverSpec.password = undefined;
+				serverSpec.auth.clear() as void;
 				response = await makeRESTRequest("HEAD", serverSpec);
 			}
 			if (response?.status !== 200) {
-				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.auth.username || "UnknownUser", `${response.status} ${response.statusText}`));
 			} else {
-				children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.username || 'UnknownUser'));
+				children.push(new NamespacesTreeItem({ parent: element, label: name, id: name }, element.name, serverSpec, serverSpec.auth.username || "UnknownUser"));
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.auth.username || "UnknownUser", errorStr as string));
 		}
 	}
 	return children;
 }
 
-async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec | undefined> {
+async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpecWithAuth | undefined> {
 	const { name, description, detail, scope } = serverSummary;
+	const spec = await getServerSpec(name, scope);
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
 	if (dockerDetail) {
-		return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" } };
+		if (spec === undefined) {
+			return { name, description, webServer: { scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "" }, auth: new BasicAuthorization() };
+		} else {
+			spec.webServer = {
+				scheme: "http", host: "127.0.0.1", port: parseInt(dockerDetail[1], 10), pathPrefix: "",
+			};
+		}
 	}
-	return getServerSpec(name, scope);
+	return spec;
 }
 
 // tslint:disable-next-line: max-classes-per-file
@@ -488,8 +495,8 @@ export class NamespacesTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName: string,
-		serverSpec: IServerSpec,
-		username: string
+		serverSpec: IServerSpecWithAuth,
+		username: string,
 	) {
 		const parentFolderId = element.parent?.id || "";
 		super({
@@ -518,7 +525,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: ServerParams):
 
 	if (params?.serverName) {
 		const name: string = params.serverName;
-		const serverSpec: IServerSpec | undefined = params.serverSpec;
+		const serverSpec = params.serverSpec;
 		if (!serverSpec) {
 			return undefined;
 		}
@@ -526,7 +533,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: ServerParams):
 		try {
 			const response = await makeRESTRequest("GET", serverSpec);
 			if (response?.status !== 200) {
-				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', `${response.status} ${response.statusText}`));
+				children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.auth.username || "UnknownUser", `${response.status} ${response.statusText}`));
 			} else {
 				const serverApiVersion = response.data.result.content.api;
 				response.data.result.content.namespaces.map((namespace: string) => {
@@ -534,7 +541,7 @@ async function serverNamespaces(element: ServerTreeItem, params?: ServerParams):
 				});
 			}
 		} catch (errorStr) {
-			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.username || 'UnknownUser', errorStr));
+			children.push(new OfflineTreeItem({ parent: element, label: name, id: name }, serverSpec.auth.username || "UnknownUser", errorStr as string));
 		}
 	}
 
@@ -553,8 +560,8 @@ export class NamespaceTreeItem extends SMTreeItem {
 		element: ISMItem,
 		name: string,
 		serverName: string,
-		serverSpec: IServerSpec,
-		serverApiVersion: number
+		serverSpec: IServerSpecWithAuth,
+		serverApiVersion: number,
 	) {
 		const parentFolderId = element.parent?.id || "";
 		const id = parentFolderId + ":" + name;
@@ -564,7 +571,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 			parent: element.parent,
 			tooltip: `${name} on ${serverName}`,
 			getChildren: namespaceFeatures,
-			params: { serverName, serverSpec, serverApiVersion }
+			params: { serverName, serverSpec, serverApiVersion },
 		});
 		this.name = name;
 		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent) ? "/wsFolder" : ""}/${name === "%SYS" ? "sysnamespace" : "namespace"}`;
@@ -582,7 +589,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 async function namespaceFeatures(element: NamespaceTreeItem, params?: ServerParams): Promise<FeatureTreeItem[] | undefined> {
 	return [
 		new ProjectsTreeItem({ parent: element, id: element.name, label: element.name }, params?.serverName, params?.serverSpec, params?.serverApiVersion),
-		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params?.serverName, params?.serverSpec, params?.serverApiVersion)
+		new WebAppsTreeItem({ parent: element, id: element.name, label: element.name }, params?.serverName, params?.serverSpec, params?.serverApiVersion),
 	];
 }
 
@@ -591,21 +598,21 @@ export class ProjectsTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName?: string,
-		serverSpec?: IServerSpec,
-		serverApiVersion: number = 0
+		serverSpec?: IServerSpecWithAuth,
+		serverApiVersion: number = 0,
 	) {
-		const parentFolderId = element.parent?.id || '';
+		const parentFolderId = element.parent?.id || "";
 		super({
 			parent: element.parent,
-			label: 'Projects',
-			id: parentFolderId + ':projects',
+			label: "Projects",
+			id: parentFolderId + ":projects",
 			tooltip: `Projects in this namespace`,
 			getChildren: namespaceProjects,
-			params: { serverName, serverSpec, serverApiVersion, ns: element.label }
+			params: { serverName, serverSpec, serverApiVersion, ns: element.label },
 		});
-		this.name = 'Projects';
-		this.contextValue = serverApiVersion.toString() + '/projects';
-		this.iconPath = new vscode.ThemeIcon('library');
+		this.name = "Projects";
+		this.contextValue = serverApiVersion.toString() + "/projects";
+		this.iconPath = new vscode.ThemeIcon("library");
 	}
 }
 
@@ -621,22 +628,23 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: ServerParam
 
 	if (params?.serverName && params.ns) {
 		const name: string = params.serverName;
-		const serverSpec: IServerSpec | undefined = params.serverSpec;
+		const serverSpec = params.serverSpec;
 		if (!serverSpec) {
-			return undefined
+			return undefined;
 		}
 
 		const response = await makeRESTRequest(
 			"POST",
 			serverSpec,
 			{ apiVersion: 1, namespace: params.ns, path: "/action/query" },
-			{ query: "SELECT Name, Description FROM %Studio.Project", parameters: [] }
+			{ query: "SELECT Name, Description FROM %Studio.Project", parameters: [] },
 		);
 		if (response?.status === 200) {
 			if (response.data.result.content === undefined) {
 				let message;
 				if (response.data.status?.errors[0]?.code === 5540) {
-					message = `To allow user '${serverSpec.username}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${serverSpec.username}"`;
+					const username = serverSpec.auth.username || "UnknownUser";
+					message = `To allow user '${username}' to list projects in namespace '${params.ns}', run this SQL statement there using an account with sufficient privilege: GRANT SELECT ON %Studio.Project TO "${username}"`;
 				} else {
 					message = response.data.status.summary;
 				}
@@ -658,19 +666,19 @@ export class ProjectTreeItem extends SMTreeItem {
 		element: ISMItem,
 		name: string,
 		description: string,
-		serverApiVersion: number
+		serverApiVersion: number,
 	) {
-		const parentFolderId = element.parent?.id || '';
-		const id = parentFolderId + ':' + name;
+		const parentFolderId = element.parent?.id || "";
+		const id = parentFolderId + ":" + name;
 		super({
 			parent: element.parent,
 			label: name,
 			id,
-			tooltip: description
+			tooltip: description,
 		});
 		this.name = name;
 		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "/wsFolder" : ""}/project`;
-		this.iconPath = new vscode.ThemeIcon('files');
+		this.iconPath = new vscode.ThemeIcon("files");
 	}
 }
 
@@ -679,21 +687,21 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName: string | undefined,
-		serverSpec: IServerSpec | undefined,
-		serverApiVersion: number = 0
+		serverSpec: IServerSpecWithAuth | undefined,
+		serverApiVersion: number = 0,
 	) {
-		const parentFolderId = element.parent?.id || '';
+		const parentFolderId = element.parent?.id || "";
 		super({
 			parent: element.parent,
-			label: 'Web Applications',
-			id: parentFolderId + ':webapps',
+			label: "Web Applications",
+			id: parentFolderId + ":webapps",
 			tooltip: `Web Applications in this namespace`,
 			getChildren: namespaceWebApps,
-			params: { serverName, serverSpec, serverApiVersion, ns: element.label }
+			params: { serverName, serverSpec, serverApiVersion, ns: element.label },
 		});
-		this.name = 'Web Applications';
-		this.contextValue = serverApiVersion.toString() + '/webapps';
-		this.iconPath = new vscode.ThemeIcon('globe');
+		this.name = "Web Applications";
+		this.contextValue = serverApiVersion.toString() + "/webapps";
+		this.iconPath = new vscode.ThemeIcon("globe");
 	}
 }
 
@@ -709,15 +717,15 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: ServerParams
 
 	if (params?.serverName && params.ns) {
 		const name: string = params.serverName;
-		const serverSpec: IServerSpec | undefined = params.serverSpec;
+		const serverSpec = params.serverSpec;
 		if (!serverSpec) {
-			return undefined
+			return undefined;
 		}
 
 		const response = await makeRESTRequest(
 			"GET",
 			serverSpec,
-			{ apiVersion: 1, namespace: "%SYS", path: `/cspapps/${params.ns}?detail=1` }
+			{ apiVersion: 1, namespace: "%SYS", path: `/cspapps/${params.ns}?detail=1` },
 		);
 		if (response?.status === 200) {
 			if (response.data.result.content === undefined) {
@@ -736,15 +744,15 @@ async function namespaceWebApps(element: ProjectsTreeItem, params?: ServerParams
 export class WebAppTreeItem extends SMTreeItem {
 	public readonly name: string;
 	constructor(element: ISMItem, name: string, isDefault: boolean, serverApiVersion: number) {
-		const parentFolderId = element.parent?.id || '';
-		const id = parentFolderId + ':' + name;
+		const parentFolderId = element.parent?.id || "";
+		const id = parentFolderId + ":" + name;
 		super({
 			parent: element.parent,
 			label: name,
-			id
+			id,
 		});
 		this.name = name;
 		this.contextValue = `${serverApiVersion.toString()}${serverItemIsWsFolder(element?.parent?.parent?.parent?.parent) ? "/wsFolder" : ""}/webapp`;
-		this.iconPath = new vscode.ThemeIcon(isDefault ? 'folder-active' : 'folder');
+		this.iconPath = new vscode.ThemeIcon(isDefault ? "folder-active" : "folder");
 	}
 }

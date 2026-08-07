@@ -1,10 +1,10 @@
-import * as vscode from "vscode";
 import { IServerName } from "@intersystems-community/intersystems-servermanager";
+import * as vscode from "vscode";
 import { serverDetail } from "./getServerSummary";
 
 export function getServerNames(scope?: vscode.ConfigurationScope, sorted?: boolean): IServerName[] {
 	const allNames: IServerName[] = [];
-	let names: IServerName[] = [];
+	const names: IServerName[] = [];
 	const servers = vscode.workspace.getConfiguration("intersystems", scope).get("servers");
 
 	if (typeof servers === "object" && servers) {
@@ -34,7 +34,7 @@ export function getServerNames(scope?: vscode.ConfigurationScope, sorted?: boole
 	}
 
 	// If requested, sort what we found
-	if (sorted) names.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+	if (sorted) { names.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0); }
 
 	// Append them
 	allNames.push(...names);

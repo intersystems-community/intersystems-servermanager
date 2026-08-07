@@ -2,9 +2,9 @@
 
 import * as vscode from "vscode";
 import { importFromRegistry } from "./commands/importFromRegistry";
-import { ServerManagerView } from "./ui/serverManagerView";
 import { commonActivate, extensionId } from "./commonActivate";
 import { logout, serverSessions } from "./makeRESTRequest";
+import { ServerManagerView } from "./ui/serverManagerView";
 
 export function activate(context: vscode.ExtensionContext) {
 	const view = new ServerManagerView(context);
@@ -24,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
 	// Do our best to log out of all sessions
 
-	const promises: Promise<void>[] = [];
+	const promises: Array<Promise<void>> = [];
 	for (const serverSession of serverSessions) {
 		promises.push(logout(serverSession[1].serverName));
 	}

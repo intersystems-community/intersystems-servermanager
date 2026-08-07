@@ -1,6 +1,7 @@
+import { IServerSpecWithAuth, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
-import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
-import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
+import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
+import { IServerSetting } from "../serverSetting";
 
 /**
  * Get a server specification.
@@ -12,75 +13,64 @@ import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
 export async function getServerSpec(
 	name: string,
 	scope?: vscode.ConfigurationScope,
-): Promise<IServerSpec | undefined> {
+): Promise<IServerSpecWithAuth | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	let server: IServerSpec | undefined = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) || legacyEmbeddedServer(name);
-
+	const setting = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSetting | undefined || legacyEmbeddedServer(name);
 	// Unknown server
-	if (!server) {
-		const folder = vscode.workspace.workspaceFolders?.find(f => f.name === name);
+	if (!setting) {
+		const folder = vscode.workspace.workspaceFolders?.find((f) => f.name === name);
 		if (!folder) {
 			return undefined;
 		}
 
 		// It is the name of a workspace root folder
 		// Get the server details from the ObjectScript extension if available
-		const objectScriptExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
-		if (!objectScriptExtension) {
-			return undefined;
-		}
-		if (!objectScriptExtension.isActive) {
+		const objectScriptExtension = vscode.extensions.getExtension<VSCodeObjectScriptAPI>(OBJECTSCRIPT_EXTENSIONID);
+		if (!objectScriptExtension?.isActive) {
 			// Activating it here would cause a deadlock because the activate method of the ObjectScript extension itself calls our getServerSpec API
 			return undefined;
 		}
-		let serverForUri: {
-			serverName: string;
-			scheme: string;
-			host: string;
-			port: number;
-			pathPrefix: string;
-			username: string;
-			password?: string;
-		};
-		if (objectScriptExtension.exports.asyncServerForUri) {
-			serverForUri = await objectScriptExtension.exports.asyncServerForUri(folder.uri);
-		} else {
-			serverForUri = objectScriptExtension.exports.serverForUri(folder.uri);
-		}
+		const serverForUri = objectScriptExtension.exports.asyncServerForUri
+			? await objectScriptExtension.exports.asyncServerForUri(folder.uri)
+			: objectScriptExtension.exports.serverForUri(folder.uri);
 		if (!serverForUri) {
 			return undefined;
 		}
+		const { serverName, scheme, host, port, pathPrefix, auth, username, password } = serverForUri;
 		return {
-			name: serverForUri.serverName,
+			name: serverName,
 			webServer: {
-				scheme: serverForUri.scheme,
-				host: serverForUri.host,
-				port: serverForUri.port,
-				pathPrefix: serverForUri.pathPrefix
+				scheme,
+				host,
+				port,
+				pathPrefix,
 			},
-			username: serverForUri.username,
-			password: serverForUri.password ? serverForUri.password : undefined,
+			username: username ?? auth?.username,
+			password: (password ?? auth?.password) || undefined,
+			auth: auth ?? new BasicAuthorization(username, password),
 			description: `Server for workspace folder "${name}"`,
 		};
 	}
 
-	server.name = name;
-	server.description = server.description || "";
-	server.webServer.scheme = server.webServer.scheme || "http";
-	server.webServer.port = server.webServer.port || (server.webServer.scheme === "https" ? 443 : 80);
-	server.webServer.pathPrefix = server.webServer.pathPrefix || "";
-	if (server.superServer) {
+	const { username, password, oauth2, ...spec } = setting;
+	spec.name = name;
+	spec.description = spec.description || "";
+	spec.webServer.scheme = spec.webServer.scheme || "http";
+	spec.webServer.port = spec.webServer.port || (spec.webServer.scheme === "https" ? 443 : 80);
+	spec.webServer.pathPrefix = spec.webServer.pathPrefix || "";
+	if (spec.superServer) {
 		// Fall back to default if appropriate
-		server.superServer.host = server.superServer.host || server.webServer.host;
+		spec.superServer.host = spec.superServer.host || spec.webServer.host;
 	}
-
-
-	// When authentication provider is being used we should only have a password if it came from the deprecated
-	// property of the settings object. Otherwise return it as undefined.
-	if (!server.password) {
-		server.password = undefined;
-	}
-	return server;
+	const auth = oauth2
+		? new OAuth2Authorization(oauth2)
+		: new BasicAuthorization(username, password);
+	return {
+		...spec,
+		auth,
+		username: auth.username,
+		password: auth.password,
+	};
 }
 
 /**
@@ -90,35 +80,34 @@ export async function getServerSpec(
  * @param name The name.
  * @returns Server specification or undefined.
  */
-export function legacyEmbeddedServer(name: string): IServerSpec | undefined {
+export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
 	return {
 		"default~iris": {
-			"name": "default~iris",
-			"webServer": {
-				"scheme": "http",
-				"host": "127.0.0.1",
-				"port": 52773
+			name: "default~iris",
+			webServer: {
+				scheme: "http",
+				host: "127.0.0.1",
+				port: 52773,
 			},
-			"description": "Connection to local InterSystems IRIS™ installed with default settings."
+			description: "Connection to local InterSystems IRIS™ installed with default settings.",
 		},
 		"default~cache": {
-			"name": "default~cache",
-			"webServer": {
-				"scheme": "http",
-				"host": "127.0.0.1",
-				"port": 57772
+			name: "default~cache",
+			webServer: {
+				scheme: "http",
+				host: "127.0.0.1",
+				port: 57772,
 			},
-			"description": "Connection to local InterSystems Caché installed with default settings."
+			description: "Connection to local InterSystems Caché installed with default settings.",
 		},
 		"default~ensemble": {
-			"name": "default~ensemble",
-			"webServer": {
-				"scheme": "http",
-				"host": "127.0.0.1",
-				"port": 57772
+			name: "default~ensemble",
+			webServer: {
+				scheme: "http",
+				host: "127.0.0.1",
+				port: 57772,
 			},
-			"description": "Connection to local InterSystems Ensemble installed with default settings."
-		}
+			description: "Connection to local InterSystems Ensemble installed with default settings.",
+		},
 	}[name];
 }
-

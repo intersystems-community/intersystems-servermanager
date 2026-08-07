@@ -1,3 +1,4 @@
+import { Authorization, IServerSpecWithAuth, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 import {
 	authentication,
 	AuthenticationProvider,
@@ -13,15 +14,33 @@ import {
 	window,
 	workspace,
 } from "vscode";
-import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState } from "./commonActivate";
 import { getServerSpec } from "./api/getServerSpec";
+import { ServerManagerAuthenticationSession } from "./authenticationSession";
+import { globalState, OAuth2Authorization, BasicAuthorization } from "./commonActivate";
+import { logger } from "./logger";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
+import { IOAuth2Config, performOAuth2Login, refreshOAuth2Token } from "./oauth2Flow";
+
+interface IOAuth2Secret {
+	refreshToken?: string;
+	/** Epoch milliseconds at which the access token should be treated as expired. */
+	expiresAt?: number;
+}
 
 export const AUTHENTICATION_PROVIDER = "intersystems-server-credentials";
 const AUTHENTICATION_PROVIDER_LABEL = "InterSystems Server Credentials";
 
+interface StrippedSession {
+	/** Session ID */
+	id: string;
+	serverName: string;
+	userName: string;
+}
+
 export class ServerManagerAuthenticationProvider implements AuthenticationProvider, Disposable {
+	get onDidChangeSessions(): Event<AuthenticationProviderAuthenticationSessionsChangeEvent> {
+		return this._onDidChangeSessions.event;
+	}
 	public static id = AUTHENTICATION_PROVIDER;
 	public static label = AUTHENTICATION_PROVIDER_LABEL;
 	public static secretKeyPrefix = "credentialProvider:";
@@ -32,24 +51,33 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	public static credentialKey(sessionId: string): string {
 		return `${ServerManagerAuthenticationProvider.secretKeyPrefix}${sessionId}`;
 	}
+	// Refresh tokens are kept privately under a separate key and never exposed as an accessToken.
+	public static oauth2SecretKey(sessionId: string): string {
+		return `${ServerManagerAuthenticationProvider.secretKeyPrefix}${sessionId}:oauth2`;
+	}
+	public static oauth2Config(spec: IServerSpecWithAuth): IOAuth2Config {
+		const oauth2 = (spec.auth as OAuth2Authorization).oauth2;
+		return {
+			authority: oauth2.authority,
+			clientId: oauth2.clientId,
+			audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`,
+		};
+	}
 
 	private _initializedDisposable: Disposable | undefined;
-
-	private readonly _secretStorage;
 
 	private _sessions: ServerManagerAuthenticationSession[] = [];
 	private _checkedSessions: ServerManagerAuthenticationSession[] = [];
 
+	// Guards against concurrent refreshes of the same session, which would
+	// invalidate each other when the provider rotates refresh tokens.
+	private _refreshInFlight = new Map<string, Promise<string | undefined>>();
+
 	private _serverManagerExtension = extensions.getExtension("intersystems-community.servermanager");
 
 	private _onDidChangeSessions = new EventEmitter<AuthenticationProviderAuthenticationSessionsChangeEvent>();
-	get onDidChangeSessions(): Event<AuthenticationProviderAuthenticationSessionsChangeEvent> {
-		return this._onDidChangeSessions.event;
-	}
 
-	constructor(private readonly secretStorage: SecretStorage) {
-		this._secretStorage = secretStorage;
-	}
+	constructor(private readonly secretStorage: SecretStorage) { }
 
 	public dispose(): void {
 
@@ -69,7 +97,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		if (options.account) {
 			const accountParts = options.account.id.split("/");
 			const serverName = accountParts.shift();
-			const userName = accountParts.join('/');
+			const userName = accountParts.join("/");
 			if (serverName && userName) {
 				sessions = sessions.filter((session) => session.scopes[0] === serverName && session.scopes[1].toLowerCase() === userName.toLowerCase());
 			}
@@ -90,40 +118,129 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	// - The end user initiates the "silent" auth flow via the Accounts menu
 	public async createSession(scopes: string[]): Promise<AuthenticationSession> {
 		await this._ensureInitialized();
-
-		let serverName = scopes[0] ?? "";
-		if (!serverName) {
-			// Prompt for the server name.
-			if (!this._serverManagerExtension) {
-				throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
-			}
-			if (!this._serverManagerExtension.isActive) {
-				await this._serverManagerExtension.activate();
-			}
-			serverName = await this._serverManagerExtension.exports.pickServer() ?? "";
-			if (!serverName) {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Server name is required.`);
-			}
-		}
-
-		let userName = scopes[1] ?? "";
-		if (!userName) {
-			// Prompt for the username.
-			const enteredUserName = await window.showInputBox({
-				ignoreFocusOut: true,
-				placeHolder: `Username on server '${serverName}'`,
-				prompt: "Enter the username to access the InterSystems server with. Leave blank for unauthenticated access as 'UnknownUser'.",
-				title: `${AUTHENTICATION_PROVIDER_LABEL}: Username on InterSystems server '${serverName}'`,
-			});
-			if (typeof enteredUserName === "undefined") {
-				throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
-			}
-			userName = enteredUserName === "" ? "UnknownUser" : enteredUserName;
-		}
-
+		const serverName = scopes[0] || await this.promptServerName();
+		const spec = await getServerSpec(serverName);
+		const userName = scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
-		let existingSession = this._sessions.find((s) => s.id === sessionId);
+		const existingSession = await this.findExistingSession(sessionId);
+		if (existingSession !== undefined) {
+			return existingSession;
+		}
+		let auth: Authorization;
+		if (spec?.auth.resolved()) {
+			auth = spec.auth;
+		} else {
+			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+			let accessToken = await this.secretStorage.get(credentialKey);
+			if (accessToken === undefined) {
+				if (spec?.auth instanceof OAuth2Authorization) {
+					const tokenSet = await performOAuth2Login(sessionId, ServerManagerAuthenticationProvider.oauth2Config(spec));
+					accessToken = tokenSet?.accessToken;
+					if (accessToken) {
+						await this.secretStorage.store(credentialKey, accessToken);
+						await this._storeOAuth2Secret(sessionId, tokenSet);
+						logger?.info(`OAuth2 [${sessionId}]: login complete, ${tokenSet?.refreshToken ? "refresh token stored" : "no refresh token"}`);
+					}
+				} else {
+					// Password is "" if userName is ""
+					accessToken = userName && await this.promptPassword(userName, serverName, credentialKey);
+				}
+
+			}
+			auth = spec?.auth.clone() ?? new BasicAuthorization();
+			auth.resolve({ username: userName || "UnknownUser", accessToken });
+		}
+		if (auth.resolved()) {
+			return this._finalizeSession(serverName, auth);
+		} else {
+			throw new Error("Internal error: Authorization should already be resolved");
+		}
+	}
+
+	// This function is called when the end user signs out of the account.
+	public async removeSession(sessionId: string): Promise<void> {
+		await this._removeSession(sessionId);
+	}
+
+	public async removeSessions(sessionIds: string[]): Promise<void> {
+		const storedPasswordCredKeys: string[] = [];
+		const removed: AuthenticationSession[] = [];
+		await Promise.allSettled(sessionIds.map(async (sessionId) => {
+			const session = this._sessions.find((item) => item.id === sessionId);
+			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+			const isOAuth2 = await this._isOAuth2Session(sessionId, session);
+			if (await this.secretStorage.get(credentialKey) !== undefined) {
+				if (isOAuth2) {
+					await this.secretStorage.delete(credentialKey);
+				} else {
+					storedPasswordCredKeys.push(credentialKey);
+				}
+			}
+			// Always clear the private refresh token on sign-out
+			await this.secretStorage.delete(ServerManagerAuthenticationProvider.oauth2SecretKey(sessionId));
+			if (session) {
+				removed.push(session);
+			}
+		}));
+		// Remove from _sessions in a single pass; splicing by index inside the concurrent
+		// loop above races, since each splice shifts the indexes the others captured.
+		const removedIds = new Set(sessionIds);
+		this._sessions = this._sessions.filter((s) => !removedIds.has(s.id));
+		if (storedPasswordCredKeys.length) {
+			const passwordOption = workspace.getConfiguration("intersystemsServerManager.credentialsProvider")
+				.get<string>("deletePasswordOnSignout", "ask");
+			let deletePasswords = (passwordOption === "always");
+			if (passwordOption === "ask") {
+				const choice = await window.showWarningMessage(
+					`Do you want to keep the stored passwords or delete them?`,
+					{
+						detail: `${storedPasswordCredKeys.length == sessionIds.length ? "All" : "Some"
+							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true,
+					},
+					{ title: "Keep", isCloseAffordance: true },
+					{ title: "Delete", isCloseAffordance: false },
+				);
+				deletePasswords = (choice?.title === "Delete");
+			}
+			if (deletePasswords) {
+				await Promise.allSettled(storedPasswordCredKeys.map((e) => this.secretStorage.delete(e)));
+			}
+		}
+		await this._storeStrippedSessions();
+		this._onDidChangeSessions.fire({ added: [], removed, changed: [] });
+	}
+
+	private async promptServerName(): Promise<string> {
+		if (!this._serverManagerExtension) {
+			throw new Error(`InterSystems Server Manager extension is not available to provide server selection for ${AUTHENTICATION_PROVIDER_LABEL}.`);
+		}
+		if (!this._serverManagerExtension.isActive) {
+			await this._serverManagerExtension.activate();
+		}
+		const serverName = await this._serverManagerExtension.exports.pickServer() ?? "";
+		if (!serverName) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Server name is required.`);
+		}
+		return serverName;
+	}
+
+	private async promptUserName(serverName: string): Promise<string> {
+		// Prompt for the username.
+		const enteredUserName = await window.showInputBox({
+			ignoreFocusOut: true,
+			placeHolder: `Username on server '${serverName}'`,
+			prompt: "Enter the username to access the InterSystems server with. Leave blank for unauthenticated access as 'UnknownUser'.",
+			title: `${AUTHENTICATION_PROVIDER_LABEL}: Username on InterSystems server '${serverName}'`,
+		});
+		if (enteredUserName === undefined) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Username is required.`);
+		}
+		return enteredUserName;
+	}
+
+	private async findExistingSession(sessionId: string): Promise<AuthenticationSession | undefined> {
+		const existingSession = this._sessions.find((s) => s.id === sessionId);
 		if (existingSession) {
 			if (this._checkedSessions.find((s) => s.id === sessionId)) {
 				return existingSession;
@@ -135,70 +252,65 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 				return existingSession;
 			}
 		}
+	}
 
-		let password: string | undefined = "";
+	private async promptPassword(userName: string, serverName: string, credentialKey: string): Promise<string> {
+		const doInputBox = async (): Promise<string | undefined> => {
+			return await new Promise<string | undefined>((resolve, reject) => {
+				const inputBox = window.createInputBox();
+				inputBox.value = "";
+				inputBox.password = true;
+				inputBox.title = `${AUTHENTICATION_PROVIDER_LABEL}: Password for user '${userName}'`;
+				inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`;
+				inputBox.prompt = "Optionally use $(key) button above to store password";
+				inputBox.ignoreFocusOut = true;
+				inputBox.buttons = [
+					{
+						iconPath: new ThemeIcon("key"),
+						tooltip: "Store Password Securely in Workstation Keychain",
+					},
+				];
 
-		if (userName !== "UnknownUser") {
-			// Seek password in secret storage
-			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-			password = await this.secretStorage.get(credentialKey);
-			if (!password) {
-				// Prompt for password
-				const doInputBox = async (): Promise<string | undefined> => {
-					return await new Promise<string | undefined>((resolve, reject) => {
-						const inputBox = window.createInputBox();
-						inputBox.value = "";
-						inputBox.password = true;
-						inputBox.title = `${AUTHENTICATION_PROVIDER_LABEL}: Password for user '${userName}'`;
-						inputBox.placeholder = `Password for user '${userName}' on '${serverName}'`;
-						inputBox.prompt = "Optionally use $(key) button above to store password";
-						inputBox.ignoreFocusOut = true;
-						inputBox.buttons = [
-							{
-								iconPath: new ThemeIcon("key"),
-								tooltip: "Store Password Securely in Workstation Keychain",
-							},
-						];
-
-						async function done(secretStorage?: SecretStorage) {
-							// Return the password, having stored it if storage was passed
-							const enteredPassword = inputBox.value;
-							if (secretStorage && enteredPassword) {
-								await secretStorage.store(credentialKey, enteredPassword);
-							}
-							// Resolve the promise and tidy up
-							resolve(enteredPassword);
-							inputBox.dispose();
-						}
-
-						inputBox.onDidTriggerButton((_button) => {
-							// We only added the one button, which stores the password
-							done(this.secretStorage);
-						});
-
-						inputBox.onDidAccept(() => {
-							// User pressed Enter
-							done();
-						});
-
-						inputBox.onDidHide(() => {
-							// User pressed Escape
-							resolve(undefined);
-							inputBox.dispose();
-						});
-
-						inputBox.show();
-					});
-				};
-				password = await doInputBox();
-				if (!password) {
-					throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
+				async function done(secretStorage?: SecretStorage) {
+					// Return the password, having stored it if storage was passed
+					const enteredPassword = inputBox.value;
+					if (secretStorage && enteredPassword) {
+						await secretStorage.store(credentialKey, enteredPassword);
+					}
+					// Resolve the promise and tidy up
+					resolve(enteredPassword);
+					inputBox.dispose();
 				}
-			}
-		}
 
+				inputBox.onDidTriggerButton((_button) => {
+					// We only added the one button, which stores the password
+					done(this.secretStorage);
+				});
+
+				inputBox.onDidAccept(() => {
+					// User pressed Enter
+					done();
+				});
+
+				inputBox.onDidHide(() => {
+					// User pressed Escape
+					resolve(undefined);
+					inputBox.dispose();
+				});
+
+				inputBox.show();
+			});
+		};
+		const password = await doInputBox();
+		if (!password) {
+			throw new Error(`${AUTHENTICATION_PROVIDER_LABEL}: Password is required.`);
+		}
+		return password;
+	}
+
+	private async _finalizeSession(serverName: string, auth: ResolvedAuthorization): Promise<AuthenticationSession> {
 		// We have all we need to create the session object
-		const session = new ServerManagerAuthenticationSession(serverName, userName, password);
+		const session = new ServerManagerAuthenticationSession(serverName, auth.username, auth.accessToken);
 		// Update this._sessions and raise the event to notify
 		const added: AuthenticationSession[] = [];
 		const changed: AuthenticationSession[] = [];
@@ -222,12 +334,24 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		}
 		const serverSpec = await getServerSpec(session.serverName);
 		if (serverSpec) {
-			serverSpec.username = session.userName;
-			serverSpec.password = session.accessToken;
-			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => { /* Swallow errors */ });
+			const isOAuth2 = serverSpec.auth instanceof OAuth2Authorization;
+			// Proactively renew an expired OAuth2 access token so we don't send a request we know will fail
+			if (isOAuth2 && await this._isAccessTokenExpired(session.id)) {
+				logger?.debug(`OAuth2 [${session.id}]: access token expired, refreshing proactively`);
+				session = await this._tryRefresh(session, serverSpec) ?? session;
+			}
+			serverSpec.auth.resolve({ accessToken: session.accessToken, username: session.userName });
+			const response = await makeRESTRequest("HEAD", serverSpec).catch(() => undefined);
 			if (response?.status == 401) {
-				await this._removeSession(session.id, true);
-				return false;
+				// Before giving up and forcing an interactive login, try to renew via refresh token
+				if (isOAuth2) { logger?.debug(`OAuth2 [${session.id}]: got 401, attempting refresh`); }
+				const refreshed = isOAuth2 ? await this._tryRefresh(session, serverSpec) : undefined;
+				if (!refreshed) {
+					if (isOAuth2) { logger?.warn(`OAuth2 [${session.id}]: refresh unavailable, signing out (re-login required)`); }
+					await this._removeSession(session.id, true);
+					return false;
+				}
+				session = refreshed;
 			}
 			// Immediately log out the session created by credentials test
 			await logout(session.serverName);
@@ -236,9 +360,84 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return true;
 	}
 
-	// This function is called when the end user signs out of the account.
-	public async removeSession(sessionId: string): Promise<void> {
-		this._removeSession(sessionId);
+	/**
+	 * Attempt to renew an OAuth2 access token using the privately-stored refresh token.
+	 * On success the new access token is written to secret storage (which propagates to all
+	 * windows) and the in-memory session is replaced. Concurrent callers share one refresh.
+	 *
+	 * @returns The refreshed session, or undefined if there is no refresh token or it is no longer valid.
+	 */
+	private async _tryRefresh(
+		session: ServerManagerAuthenticationSession,
+		serverSpec: IServerSpecWithAuth,
+	): Promise<ServerManagerAuthenticationSession | undefined> {
+		const existing = this._refreshInFlight.get(session.id);
+		const promise = existing ?? this._doRefresh(session.id, serverSpec);
+		if (!existing) {
+			this._refreshInFlight.set(session.id, promise);
+		}
+		let accessToken: string | undefined;
+		try {
+			accessToken = await promise;
+		} finally {
+			if (!existing) {
+				this._refreshInFlight.delete(session.id);
+			}
+		}
+		if (!accessToken) { return undefined; }
+		const index = this._sessions.findIndex((s) => s.id === session.id);
+		const refreshed = new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
+		if (index > -1) {
+			this._sessions[index] = refreshed;
+			this._onDidChangeSessions.fire({ added: [], removed: [], changed: [refreshed] });
+		}
+		return refreshed;
+	}
+
+	private async _doRefresh(sessionId: string, serverSpec: IServerSpecWithAuth): Promise<string | undefined> {
+		const secret = await this._getOAuth2Secret(sessionId);
+		if (!secret?.refreshToken) {
+			logger?.debug(`OAuth2 [${sessionId}]: no refresh token stored`);
+			return undefined;
+		}
+		const tokenSet = await refreshOAuth2Token(sessionId, ServerManagerAuthenticationProvider.oauth2Config(serverSpec), secret.refreshToken);
+		if (!tokenSet) { return undefined; }
+		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+		await this.secretStorage.store(credentialKey, tokenSet.accessToken);
+		await this._storeOAuth2Secret(sessionId, tokenSet);
+		logger?.info(`OAuth2 [${sessionId}]: access token refreshed successfully`);
+		return tokenSet.accessToken;
+	}
+
+	private async _isAccessTokenExpired(sessionId: string): Promise<boolean> {
+		const secret = await this._getOAuth2Secret(sessionId);
+		return secret?.expiresAt !== undefined && Date.now() >= secret.expiresAt;
+	}
+
+	// OAuth2 access tokens are not passwords: never prompt to "keep", always clear them.
+	private async _isOAuth2Session(sessionId: string, session?: ServerManagerAuthenticationSession): Promise<boolean> {
+		if (await this.secretStorage.get(ServerManagerAuthenticationProvider.oauth2SecretKey(sessionId)) !== undefined) { return true; }
+		return session !== undefined && (await getServerSpec(session.serverName))?.auth instanceof OAuth2Authorization;
+	}
+
+	private async _getOAuth2Secret(sessionId: string): Promise<IOAuth2Secret | undefined> {
+		const raw = await this.secretStorage.get(ServerManagerAuthenticationProvider.oauth2SecretKey(sessionId));
+		if (!raw) { return undefined; }
+		try {
+			return JSON.parse(raw) as IOAuth2Secret;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private async _storeOAuth2Secret(sessionId: string, tokenSet?: IOAuth2Secret): Promise<void> {
+		const key = ServerManagerAuthenticationProvider.oauth2SecretKey(sessionId);
+		if (!tokenSet?.refreshToken) {
+			// No refresh token issued (or none anymore): don't leave a stale one behind
+			await this.secretStorage.delete(key);
+			return;
+		}
+		await this.secretStorage.store(key, JSON.stringify({ refreshToken: tokenSet.refreshToken, expiresAt: tokenSet.expiresAt }));
 	}
 
 	private async _removeSession(sessionId: string, alwaysDeletePassword = false): Promise<void> {
@@ -246,9 +445,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		const session = this._sessions[index];
 
 		const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
+		const isOAuth2 = await this._isOAuth2Session(sessionId, session);
 		let deletePassword = false;
 		const hasStoredPassword = await this.secretStorage.get(credentialKey) !== undefined;
-		if (alwaysDeletePassword) {
+		if (alwaysDeletePassword || isOAuth2) {
 			deletePassword = hasStoredPassword;
 		} else {
 			if (hasStoredPassword) {
@@ -270,51 +470,14 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 			// Delete from secret storage
 			await this.secretStorage.delete(credentialKey);
 		}
+		// Always clear the private refresh token when the session goes away
+		await this.secretStorage.delete(ServerManagerAuthenticationProvider.oauth2SecretKey(sessionId));
 		if (index > -1) {
 			// Remove session here so we don't store it
 			this._sessions.splice(index, 1);
 		}
 		await this._storeStrippedSessions();
 		this._onDidChangeSessions.fire({ added: [], removed: [session], changed: [] });
-	}
-
-	public async removeSessions(sessionIds: string[]): Promise<void> {
-		const storedPasswordCredKeys: string[] = [];
-		const removed: AuthenticationSession[] = [];
-		await Promise.allSettled(sessionIds.map(async (sessionId) => {
-			const index = this._sessions.findIndex((item) => item.id === sessionId);
-			const session = this._sessions[index];
-			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
-			if (await this.secretStorage.get(credentialKey) !== undefined) {
-				storedPasswordCredKeys.push(credentialKey);
-			}
-			if (index > -1) {
-				this._sessions.splice(index, 1);
-			}
-			removed.push(session);
-		}));
-		if (storedPasswordCredKeys.length) {
-			const passwordOption = workspace.getConfiguration("intersystemsServerManager.credentialsProvider")
-				.get<string>("deletePasswordOnSignout", "ask");
-			let deletePasswords = (passwordOption === "always");
-			if (passwordOption === "ask") {
-				const choice = await window.showWarningMessage(
-					`Do you want to keep the stored passwords or delete them?`,
-					{
-						detail: `${storedPasswordCredKeys.length == sessionIds.length ? "All" : "Some"
-							} of the ${AUTHENTICATION_PROVIDER_LABEL} accounts you signed out are currently storing their passwords securely on your workstation.`, modal: true
-					},
-					{ title: "Keep", isCloseAffordance: true },
-					{ title: "Delete", isCloseAffordance: false },
-				);
-				deletePasswords = (choice?.title === "Delete");
-			}
-			if (deletePasswords) {
-				await Promise.allSettled(storedPasswordCredKeys.map((e) => this.secretStorage.delete(e)));
-			}
-		}
-		await this._storeStrippedSessions();
-		this._onDidChangeSessions.fire({ added: [], removed, changed: [] });
 	}
 
 	private async _ensureInitialized(): Promise<void> {
@@ -360,48 +523,32 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	}
 
 	private async _reloadSessions() {
-		const strippedSessions = globalState.get<ServerManagerAuthenticationSession[]>(
+		const strippedSessions = globalState.get<StrippedSession[]>(
 			"authenticationProvider.strippedSessions",
 			[],
 		);
-
 		// Build our array of sessions for which non-empty accessTokens were securely persisted
 		this._sessions = (await Promise.all(
 			strippedSessions.map(async (session) => {
 				const credentialKey = ServerManagerAuthenticationProvider.credentialKey(session.id);
-				const accessToken = await this._secretStorage.get(credentialKey);
-				return new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken);
-			}),
-		)).filter((session) => session.accessToken).sort((a, b) => {
-			const aUserNameLowercase = a.userName.toLowerCase();
-			const bUserNameLowercase = b.userName.toLowerCase();
-			if (aUserNameLowercase < bUserNameLowercase) {
-				return -1;
-			}
-			if (aUserNameLowercase > bUserNameLowercase) {
-				return 1;
-			}
-			if (a.serverName < b.serverName) {
-				return -1;
-			}
-			return 1;
-		});
+				const accessToken = await this.secretStorage.get(credentialKey);
+				if (accessToken === undefined) { return []; }
+				return [new ServerManagerAuthenticationSession(session.serverName, session.userName, accessToken)];
+			})))
+			.flat(1)
+			.sort((a, b) =>
+				a.userName.toLowerCase().localeCompare(b.userName.toLowerCase())
+				|| a.serverName.localeCompare(b.serverName));
 	}
 
 	private async _storeStrippedSessions() {
-		// Build an array of sessions with passwords blanked
-		const strippedSessions = this._sessions.map((session) => {
-			return new ServerManagerAuthenticationSession(
-				session.serverName,
-				session.userName,
-				"",
-			);
-		});
-
-		// Persist it
+		// Persist an array of sessions with accessToken blanked
 		await globalState.update(
 			"authenticationProvider.strippedSessions",
-			strippedSessions,
+			this._sessions.map((session): StrippedSession => {
+				const { accessToken: _, ...strippedSession } = session;
+				return strippedSession;
+			}),
 		);
 	}
 }
