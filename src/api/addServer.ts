@@ -3,7 +3,6 @@ import { promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
 import { IServerSetting } from "../serverSetting";
 import { getServerNames } from "./getServerNames";
 
-
 export async function addServer(
 	scope?: vscode.ConfigurationScope,
 	target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global,
@@ -32,30 +31,52 @@ export async function addServer(
 	});
 	if (description === undefined) { return; }
 	description = description.trim();
-	let host = await vscode.window.showInputBox({
+	let url = undefined as URL | undefined;
+	let hostOrURL = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
 		title: "Enter the hostname or IP address of the web server",
 		validateInput: (value) => {
-			return value.trim().length ? undefined : "Required";
+			try {
+				const localURL = new URL(value);
+				const scheme = localURL.protocol.slice(0, -1);
+				if (!["http", "https"].includes(scheme)) {
+					return `Invalid scheme (${scheme}): must be either http or https`
+				}
+				const portValidation = validatePort(localURL.port);
+				if (portValidation) {
+					return `Invalid port (${localURL.port}): ` + portValidation
+				}
+				const hostValidatiaon = validateHost(localURL.hostname)
+				if (hostValidatiaon) {
+					return `Invalid host (${localURL.hostname}): ` + hostValidatiaon
+				}
+				url = localURL;
+				return
+			} catch { }
+			return validateHost(value)
 		},
 	});
-	if (host === undefined) { return; }
-	host = host.trim();
-	const port = await vscode.window.showInputBox({
+	function validateHost(value: string): "Required" | undefined {
+		return value.trim().length ? undefined : "Required";
+	}
+	if (hostOrURL === undefined) { return; }
+	const host = url?.hostname ?? hostOrURL.trim();
+	const port = url?.port ?? await vscode.window.showInputBox({
 		ignoreFocusOut: true,
 		title: "Enter the port of the web server",
-		validateInput: (value) => {
-			const port = +value;
-			return value.match(/\d+/) &&
-				port.toString() === value &&
-				port > 0 &&
-				port < 65536
-				? undefined
-				: "Required, 1-65535";
-		},
+		validateInput: validatePort,
 	});
+	function validatePort(value: string): "Required, 1-65535" | undefined {
+		const port = +value;
+		return value.match(/\d+/) &&
+			port.toString() === value &&
+			port > 0 &&
+			port < 65536
+			? undefined
+			: "Required, 1-65535";
+	}
 	if (port === undefined) { return; }
-	let pathPrefix = await vscode.window.showInputBox({
+	let pathPrefix = url?.pathname ?? await vscode.window.showInputBox({
 		ignoreFocusOut: true,
 		title:
 			"Optionally enter the path prefix of the instance",
@@ -100,7 +121,7 @@ export async function addServer(
 	} else {
 		throw Error(`Unreachable! ${authMethod} must be either "Basic Auth", "OAuth2", or "Unauthenticated".`)
 	}
-	const scheme = await new Promise<string | undefined>((resolve) => {
+	const scheme = url?.protocol.slice(0, -1) ?? await new Promise<string | undefined>((resolve) => {
 		let result: string;
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = "Confirm the connection type, then the definition will be stored in your User Settings. 'Escape' to cancel.";
