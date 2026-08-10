@@ -43,7 +43,7 @@ export interface IServerSpec extends IJSONServerSpec {
 
 /** IServerSpec with `auth` guaranteed to be present. */
 export interface IServerSpecWithAuth extends IServerSpec {
-	auth: Authorization;
+	auth?: Authorization;
 }
 
 /** API to the Server Manager extension */
@@ -80,7 +80,7 @@ export interface ServerManagerAPI {
 	/** Authorization to use when a server definition has no `auth` of its own.
 	 * This creates a Basic Auth that needs to be resolved with username and password.
 	 */
-	defaultAuth(): Authorization;
+	defaultAuth?(): Authorization;
 }
 
 /**
