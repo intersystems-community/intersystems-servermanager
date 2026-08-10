@@ -1,7 +1,7 @@
 {
   "name": "servermanager",
   "displayName": "InterSystems Server Manager",
-  "version": "3.12.4-SNAPSHOT",
+  "version": "3.14.0-SNAPSHOT",
   "publisher": "intersystems-community",
   "description": "Define connections to InterSystems servers. Browse and manage those servers.",
   "repository": {
@@ -49,11 +49,11 @@
     "open-in-browser": "vscode-test-web --extensionDevelopmentPath=. ."
   },
   "dependencies": {
-    "axios": "^1.18.0",
+    "axios": "^1.19.0",
     "node-cmd": "^5.0.0"
   },
   "devDependencies": {
-    "@intersystems-community/intersystems-servermanager": "^3.14.0",
+    "@intersystems-community/intersystems-servermanager": "^3.14.1",
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^20.14.0",
