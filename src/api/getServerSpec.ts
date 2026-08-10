@@ -1,4 +1,4 @@
-import { IServerSpecWithAuth, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpec, Authorization, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
 import { IServerSetting } from "../serverSetting";
@@ -13,7 +13,7 @@ import { IServerSetting } from "../serverSetting";
 export async function getServerSpec(
 	name: string,
 	scope?: vscode.ConfigurationScope,
-): Promise<IServerSpecWithAuth | undefined> {
+): Promise<IServerSpec & { auth: Authorization } | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
 	const setting = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSetting | undefined || legacyEmbeddedServer(name);
 	// Unknown server
