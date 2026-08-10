@@ -34,8 +34,8 @@ export async function addServer(
 	let url = undefined as { scheme: string; host: string; port: string; pathPrefix: string } | undefined;
 	let hostOrURL = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
-		placeHolder: "http(s)://host:port/pathPrefix  or  host",
-		title: "Enter the base URL used to connect to the server, or just its hostname/IP",
+		placeHolder: "http(s)://host(:port)/pathPrefix  or  host",
+		title: "Enter the base URL used to connect to the server, or just its hostname/IP. The port defaults to 80 for http and 443 for https.",
 		validateInput: (value) => {
 			value = value.trim()
 			try {
@@ -95,7 +95,7 @@ export async function addServer(
 	if (!pathPrefix.startsWith("/")) {
 		pathPrefix = "/" + pathPrefix;
 	}
-	if (pathPrefix.endsWith("/")) {
+	while (pathPrefix.endsWith("/")) {
 		pathPrefix = pathPrefix.slice(0, -1);
 	}
 	const authMethod = (await vscode.window.showQuickPick(
