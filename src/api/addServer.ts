@@ -35,7 +35,7 @@ export async function addServer(
 	let hostOrURL = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
 		placeHolder: "http(s)://host(:port)/pathPrefix  or  host",
-		title: "Enter the base URL used to connect to the server, or just its hostname/IP.",
+		title: "Enter the base URL used to connect to the server, or just its hostname/IP",
 		validateInput: (value) => {
 			value = value.trim()
 			try {
