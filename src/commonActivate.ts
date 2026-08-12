@@ -516,8 +516,6 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			}
 
 			spec.auth = spec.auth.clone();
-			spec.auth.clear() as void;
-
 			return spec;
 		},
 
