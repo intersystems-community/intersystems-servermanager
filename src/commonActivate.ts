@@ -510,12 +510,9 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			if (spec === undefined) {
 				return undefined;
 			}
-
 			if (!options?.hideFromRecents) {
 				await view.addToRecents(name);
 			}
-
-			spec.auth = spec.auth.clone();
 			return spec;
 		},
 
