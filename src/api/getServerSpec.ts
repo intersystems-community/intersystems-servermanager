@@ -50,27 +50,28 @@ export async function getServerSpec(
 			auth: auth ?? new BasicAuthorization(username, password),
 			description: `Server for workspace folder "${name}"`,
 		};
+	} else {
+		// Found a setting
+		const { username, password, oauth2, ...spec } = setting;
+		spec.name = name;
+		spec.description = spec.description || "";
+		spec.webServer.scheme = spec.webServer.scheme || "http";
+		spec.webServer.port = spec.webServer.port || (spec.webServer.scheme === "https" ? 443 : 80);
+		spec.webServer.pathPrefix = spec.webServer.pathPrefix || "";
+		if (spec.superServer) {
+			// Fall back to default if appropriate
+			spec.superServer.host = spec.superServer.host || spec.webServer.host;
+		}
+		const auth = oauth2
+			? new OAuth2Authorization(oauth2)
+			: new BasicAuthorization(username, password);
+		return {
+			...spec,
+			auth,
+			username: auth.username,
+			password: auth.password,
+		};
 	}
-
-	const { username, password, oauth2, ...spec } = setting;
-	spec.name = name;
-	spec.description = spec.description || "";
-	spec.webServer.scheme = spec.webServer.scheme || "http";
-	spec.webServer.port = spec.webServer.port || (spec.webServer.scheme === "https" ? 443 : 80);
-	spec.webServer.pathPrefix = spec.webServer.pathPrefix || "";
-	if (spec.superServer) {
-		// Fall back to default if appropriate
-		spec.superServer.host = spec.superServer.host || spec.webServer.host;
-	}
-	const auth = oauth2
-		? new OAuth2Authorization(oauth2)
-		: new BasicAuthorization(username, password);
-	return {
-		...spec,
-		auth,
-		username: auth.username,
-		password: auth.password,
-	};
 }
 
 /**
