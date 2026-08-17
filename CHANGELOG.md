@@ -1,3 +1,6 @@
+## 3.14.1 (18-Aug-2026)
+* Passwords in plaintext settings are not passed directly to client extensions (#347)
+
 ## 3.14.0 (11-Aug-2026)
 * Support OAuth2 for authorizing with InterSystems servers (#335, #344)
 * Allow users to enter scheme, host, port, and path prefix as one URL when creating a server definition through the UI (#342)
