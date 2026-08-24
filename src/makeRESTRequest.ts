@@ -90,11 +90,9 @@ export async function makeRESTRequest(
 	try {
 		let respdata;
 		// Make the request w/ cookies if applicable
-		if (cookies.length > 0) {
+		if (cookies.length > 0 || !server.auth.username) {
 			request.headers.Cookie = cookies.join("; ");
-			respdata = await axios.request(
-				request,
-			);
+			respdata = await axios.request(request);
 			if (respdata?.status === 401) {
 				delete request.headers.Cookie;
 				respdata = undefined;
