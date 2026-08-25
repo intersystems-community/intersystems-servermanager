@@ -116,13 +116,11 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	// - `vscode.authentication.getSession` was called with `forceNewSession: true` or
 	//   `forceNewSession: {detail: "Reason message for modal dialog"}` (proposed API since 1.59, finalized in 1.63)
 	// - The end user initiates the "silent" auth flow via the Accounts menu
-	public async createSession(scopes: string[], options?: AuthenticationProviderSessionOptions): Promise<AuthenticationSession> {
+	public async createSession(scopes: string[]): Promise<AuthenticationSession> {
 		await this._ensureInitialized();
-		// Honor a caller-supplied account so we never create a session for a different server/username than requested.
-		const accountParts = options?.account?.id.split("/");
-		const serverName = accountParts?.shift() || scopes[0] || await this.promptServerName();
+		const serverName = scopes[0] || await this.promptServerName();
 		const spec = await getServerSpec(serverName);
-		const userName = accountParts?.join("/") || scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
+		const userName = scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
 		// Return existing session if found
 		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
 		const existingSession = await this.findExistingSession(sessionId);
