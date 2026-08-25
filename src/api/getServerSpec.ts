@@ -38,7 +38,7 @@ export async function getServerSpec(
 		}
 		const { serverName, scheme, host, port, pathPrefix, auth, username, password } = serverForUri;
 		return {
-			name: serverName,
+			name: serverName || name,
 			webServer: {
 				scheme,
 				host,

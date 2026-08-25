@@ -17,10 +17,9 @@ export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscr
 
 export let globalState: vscode.Memento;
 
-export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation {
-	// Canonicalize like createSession does, so the requested account always matches the created one.
-	const canonicalUserName = userName || "UnknownUser";
-	return { id: `${serverName}/${canonicalUserName}`, label: `${canonicalUserName} on ${serverName}` };
+export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
+	const accountId = serverName && userName ? `${serverName}/${userName}` : undefined;
+	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
 }
 
 export class BasicAuthorization implements Authorization {
