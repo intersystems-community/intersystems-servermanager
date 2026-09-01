@@ -1,3 +1,7 @@
+## 3.14.2 (02-Sep-2026)
+* Attempt unauthenticated request before prompting when no credentials are configured (#352)
+* Update dependencies
+
 ## 3.14.1 (18-Aug-2026)
 * Passwords in plaintext settings are not passed directly to client extensions (#347)
 
