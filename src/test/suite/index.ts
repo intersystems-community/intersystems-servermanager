@@ -6,6 +6,8 @@ export function run(): Promise<void> {
 	// Create the mocha test
 	const mocha = new Mocha({
 		color: true,
+		// Tests wait on real IRIS containers and on the extensions' own retry/timeout logic
+		timeout: 120000,
 		ui: "tdd",
 	});
 

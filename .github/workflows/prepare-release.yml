@@ -1,0 +1,32 @@
+name: Pre-release tests
+
+# Integration tests against real IRIS containers. Too slow to run on every PR, so they only run on
+# release-preparation PRs (source branch "prepare-*") and on demand.
+on:
+  pull_request:
+    branches:
+      - master
+      - prerelease
+  workflow_dispatch:
+
+jobs:
+  integration:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'prepare-')
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm install
+      - name: Start IRIS
+        run: docker compose -f test-fixtures/iris/docker-compose.yml up -d --wait --wait-timeout 300
+      - name: Run integration tests
+        run: xvfb-run npm test
+      - name: IRIS logs
+        if: failure()
+        run: docker compose -f test-fixtures/iris/docker-compose.yml logs
+      - name: Stop IRIS
+        if: always()
+        run: docker compose -f test-fixtures/iris/docker-compose.yml down -v
