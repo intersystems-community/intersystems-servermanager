@@ -68,6 +68,7 @@ async function loadRegistryData(
 	serversMissingUsernames: string[],
 	newServerNames: string[],
 ): Promise<number> {
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const cmd = require("node-cmd");
 	const subFolder = "\\Intersystems\\Cache\\Servers";
 	const fullPaths: string[] = [];
@@ -213,7 +214,7 @@ export type ServerDefinitions = Record<string, ServerDefinition>;
 async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDefinitions: ServerDefinitions, newServerNames: string[]): Promise<void> {
 	let reusePassword;
 	let password: string | undefined = "";
-	const promptServerNames = new Array();
+	const promptServerNames: string[] = [];
 	// Only prompt for servers with a username specified, of course.
 	newServerNames.forEach((name) => {
 		if (serverDefinitions[name].username !== undefined) {
@@ -259,7 +260,7 @@ async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDef
 		}
 
 		if ((password !== "") && (password !== undefined)) {
-			const username = serverDefinitions[serverName]?.username!;
+			const username = serverDefinitions[serverName].username!;
 			const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, username);
 			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
 			await secretStorage.store(credentialKey, password).then(() => {

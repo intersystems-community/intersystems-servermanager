@@ -8,12 +8,11 @@ import { makeRESTRequest } from "../makeRESTRequest";
 
 const SETTINGS_VERSION = "v1";
 
-// tslint:disable-next-line: no-namespace
-namespace StorageIds {
-	export const favorites = `tree.${SETTINGS_VERSION}.favorites`;
-	export const recents = `tree.${SETTINGS_VERSION}.recents`;
-	export const iconColors = `tree.${SETTINGS_VERSION}.iconColors`;
-}
+const StorageIds = {
+	favorites: `tree.${SETTINGS_VERSION}.favorites`,
+	recents: `tree.${SETTINGS_VERSION}.recents`,
+	iconColors: `tree.${SETTINGS_VERSION}.iconColors`,
+};
 
 const favoritesMap = new Map<string, null>();
 
@@ -104,15 +103,11 @@ export class ServerManagerView {
 
 }
 
-// tslint:disable-next-line: max-classes-per-file
 class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 
-	// tslint:disable-next-line: max-line-length
 	private _onDidChangeTreeData: vscode.EventEmitter<SMTreeItem | undefined | void> = new vscode.EventEmitter<SMTreeItem | undefined | void>();
-	// tslint:disable-next-line: member-ordering
 	public readonly onDidChangeTreeData: vscode.Event<SMTreeItem | undefined | void> = this._onDidChangeTreeData.event;
 
-	// tslint:disable-next-line: member-ordering
 	public view: vscode.TreeView<SMTreeItem>;
 	private _firstRevealDone = false;
 	private _firstRevealItem: SMTreeItem;
@@ -211,6 +206,8 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 	}
 }
 
+type GetChildren = (element: SMTreeItem, params?: ServerParams) => SMTreeItem[] | undefined | Promise<SMTreeItem[] | undefined>;
+
 export interface ServerParams {
 	sorted?: boolean;
 	serverSummary?: IServerName;
@@ -228,18 +225,15 @@ interface ISMItem {
 	tooltip?: string | vscode.MarkdownString;
 	description?: string;
 	codiconName?: string;
-	// tslint:disable-next-line: ban-types
-	getChildren?: Function;
+	getChildren?: GetChildren;
 	params?: ServerParams;
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class SMTreeItem extends vscode.TreeItem {
 
 	public readonly parent: SMTreeItem | undefined;
 	public readonly params?: ServerParams;
-	// tslint:disable-next-line: ban-types
-	private readonly _getChildren?: Function;
+	private readonly _getChildren?: GetChildren;
 
 	constructor(item: ISMItem) {
 		const collapsibleState = item.getChildren
@@ -377,7 +371,6 @@ function recentServers(element: SMTreeItem, params?: ServerParams): ServerTreeIt
 	return children;
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class ServerTreeItem extends SMTreeItem {
 	public readonly name: string;
 	constructor(
@@ -464,11 +457,9 @@ async function specFromServerSummary(serverSummary: IServerName): Promise<IServe
 	return spec;
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class FeatureTreeItem extends SMTreeItem {
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class OfflineTreeItem extends FeatureTreeItem {
 	public readonly name: string;
 	constructor(
@@ -489,7 +480,6 @@ export class OfflineTreeItem extends FeatureTreeItem {
 	}
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class NamespacesTreeItem extends FeatureTreeItem {
 	public readonly name: string;
 	constructor(
@@ -553,7 +543,6 @@ function serverItemIsWsFolder(server?: SMTreeItem): boolean {
 	return typeof server?.label == "string" && ((server.label.includes("(") && server.label.endsWith(")")) || server.label.startsWith("docker:"));
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class NamespaceTreeItem extends SMTreeItem {
 	public readonly name: string;
 	constructor(

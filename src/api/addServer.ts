@@ -32,7 +32,7 @@ export async function addServer(
 	if (description === undefined) { return; }
 	description = description.trim();
 	let url = undefined as { scheme: string; host: string; port: string; pathPrefix: string } | undefined;
-	let hostOrURL = await vscode.window.showInputBox({
+	const hostOrURL = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
 		placeHolder: "http(s)://host(:port)/pathPrefix  or  host",
 		title: "Enter the base URL used to connect to the server, or just its hostname/IP",

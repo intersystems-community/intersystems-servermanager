@@ -72,7 +72,7 @@ export async function makeRESTRequest(
 		url += "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
 	}
 
-	const request: AxiosRequestConfig & { headers: {}, data?: any } = {
+	const request: AxiosRequestConfig & { headers: Record<string, string>, data?: any } = {
 		httpsAgent,
 		headers: {},
 		method,

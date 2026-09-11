@@ -17,6 +17,8 @@ export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscr
 
 export let globalState: vscode.Memento;
 
+const hasServer = (servers: unknown, name: string) => !!servers && Object.prototype.hasOwnProperty.call(servers, name);
+
 export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
 	const accountId = userName ? `${serverName}/${userName}` : undefined;
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
@@ -336,7 +338,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				}
 			};
 			// Only WorkspaceFolder objects have an index.
-			if (server && servers?.workspaceFolderValue?.hasOwnProperty(server.name) && typeof (scope as vscode.WorkspaceFolder)?.index == "number") {
+			if (server && hasServer(servers?.workspaceFolderValue, server.name) && typeof (scope as vscode.WorkspaceFolder)?.index == "number") {
 				// Open the workspace folder settings file. Need to use showTextDocument because the
 				// "workbench.action.openFolderSettingsFile" command always prompts the user.
 				vscode.window.showTextDocument(
@@ -347,10 +349,10 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 					// If there's an error, fall back to showing the UI
 					vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${extensionId}`);
 				});
-			} else if (server && servers?.workspaceValue?.hasOwnProperty(server.name)) {
+			} else if (server && hasServer(servers?.workspaceValue, server.name)) {
 				// Open the workspace settings file
 				vscode.commands.executeCommand("workbench.action.openWorkspaceSettingsFile", openJSONArg).then(revealServer);
-			} else if (server && servers?.globalValue?.hasOwnProperty(server.name)) {
+			} else if (server && hasServer(servers?.globalValue, server.name)) {
 				// Open the user settings.json
 				vscode.commands.executeCommand("workbench.action.openSettingsJson", openJSONArg).then(revealServer);
 			} else {
