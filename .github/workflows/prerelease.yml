@@ -62,6 +62,7 @@ jobs:
         with:
           node-version: 24
       - run: npm install
+      - run: npm run lint
       - run: npm run compile
       - name: npm test
         run: xvfb-run npm test
