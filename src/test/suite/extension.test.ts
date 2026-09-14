@@ -1,9 +1,9 @@
 /**
- * Integration tests against the IRIS containers defined in test-fixtures/iris/docker-compose.yml, opened through
- * the multi-root workspace test-fixtures/ci.code-workspace. Each intersystems.servers entry, and each workspace
- * folder connecting through one, is a configuration; the same checks run against every configuration they
- * apply to. Every check asserts that no credential prompt appeared: a prompt would block and the test would
- * time out.
+ * Integration tests against the IRIS containers in test-fixtures/iris/docker-compose.yml. runTest.ts
+ * generates one workspace file per launch (see test-fixtures/CASES.md) and opens them one at a time;
+ * this suite reads its launch back from the open workspace's file name and runs every check that applies.
+ * Every check asserts that no credential prompt appeared: VS Code refuses modal dialogs in tests, and an
+ * input box would block until the mocha timeout.
  */
 import { Authorization, IServerSpec, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import * as assert from "assert";
@@ -11,27 +11,93 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { extensionId, OBJECTSCRIPT_EXTENSIONID } from "../../commonActivate";
 import { makeRESTRequest } from "../../makeRESTRequest";
+import { parse, SESSION_TIMEOUT_MS, togglesActive } from "../cases";
 
-/** Must match test-fixtures/iris/docker-compose.yml and the entries in test-fixtures/ci.code-workspace */
-const SERVERS: Record<string, { port: number, username: string, password?: string }> = {
-	ci: { port: 52799, username: "_SYSTEM", password: "SYS" },
-	anon: { port: 52798, username: "" },
-};
-/** Workspace folders that the ObjectScript extension connects through an intersystems.servers entry */
-const FOLDERS: Record<string, keyof typeof SERVERS> = {
-	"client-named-server": "ci",
-	"server-side": "ci",
-	"server-side-anon": "anon",
-};
-/** The /api/atelier session timeout configured by test-fixtures/iris/setup/setup.sh */
-const SESSION_TIMEOUT_MS = 10000;
+const CASE = path.basename(vscode.workspace.workspaceFile!.fsPath, ".code-workspace");
+const { kind, server, active } = parse(CASE);
+const FOLDER = vscode.workspace.workspaceFolders![0];
+const isServerSide = kind === "serverSide-sm";
+const canToggle = togglesActive(kind);
+/** docker-compose and serverSide are always active; os-host and sm follow objectscript.conn.active */
+const configuredActive = canToggle ? active === true : true;
+/** getServerSpec key: the entry for the -sm cases, the folder name for the -os- cases (the Current node) */
+const specName = kind.endsWith("-sm") ? server.serverName : FOLDER.name;
 
 let smApi: ServerManagerAPI;
 let osApi: any;
-/** Server documents created by the tests, for cleanup */
-const created: Array<[string, string]> = [];
+let counter = 0;
+const created = new Set<string>();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Talks to the container directly, bypassing both extensions, to check what actually landed on the server */
+async function restDoc(method: "GET" | "DELETE", name: string): Promise<string | undefined> {
+	const response = await fetch(`http://localhost:${server.port}/api/atelier/v1/USER/doc/${name}`, {
+		headers: server.password
+			? { Authorization: "Basic " + Buffer.from(`${server.username}:${server.password}`).toString("base64") }
+			: {},
+		method,
+	});
+	if (response.status === 404) { return undefined; }
+	assert.ok(response.ok, `${method} ${name} failed with HTTP ${response.status}`);
+	const { result } = await response.json();
+	return Array.isArray(result.content) ? result.content.join("\n") : undefined;
+}
+
+async function spec(): Promise<IServerSpec & { auth: Authorization }> {
+	const s = await smApi.getServerSpec(specName);
+	assert.ok(s?.auth, `no spec for '${specName}'`);
+	return s as IServerSpec & { auth: Authorization };
+}
+
+/** Check 1: the ObjectScript extension resolves the folder as configured, without prompting */
+async function checkResolves(expectActive: boolean): Promise<void> {
+	const deadline = Date.now() + 30000;
+	let conn = await osApi.asyncServerForUri(FOLDER.uri);
+	while (conn?.active !== expectActive && Date.now() < deadline) {
+		await sleep(500);
+		conn = await osApi.asyncServerForUri(FOLDER.uri);
+	}
+	assert.strictEqual(conn.active, expectActive, `expected active=${expectActive}`);
+	assert.strictEqual(conn.host, "localhost");
+	assert.strictEqual(conn.port, server.port);
+	assert.strictEqual(conn.namespace, "USER");
+	assert.strictEqual(conn.username || "", server.username || "");
+	assert.strictEqual(conn.password, server.password);
+}
+
+/**
+ * Check 2: a saved class reaches the server iff the connection is active. With verifyDelete, an active
+ * connection also propagates the local delete back to the server; the flip check omits that, because a
+ * folder that was inactive at activation time does not wire up delete-sync until the window reloads.
+ */
+async function roundTrip(expectActive: boolean, verifyDelete = true): Promise<void> {
+	const className = `SMTest.${CASE.replace(/[^A-Za-z0-9]/g, "")}${counter++}`;
+	const doc = `${className}.cls`;
+	const file = isServerSide
+		? vscode.Uri.joinPath(FOLDER.uri, `${className.replace(/\./g, "/")}.cls`)
+		// Written straight into the pre-existing src/ folder: creating a directory tree and a file in it at
+		// once can lose the file's watcher event on Linux, which is not what this is testing
+		: vscode.Uri.joinPath(FOLDER.uri, "src", `${className}.cls`);
+	const source = `Class ${className}\n{\n\nClassMethod Hello() As %String\n{\n\tQuit "hello"\n}\n\n}\n`;
+	created.add(doc);
+	await vscode.workspace.fs.writeFile(file, Buffer.from(source));
+	if (expectActive) {
+		const onServer = await waitFor(`${doc} on the server`, () => restDoc("GET", doc));
+		assert.match(onServer, new RegExp(`^Class ${className}`));
+		await vscode.workspace.fs.delete(file);
+		if (verifyDelete) {
+			await waitFor(`${doc} deleted from the server`, async () => !(await restDoc("GET", doc)));
+			created.delete(doc);
+		}
+	} else {
+		// Give any erroneous sync time to happen before asserting it did not
+		await sleep(5000);
+		assert.strictEqual(await restDoc("GET", doc), undefined, "inactive connection must not reach the server");
+		await vscode.workspace.fs.delete(file);
+		created.delete(doc);
+	}
+}
 
 async function waitFor<T>(label: string, probe: () => Promise<T | undefined | false>, timeoutMs = 30000): Promise<T> {
 	const deadline = Date.now() + timeoutMs;
@@ -43,51 +109,30 @@ async function waitFor<T>(label: string, probe: () => Promise<T | undefined | fa
 	throw new Error(`Timed out after ${timeoutMs} ms waiting for ${label}`);
 }
 
-function folderUri(name: string): vscode.Uri {
-	const folder = vscode.workspace.workspaceFolders?.find((f) => f.name === name);
-	assert.ok(folder, `workspace folder '${name}' is missing`);
-	return folder.uri;
+/** Rewrite objectscript.conn.active in the generated (gitignored) workspace file */
+async function applyActive(value: boolean): Promise<void> {
+	const cfg = vscode.workspace.getConfiguration("objectscript");
+	await cfg.update("conn", { ...(cfg.get("conn") as object), active: value }, vscode.ConfigurationTarget.Workspace);
 }
 
-/** Talks to a container directly, bypassing both extensions, to check what actually landed on the server */
-async function restDoc(server: string, method: "GET" | "DELETE", name: string): Promise<string | undefined> {
-	const { port, username, password } = SERVERS[server];
-	const response = await fetch(`http://localhost:${port}/api/atelier/v1/USER/doc/${name}`, {
-		headers: password ? { Authorization: "Basic " + Buffer.from(`${username}:${password}`).toString("base64") } : {},
-		method,
-	});
-	if (response.status === 404) { return undefined; }
-	assert.ok(response.ok, `${method} ${name} on ${server} failed with HTTP ${response.status}`);
-	const { result } = await response.json();
-	return Array.isArray(result.content) ? result.content.join("\n") : undefined;
+/** Check 5: Server Manager resolves the spec as configured; check 6: it lists namespaces over REST */
+async function checkSpec(): Promise<void> {
+	const s = await spec();
+	assert.strictEqual(s.webServer.scheme, "http");
+	assert.strictEqual(s.webServer.host, "localhost");
+	assert.strictEqual(s.webServer.port, server.port);
+	assert.strictEqual(s.webServer.pathPrefix, "");
+	assert.strictEqual(s.username || "", server.username || "");
+	// A password stored in plaintext in settings must reach API consumers such as the ObjectScript extension
+	assert.strictEqual(s.password, server.password);
+	assert.strictEqual(s.auth.resolved(), server.password !== undefined);
+	// As the Servers view does
+	const response = await makeRESTRequest("GET", s);
+	assert.strictEqual(response?.status, 200);
+	assert.ok(response.data.result.content.namespaces.includes("USER"), "USER namespace not listed");
 }
 
-async function specFor(name: string): Promise<IServerSpec & { auth: Authorization }> {
-	const spec = await smApi.getServerSpec(name);
-	assert.ok(spec?.auth, `no spec for ${name}`);
-	return spec as IServerSpec & { auth: Authorization };
-}
-
-/** Write a class through the folder, confirm it reached the server, delete it, confirm it's gone */
-async function assertRoundTrip(folder: string): Promise<void> {
-	const server = FOLDERS[folder];
-	const root = folderUri(folder);
-	const className = `CiTest.${folder.replace(/-/g, "")}`;
-	const file = root.scheme === "isfs"
-		? vscode.Uri.joinPath(root, `${className.replace(/\./g, "/")}.cls`)
-		// Written straight into the pre-existing src/ folder: creating a directory tree and a file in it at
-		// once can lose the file's watcher event on Linux, which is not what this is testing
-		: vscode.Uri.joinPath(root, "src", `${className}.cls`);
-	created.push([server, `${className}.cls`]);
-	const source = `Class ${className}\n{\n\nClassMethod Hello() As %String\n{\n\tQuit "hello"\n}\n\n}\n`;
-	await vscode.workspace.fs.writeFile(file, Buffer.from(source));
-	const onServer = await waitFor(`${className} to appear on ${server}`, () => restDoc(server, "GET", `${className}.cls`));
-	assert.match(onServer, new RegExp(`^Class ${className}`));
-	await vscode.workspace.fs.delete(file);
-	await waitFor(`${className} to be deleted from ${server}`, async () => !(await restDoc(server, "GET", `${className}.cls`)));
-}
-
-suite("Servers in IRIS containers", () => {
+suite(CASE, () => {
 	suiteSetup(async () => {
 		const serverManager = vscode.extensions.getExtension(extensionId)!;
 		// The ObjectScript extension depends on the Marketplace release of this extension, which gets
@@ -96,63 +141,52 @@ suite("Servers in IRIS containers", () => {
 		smApi = await serverManager.activate();
 		const objectscript = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
 		assert.ok(objectscript, `${OBJECTSCRIPT_EXTENSIONID} is not installed`);
-		// Hangs here (and fails on the mocha timeout) if its activation blocks on a credential prompt
+		// Hangs here (and fails on the mocha timeout) if its activation blocks on a credential prompt.
+		// getServerSpec by folder name also needs it active before we call it.
 		osApi = await objectscript.activate();
 	});
 
 	suiteTeardown(async () => {
-		for (const [server, name] of created) { await restDoc(server, "DELETE", name).catch(() => undefined); }
-		const src = vscode.Uri.joinPath(folderUri("client-named-server"), "src");
-		for (const [name] of await vscode.workspace.fs.readDirectory(src)) {
-			if (name.endsWith(".cls")) { await vscode.workspace.fs.delete(vscode.Uri.joinPath(src, name)); }
-		}
+		for (const doc of created) { await restDoc("DELETE", doc).catch(() => undefined); }
 	});
 
-	for (const [name, expected] of Object.entries(SERVERS)) {
-		test(`${name}: getServerSpec resolves the entry without prompting`, async () => {
-			const spec = await specFor(name);
-			assert.strictEqual(spec.webServer.scheme, "http");
-			assert.strictEqual(spec.webServer.host, "localhost");
-			assert.strictEqual(spec.webServer.port, expected.port);
-			assert.strictEqual(spec.webServer.pathPrefix, "");
-			assert.strictEqual(spec.username, expected.username);
-			// A password stored in plaintext in settings must reach API consumers such as the ObjectScript extension
-			assert.strictEqual(spec.password, expected.password);
-			assert.strictEqual(spec.auth.resolved(), expected.password !== undefined);
-		});
+	// Checks 1 and 2
+	test("resolves and round-trips as configured", async () => {
+		await checkResolves(configuredActive);
+		await roundTrip(configuredActive);
+	});
 
-		test(`${name}: lists namespaces without prompting, as the Servers view does`, async () => {
-			const response = await makeRESTRequest("GET", await specFor(name));
-			assert.strictEqual(response.status, 200);
-			assert.ok(response.data.result.content.namespaces.includes("USER"), "USER namespace not listed");
-		});
-
-		test(`${name}: still lists namespaces after the session expired`, async () => {
-			// Idle past the server's session timeout so the cached cookie is rejected
-			await sleep(SESSION_TIMEOUT_MS + 3000);
-			const response = await makeRESTRequest("GET", await specFor(name));
-			assert.strictEqual(response.status, 200);
-		});
-	}
-
-	for (const [folder, server] of Object.entries(FOLDERS)) {
-		test(`${folder}: the ObjectScript extension resolves the '${server}' entry without prompting`, async () => {
-			const conn = await osApi.asyncServerForUri(folderUri(folder));
-			assert.strictEqual(conn.active, true);
-			assert.strictEqual(conn.host, "localhost");
-			assert.strictEqual(conn.port, SERVERS[server].port);
-			assert.strictEqual(conn.namespace, "USER");
-			assert.strictEqual(conn.username, SERVERS[server].username);
-			assert.strictEqual(conn.password, SERVERS[server].password);
-		});
-
-		test(`${folder}: saving a class syncs it to the server and deleting it removes it`, () => assertRoundTrip(folder));
-	}
-
-	for (const folder of ["server-side", "server-side-anon"]) {
-		test(`${folder}: lists the namespace`, async () => {
-			const entries = await vscode.workspace.fs.readDirectory(folderUri(folder));
+	// Check 4
+	if (isServerSide) {
+		test("lists the namespace through the folder", async () => {
+			const entries = await vscode.workspace.fs.readDirectory(FOLDER.uri);
 			assert.ok(entries.length > 0, "namespace listing is empty");
+		});
+	}
+
+	// Check 5 (and 6)
+	test("Server Manager resolves the spec and lists namespaces", () => checkSpec());
+
+	// Checks 1 and 2 again, after idling past the session timeout so a cached cookie must be renewed.
+	// Skips the delete round-trip: this proves the save reconnects, and older releases don't re-wire
+	// delete-sync after a session lapses (fixed on the dev build, so re-verifying it here would be flaky).
+	test("still resolves and round-trips after the session times out", async () => {
+		await sleep(SESSION_TIMEOUT_MS + 3000);
+		await checkResolves(configuredActive);
+		await roundTrip(configuredActive, false);
+	});
+
+	// Check 3, last, so the connection it establishes can't leak a session into the idle check above
+	if (canToggle) {
+		test("flipping objectscript.conn.active is honored", async () => {
+			try {
+				await applyActive(!configuredActive);
+				await checkResolves(!configuredActive);
+				await roundTrip(!configuredActive, false);
+			} finally {
+				await applyActive(configuredActive);
+				await checkResolves(configuredActive);
+			}
 		});
 	}
 });
