@@ -1,6 +1,6 @@
 /**
  * Integration tests against the IRIS containers in test-fixtures/iris/docker-compose.yml. runTest.ts
- * generates one workspace file per launch (see test-fixtures/CASES.md) and opens them one at a time;
+ * generates one workspace file per launch (see test-fixtures/README.md) and opens them one at a time;
  * this suite reads its launch back from the open workspace's file name and runs every check that applies.
  * Every check asserts that no credential prompt appeared: VS Code refuses modal dialogs in tests, and an
  * input box would block until the mocha timeout.
