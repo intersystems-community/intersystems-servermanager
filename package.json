@@ -74,7 +74,7 @@
   "contributes": {
     "authentication": [
       {
-        "id": "intersystems-servermanager-credentials",
+        "id": "intersystems-server-credentials",
         "label": "InterSystems Server Credentials"
       }
     ],
