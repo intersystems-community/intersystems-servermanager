@@ -104,7 +104,7 @@ async function applyActive(value: boolean): Promise<void> {
 	await cfg.update("conn", { ...(cfg.get("conn") as object), active: value }, vscode.ConfigurationTarget.Workspace);
 }
 
-/** Checks 5 and 6 */
+/** Checks 4 and 5 */
 async function checkSpec(): Promise<void> {
 	const s = await spec();
 	assert.strictEqual(s.webServer.scheme, "http");
@@ -140,7 +140,7 @@ suite(CASE, () => {
 		await roundTrip(configuredActive);
 	});
 
-	// Check 4
+	// Check 3
 	if (isServerSide) {
 		test("lists the namespace through the folder", async () => {
 			const entries = await vscode.workspace.fs.readDirectory(FOLDER.uri);
@@ -148,7 +148,7 @@ suite(CASE, () => {
 		});
 	}
 
-	// Check 5 (and 6)
+	// Checks 4 and 5
 	test("Server Manager resolves the spec and lists namespaces", () => checkSpec());
 
 	// Checks 1 and 2 again once the cached session has expired. Skips the delete: released ObjectScript
@@ -159,7 +159,7 @@ suite(CASE, () => {
 		await roundTrip(configuredActive, false);
 	});
 
-	// Check 3, last so its connection can't leak a live session into the idle check above
+	// Check 6, last so its connection can't leak a live session into the idle check above
 	if (canToggle) {
 		test("flipping objectscript.conn.active is honored", async () => {
 			try {
