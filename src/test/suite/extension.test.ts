@@ -46,7 +46,7 @@ async function spec(): Promise<IServerSpec & { auth: Authorization }> {
 	return s as IServerSpec & { auth: Authorization };
 }
 
-async function checkResolves(expectActive: boolean): Promise<void> {
+async function checkOsResolves(expectActive: boolean): Promise<void> {
 	const deadline = Date.now() + 30000;
 	let conn = await osApi.asyncServerForUri(FOLDER.uri);
 	while (conn?.active !== expectActive && Date.now() < deadline) {
@@ -98,7 +98,7 @@ async function waitFor<T>(label: string, probe: () => Promise<T | undefined | fa
 	throw new Error(`Timed out after ${timeoutMs} ms waiting for ${label}`);
 }
 
-async function checkListsTheNamespace(): Promise<void> {
+async function checkOsListsTheNamespace(): Promise<void> {
 	const entries = await vscode.workspace.fs.readDirectory(FOLDER.uri);
 	assert.ok(entries.length > 0, "namespace listing is empty");
 }
@@ -108,7 +108,7 @@ async function applyActive(value: boolean): Promise<void> {
 	await cfg.update("conn", { ...(cfg.get("conn") as object), active: value }, vscode.ConfigurationTarget.Workspace);
 }
 
-async function checkServerManagerResolvesTheSpec(): Promise<void> {
+async function checkSmResolves(): Promise<void> {
 	const s = await spec();
 	assert.strictEqual(s.webServer.scheme, "http");
 	assert.strictEqual(s.webServer.host, "localhost");
@@ -119,7 +119,7 @@ async function checkServerManagerResolvesTheSpec(): Promise<void> {
 	assert.strictEqual(s.auth.resolved(), server.password !== undefined);
 }
 
-async function checkServerManagerListsNamespaces(): Promise<void> {
+async function checkSmListsNamespaces(): Promise<void> {
 	const response = await makeRESTRequest("GET", await spec());
 	assert.strictEqual(response?.status, 200);
 	assert.ok(response.data.result.content.namespaces.includes("USER"), "USER namespace not listed");
@@ -140,20 +140,20 @@ suite(CASE, () => {
 		for (const doc of created) { await restDoc("DELETE", doc).catch(() => undefined); }
 	});
 
-	test("resolves", () => checkResolves(configuredActive));
-	test("Server Manager resolves the spec", () => checkServerManagerResolvesTheSpec());
+	test("OS resolves", () => checkOsResolves(configuredActive));
+	test("SM resolves", () => checkSmResolves());
 	test("round-trips", () => checkRoundTrips(configuredActive));
 
 	if (isServerSide) {
-		test("lists the namespace", () => checkListsTheNamespace());
+		test("OS lists the namespace", () => checkOsListsTheNamespace());
 	}
 
-	test("Server Manager lists namespaces", () => checkServerManagerListsNamespaces());
+	test("SM lists namespaces", () => checkSmListsNamespaces());
 
 	// Skips the delete: released ObjectScript builds don't re-wire delete-sync after a session lapse
 	test("still resolves and round-trips after the session times out", async () => {
 		await sleep(SESSION_TIMEOUT_MS + 3000);
-		await checkResolves(configuredActive);
+		await checkOsResolves(configuredActive);
 		await checkRoundTrips(configuredActive, false);
 	});
 
@@ -162,11 +162,11 @@ suite(CASE, () => {
 		test("flipping objectscript.conn.active is honored", async () => {
 			try {
 				await applyActive(!configuredActive);
-				await checkResolves(!configuredActive);
+				await checkOsResolves(!configuredActive);
 				await checkRoundTrips(!configuredActive, false);
 			} finally {
 				await applyActive(configuredActive);
-				await checkResolves(configuredActive);
+				await checkOsResolves(configuredActive);
 			}
 		});
 	}
