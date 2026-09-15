@@ -46,7 +46,6 @@ async function spec(): Promise<IServerSpec & { auth: Authorization }> {
 	return s as IServerSpec & { auth: Authorization };
 }
 
-/** Check 1 */
 async function checkResolves(expectActive: boolean): Promise<void> {
 	const deadline = Date.now() + 30000;
 	let conn = await osApi.asyncServerForUri(FOLDER.uri);
@@ -62,7 +61,7 @@ async function checkResolves(expectActive: boolean): Promise<void> {
 	assert.strictEqual(conn.password, server.password);
 }
 
-/** Check 2. A folder that was inactive at activation doesn't wire up delete-sync until reload, hence verifyDelete */
+/** A folder that was inactive at activation doesn't wire up delete-sync until reload, hence verifyDelete */
 async function roundTrip(expectActive: boolean, verifyDelete = true): Promise<void> {
 	const className = `SMTest.${CASE.replace(/[^A-Za-z0-9]/g, "")}${counter++}`;
 	const doc = `${className}.cls`;
@@ -104,7 +103,6 @@ async function applyActive(value: boolean): Promise<void> {
 	await cfg.update("conn", { ...(cfg.get("conn") as object), active: value }, vscode.ConfigurationTarget.Workspace);
 }
 
-/** Checks 4 and 5 */
 async function checkSpec(): Promise<void> {
 	const s = await spec();
 	assert.strictEqual(s.webServer.scheme, "http");
@@ -114,9 +112,6 @@ async function checkSpec(): Promise<void> {
 	assert.strictEqual(s.username || "", server.username || "");
 	assert.strictEqual(s.password, server.password);
 	assert.strictEqual(s.auth.resolved(), server.password !== undefined);
-	const response = await makeRESTRequest("GET", s);
-	assert.strictEqual(response?.status, 200);
-	assert.ok(response.data.result.content.namespaces.includes("USER"), "USER namespace not listed");
 }
 
 suite(CASE, () => {
@@ -134,32 +129,32 @@ suite(CASE, () => {
 		for (const doc of created) { await restDoc("DELETE", doc).catch(() => undefined); }
 	});
 
-	// Checks 1 and 2
-	test("resolves and round-trips as configured", async () => {
-		await checkResolves(configuredActive);
-		await roundTrip(configuredActive);
-	});
+	test("resolves", () => checkResolves(configuredActive));
+	test("round-trips", () => roundTrip(configuredActive));
 
-	// Check 3
 	if (isServerSide) {
-		test("lists the namespace through the folder", async () => {
+		test("lists the namespace", async () => {
 			const entries = await vscode.workspace.fs.readDirectory(FOLDER.uri);
 			assert.ok(entries.length > 0, "namespace listing is empty");
 		});
 	}
 
-	// Checks 4 and 5
-	test("Server Manager resolves the spec and lists namespaces", () => checkSpec());
+	test("Server Manager resolves the spec", () => checkSpec());
 
-	// Checks 1 and 2 again once the cached session has expired. Skips the delete: released ObjectScript
-	// builds don't re-wire delete-sync after a session lapse.
+	test("Server Manager lists namespaces", async () => {
+		const response = await makeRESTRequest("GET", await spec());
+		assert.strictEqual(response?.status, 200);
+		assert.ok(response.data.result.content.namespaces.includes("USER"), "USER namespace not listed");
+	});
+
+	// Skips the delete: released ObjectScript builds don't re-wire delete-sync after a session lapse
 	test("still resolves and round-trips after the session times out", async () => {
 		await sleep(SESSION_TIMEOUT_MS + 3000);
 		await checkResolves(configuredActive);
 		await roundTrip(configuredActive, false);
 	});
 
-	// Check 6, last so its connection can't leak a live session into the idle check above
+	// Last, so its connection can't leak a live session into the idle check above
 	if (canToggle) {
 		test("flipping objectscript.conn.active is honored", async () => {
 			try {
