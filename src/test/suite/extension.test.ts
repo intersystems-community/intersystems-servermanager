@@ -61,8 +61,7 @@ async function checkOsResolves(expectActive: boolean): Promise<void> {
 	assert.strictEqual(conn.password, server.password);
 }
 
-/** verifyDelete is off for the flip: deletes go through an AtelierAPI captured at indexing, whose `active` is stale */
-async function checkRoundTrips(expectActive: boolean, verifyDelete = true): Promise<void> {
+async function checkRoundTrips(expectActive: boolean): Promise<void> {
 	const className = `SMTest.${CASE.replace(/[^A-Za-z0-9]/g, "")}${counter++}`;
 	const doc = `${className}.cls`;
 	const file = isServerSide
@@ -76,10 +75,8 @@ async function checkRoundTrips(expectActive: boolean, verifyDelete = true): Prom
 		const onServer = await waitFor(`${doc} on the server`, () => restDoc("GET", doc));
 		assert.match(onServer, new RegExp(`^Class ${className}`));
 		await vscode.workspace.fs.delete(file);
-		if (verifyDelete) {
-			await waitFor(`${doc} deleted from the server`, async () => !(await restDoc("GET", doc)));
-			created.delete(doc);
-		}
+		await waitFor(`${doc} deleted from the server`, async () => !(await restDoc("GET", doc)));
+		created.delete(doc);
 	} else {
 		await sleep(5000);
 		assert.strictEqual(await restDoc("GET", doc), undefined, "inactive connection must not reach the server");
@@ -103,14 +100,14 @@ async function checkOsListsTheFolder(): Promise<void> {
 	assert.ok(entries.length > 0, "namespace listing is empty");
 }
 
-type Check = (expectActive: boolean, verifyDelete: boolean) => Promise<void>;
+type Check = (expectActive: boolean) => Promise<void>;
 /** 1–5, as they apply to the case */
 const checks: [string, Check][] = [
 	["OS resolves", (expectActive) => checkOsResolves(expectActive)],
 	["SM resolves", () => checkSmResolves()],
 	...(isServerSide ? [["OS lists the folder", () => checkOsListsTheFolder()] as [string, Check]] : []),
 	["SM lists namespaces", () => checkSmListsNamespaces()],
-	["round-trips", (expectActive, verifyDelete) => checkRoundTrips(expectActive, verifyDelete)],
+	["round-trips", (expectActive) => checkRoundTrips(expectActive)],
 ];
 
 async function applyActive(value: boolean): Promise<void> {
@@ -152,17 +149,17 @@ suite(CASE, () => {
 
 	// Each check twice, the second time as the first request on a lapsed session
 	for (const [name, check] of checks) {
-		test(name, () => check(configuredActive, true));
+		test(name, () => check(configuredActive));
 		test(`${name} after the session times out`, async () => {
 			await sleep(SESSION_TIMEOUT_MS + 3000);
-			await check(configuredActive, true);
+			await check(configuredActive);
 		});
 	}
 
 	if (canToggle) {
 		test("all again with active flipped", async () => {
 			await applyActive(!configuredActive);
-			for (const [, check] of checks) { await check(!configuredActive, false); }
+			for (const [, check] of checks) { await check(!configuredActive); }
 		});
 	}
 });
