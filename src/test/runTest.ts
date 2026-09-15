@@ -4,7 +4,7 @@ import * as os from "os";
 import * as path from "path";
 
 import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from "@vscode/test-electron";
-import { allLaunches, workspaceFile } from "./cases";
+import { LAUNCHES, workspaceFile } from "./cases";
 
 async function main() {
 	try {
@@ -18,10 +18,8 @@ async function main() {
 
 		// Generated so the active-flip check can rewrite the workspace file without dirtying the repo
 		const generated = path.resolve(extensionDevelopmentPath, "test-fixtures", ".generated");
-		fs.rmSync(generated, { recursive: true, force: true });
 		fs.mkdirSync(generated, { recursive: true });
-		const launches = allLaunches();
-		for (const l of launches) {
+		for (const l of LAUNCHES) {
 			fs.writeFileSync(path.join(generated, `${l.name}.code-workspace`), JSON.stringify(workspaceFile(l), null, "\t"));
 		}
 
@@ -40,13 +38,11 @@ async function main() {
 		// Docker Desktop's CLI plugins would otherwise make the extension's `podman compose` run Docker Compose
 		process.env.PODMAN_COMPOSE_PROVIDER ??= "podman-compose";
 
-		// e.g. `npm test -- os-host`
 		const filter = process.argv[2];
 		const failed: string[] = [];
-		for (const l of filter ? launches.filter((l) => l.name.includes(filter)) : launches) {
+		for (const l of filter ? LAUNCHES.filter((l) => l.name.includes(filter)) : LAUNCHES) {
 			const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "servermanager-test-"));
-			const workspace = path.join(generated, `${l.name}.code-workspace`);
-			const launchArgs = [workspace, "--user-data-dir", userDataDir, "--disable-workspace-trust"];
+			const launchArgs = [path.join(generated, `${l.name}.code-workspace`), "--user-data-dir", userDataDir, "--disable-workspace-trust"];
 			console.log(`\n===== ${l.name} =====`);
 			try {
 				await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath, launchArgs });
