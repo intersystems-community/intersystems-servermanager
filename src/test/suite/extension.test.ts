@@ -61,7 +61,7 @@ async function checkOsResolves(expectActive: boolean): Promise<void> {
 	assert.strictEqual(conn.password, server.password);
 }
 
-/** A folder that was inactive at activation doesn't wire up delete-sync until reload, hence verifyDelete */
+/** verifyDelete is off for the flip: a folder inactive at activation doesn't wire up delete-sync until reload */
 async function checkRoundTrips(expectActive: boolean, verifyDelete = true): Promise<void> {
 	const className = `SMTest.${CASE.replace(/[^A-Za-z0-9]/g, "")}${counter++}`;
 	const doc = `${className}.cls`;
@@ -150,13 +150,12 @@ suite(CASE, () => {
 		for (const doc of created) { await restDoc("DELETE", doc).catch(() => undefined); }
 	});
 
-	// Each check twice, the second time as the first request on a lapsed session. No delete then:
-	// released builds don't re-wire delete-sync after a session lapse.
+	// Each check twice, the second time as the first request on a lapsed session
 	for (const [name, check] of checks) {
 		test(name, () => check(configuredActive, true));
 		test(`${name} after the session times out`, async () => {
 			await sleep(SESSION_TIMEOUT_MS + 3000);
-			await check(configuredActive, false);
+			await check(configuredActive, true);
 		});
 	}
 
