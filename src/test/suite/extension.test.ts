@@ -141,13 +141,13 @@ suite(CASE, () => {
 	});
 
 	test("resolves", () => checkResolves(configuredActive));
+	test("Server Manager resolves the spec", () => checkServerManagerResolvesTheSpec());
 	test("round-trips", () => checkRoundTrips(configuredActive));
 
 	if (isServerSide) {
 		test("lists the namespace", () => checkListsTheNamespace());
 	}
 
-	test("Server Manager resolves the spec", () => checkServerManagerResolvesTheSpec());
 	test("Server Manager lists namespaces", () => checkServerManagerListsNamespaces());
 
 	// Skips the delete: released ObjectScript builds don't re-wire delete-sync after a session lapse
