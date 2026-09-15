@@ -98,7 +98,7 @@ async function waitFor<T>(label: string, probe: () => Promise<T | undefined | fa
 	throw new Error(`Timed out after ${timeoutMs} ms waiting for ${label}`);
 }
 
-async function checkOsListsTheNamespace(): Promise<void> {
+async function checkOsListsTheFolder(): Promise<void> {
 	const entries = await vscode.workspace.fs.readDirectory(FOLDER.uri);
 	assert.ok(entries.length > 0, "namespace listing is empty");
 }
@@ -145,7 +145,7 @@ suite(CASE, () => {
 	test("round-trips", () => checkRoundTrips(configuredActive));
 
 	if (isServerSide) {
-		test("OS lists the namespace", () => checkOsListsTheNamespace());
+		test("OS lists the folder", () => checkOsListsTheFolder());
 	}
 
 	test("SM lists namespaces", () => checkSmListsNamespaces());
