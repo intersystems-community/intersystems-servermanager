@@ -60,6 +60,8 @@ export interface WorkspaceFile {
 /** Folder paths are relative to test-fixtures/.generated/ */
 export function workspaceFile({ kind, serverName, active }: Launch): WorkspaceFile {
 	const { webServer: { host, port }, username, password } = SERVERS[serverName];
+	// -inactive omits the key to exercise the default
+	const activeConn = active ? { active } : {};
 	switch (kind) {
 		case "clientSide-os-host":
 			return {
@@ -72,7 +74,7 @@ export function workspaceFile({ kind, serverName, active }: Launch): WorkspaceFi
 						ns: "USER",
 						username,
 						password,
-						...(active && { active }),
+						...activeConn,
 					},
 				},
 			};
@@ -93,7 +95,7 @@ export function workspaceFile({ kind, serverName, active }: Launch): WorkspaceFi
 			return {
 				folders: [{ path: "../client" }],
 				settings: {
-					"objectscript.conn": { server: serverName, ns: "USER", ...(active && { active }) },
+					"objectscript.conn": { server: serverName, ns: "USER", ...activeConn },
 					"intersystems.servers": { [serverName]: SERVERS[serverName] },
 				},
 			};
