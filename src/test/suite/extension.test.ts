@@ -13,16 +13,17 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { extensionId, OBJECTSCRIPT_EXTENSIONID } from "../../commonActivate";
 import { makeRESTRequest } from "../../makeRESTRequest";
-import { Conn, parse, SESSION_TIMEOUT_MS } from "../cases";
+import { Conn, parse, SERVERS, SESSION_TIMEOUT_MS } from "../cases";
 
 const caseName = path.basename(vscode.workspace.workspaceFile!.fsPath, ".code-workspace");
-const { kind, server, active } = parse(caseName);
+const { kind, serverName, active } = parse(caseName);
+const server = SERVERS[serverName];
 const folder = vscode.workspace.workspaceFolders![0];
 const isServerSide = kind === "serverSide-sm";
 const canToggle = active !== undefined;
 const configuredActive = active ?? true;
 /** The entry for -sm cases; the folder name (the Servers view's Current node) for -os- cases */
-const specName = kind.endsWith("-sm") ? server.serverName : folder.name;
+const specName = kind.endsWith("-sm") ? serverName : folder.name;
 
 let smAPI: ServerManagerAPI;
 let osAPI: VSCodeObjectScriptAPI;
@@ -33,7 +34,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Direct REST to the container, bypassing both extensions */
 async function restDoc(method: "GET" | "DELETE", name: string): Promise<string | undefined> {
-	const response = await fetch(`http://localhost:${server.port}/api/atelier/v1/USER/doc/${name}`, {
+	const response = await fetch(`http://localhost:${server.webServer.port}/api/atelier/v1/USER/doc/${name}`, {
 		headers: server.password
 			? { Authorization: "Basic " + Buffer.from(`${server.username}:${server.password}`).toString("base64") }
 			: {},
@@ -61,7 +62,7 @@ async function checkOSResolves(expectActive: boolean): Promise<void> {
 	assert.ok(conn, "no connection for the folder");
 	assert.strictEqual(conn.active, expectActive, `expected active=${expectActive}`);
 	assert.strictEqual(conn.host, "localhost");
-	assert.strictEqual(conn.port, server.port);
+	assert.strictEqual(conn.port, server.webServer.port);
 	assert.strictEqual(conn.namespace, "USER");
 	assert.strictEqual(conn.username || "", server.username || "");
 	assert.strictEqual(conn.password, server.password);
@@ -123,10 +124,7 @@ async function applyActive(value: boolean): Promise<void> {
 
 async function checkSMResolves(): Promise<void> {
 	const s = await spec();
-	assert.strictEqual(s.webServer.scheme, "http");
-	assert.strictEqual(s.webServer.host, "localhost");
-	assert.strictEqual(s.webServer.port, server.port);
-	assert.strictEqual(s.webServer.pathPrefix, "");
+	assert.deepStrictEqual(s.webServer, server.webServer);
 	assert.strictEqual(s.username || "", server.username || "");
 	assert.strictEqual(s.password, server.password);
 	assert.strictEqual(s.auth.resolved(), server.password !== undefined);
