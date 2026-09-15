@@ -1,9 +1,6 @@
 /**
- * Integration tests against the IRIS containers in test-fixtures/iris/docker-compose.yml. runTest.ts
- * generates one workspace file per launch (see test-fixtures/README.md) and opens them one at a time;
- * this suite reads its launch back from the open workspace's file name and runs every check that applies.
- * Every check asserts that no credential prompt appeared: VS Code refuses modal dialogs in tests, and an
- * input box would block until the mocha timeout.
+ * One launch per case (test-fixtures/README.md), read back from the workspace file name. A credential
+ * prompt anywhere fails the case: VS Code refuses modal dialogs in tests, and an input box blocks to the timeout.
  */
 import { Authorization, IServerSpec, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import * as assert from "assert";
@@ -18,9 +15,8 @@ const { kind, server, active } = parse(CASE);
 const FOLDER = vscode.workspace.workspaceFolders![0];
 const isServerSide = kind === "serverSide-sm";
 const canToggle = togglesActive(kind);
-/** docker-compose and serverSide are always active; os-host and sm follow objectscript.conn.active */
 const configuredActive = canToggle ? active === true : true;
-/** getServerSpec key: the entry for the -sm cases, the folder name for the -os- cases (the Current node) */
+/** The entry for -sm cases; the folder name (the Servers view's Current node) for -os- cases */
 const specName = kind.endsWith("-sm") ? server.serverName : FOLDER.name;
 
 let smApi: ServerManagerAPI;
@@ -30,7 +26,7 @@ const created = new Set<string>();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Talks to the container directly, bypassing both extensions, to check what actually landed on the server */
+/** Direct REST to the container, bypassing both extensions */
 async function restDoc(method: "GET" | "DELETE", name: string): Promise<string | undefined> {
 	const response = await fetch(`http://localhost:${server.port}/api/atelier/v1/USER/doc/${name}`, {
 		headers: server.password
@@ -50,7 +46,7 @@ async function spec(): Promise<IServerSpec & { auth: Authorization }> {
 	return s as IServerSpec & { auth: Authorization };
 }
 
-/** Check 1: the ObjectScript extension resolves the folder as configured, without prompting */
+/** Check 1 */
 async function checkResolves(expectActive: boolean): Promise<void> {
 	const deadline = Date.now() + 30000;
 	let conn = await osApi.asyncServerForUri(FOLDER.uri);
@@ -66,18 +62,13 @@ async function checkResolves(expectActive: boolean): Promise<void> {
 	assert.strictEqual(conn.password, server.password);
 }
 
-/**
- * Check 2: a saved class reaches the server iff the connection is active. With verifyDelete, an active
- * connection also propagates the local delete back to the server; the flip check omits that, because a
- * folder that was inactive at activation time does not wire up delete-sync until the window reloads.
- */
+/** Check 2. A folder that was inactive at activation doesn't wire up delete-sync until reload, hence verifyDelete */
 async function roundTrip(expectActive: boolean, verifyDelete = true): Promise<void> {
 	const className = `SMTest.${CASE.replace(/[^A-Za-z0-9]/g, "")}${counter++}`;
 	const doc = `${className}.cls`;
 	const file = isServerSide
 		? vscode.Uri.joinPath(FOLDER.uri, `${className.replace(/\./g, "/")}.cls`)
-		// Written straight into the pre-existing src/ folder: creating a directory tree and a file in it at
-		// once can lose the file's watcher event on Linux, which is not what this is testing
+		// Into the existing src/: creating a directory and a file at once can lose the watcher event on Linux
 		: vscode.Uri.joinPath(FOLDER.uri, "src", `${className}.cls`);
 	const source = `Class ${className}\n{\n\nClassMethod Hello() As %String\n{\n\tQuit "hello"\n}\n\n}\n`;
 	created.add(doc);
@@ -91,7 +82,6 @@ async function roundTrip(expectActive: boolean, verifyDelete = true): Promise<vo
 			created.delete(doc);
 		}
 	} else {
-		// Give any erroneous sync time to happen before asserting it did not
 		await sleep(5000);
 		assert.strictEqual(await restDoc("GET", doc), undefined, "inactive connection must not reach the server");
 		await vscode.workspace.fs.delete(file);
@@ -109,13 +99,12 @@ async function waitFor<T>(label: string, probe: () => Promise<T | undefined | fa
 	throw new Error(`Timed out after ${timeoutMs} ms waiting for ${label}`);
 }
 
-/** Rewrite objectscript.conn.active in the generated (gitignored) workspace file */
 async function applyActive(value: boolean): Promise<void> {
 	const cfg = vscode.workspace.getConfiguration("objectscript");
 	await cfg.update("conn", { ...(cfg.get("conn") as object), active: value }, vscode.ConfigurationTarget.Workspace);
 }
 
-/** Check 5: Server Manager resolves the spec as configured; check 6: it lists namespaces over REST */
+/** Checks 5 and 6 */
 async function checkSpec(): Promise<void> {
 	const s = await spec();
 	assert.strictEqual(s.webServer.scheme, "http");
@@ -123,10 +112,8 @@ async function checkSpec(): Promise<void> {
 	assert.strictEqual(s.webServer.port, server.port);
 	assert.strictEqual(s.webServer.pathPrefix, "");
 	assert.strictEqual(s.username || "", server.username || "");
-	// A password stored in plaintext in settings must reach API consumers such as the ObjectScript extension
 	assert.strictEqual(s.password, server.password);
 	assert.strictEqual(s.auth.resolved(), server.password !== undefined);
-	// As the Servers view does
 	const response = await makeRESTRequest("GET", s);
 	assert.strictEqual(response?.status, 200);
 	assert.ok(response.data.result.content.namespaces.includes("USER"), "USER namespace not listed");
@@ -135,14 +122,11 @@ async function checkSpec(): Promise<void> {
 suite(CASE, () => {
 	suiteSetup(async () => {
 		const serverManager = vscode.extensions.getExtension(extensionId)!;
-		// The ObjectScript extension depends on the Marketplace release of this extension, which gets
-		// installed alongside; the build under test must be the one that ends up running
+		// The build under test, not the Marketplace copy the ObjectScript extension depends on
 		assert.strictEqual(serverManager.extensionPath, path.resolve(__dirname, "../../.."));
 		smApi = await serverManager.activate();
 		const objectscript = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
 		assert.ok(objectscript, `${OBJECTSCRIPT_EXTENSIONID} is not installed`);
-		// Hangs here (and fails on the mocha timeout) if its activation blocks on a credential prompt.
-		// getServerSpec by folder name also needs it active before we call it.
 		osApi = await objectscript.activate();
 	});
 
@@ -167,16 +151,15 @@ suite(CASE, () => {
 	// Check 5 (and 6)
 	test("Server Manager resolves the spec and lists namespaces", () => checkSpec());
 
-	// Checks 1 and 2 again, after idling past the session timeout so a cached cookie must be renewed.
-	// Skips the delete round-trip: this proves the save reconnects, and older releases don't re-wire
-	// delete-sync after a session lapses (fixed on the dev build, so re-verifying it here would be flaky).
+	// Checks 1 and 2 again once the cached session has expired. Skips the delete: released ObjectScript
+	// builds don't re-wire delete-sync after a session lapse.
 	test("still resolves and round-trips after the session times out", async () => {
 		await sleep(SESSION_TIMEOUT_MS + 3000);
 		await checkResolves(configuredActive);
 		await roundTrip(configuredActive, false);
 	});
 
-	// Check 3, last, so the connection it establishes can't leak a session into the idle check above
+	// Check 3, last so its connection can't leak a live session into the idle check above
 	if (canToggle) {
 		test("flipping objectscript.conn.active is honored", async () => {
 			try {

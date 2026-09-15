@@ -1,18 +1,10 @@
-/**
- * The connection test matrix, shared by runTest.ts (which generates one workspace file per launch)
- * and the test suite (which reads its launch back from the open workspace's file name). See
- * test-fixtures/README.md for the design. Pure Node, no vscode import, so runTest can use it too.
- */
+/** The case matrix in test-fixtures/README.md, shared by runTest.ts and the suite. No vscode import. */
 
 export const SESSION_TIMEOUT_MS = 10000;
 
-/** The two IRIS containers in test-fixtures/iris/docker-compose.yml */
 export interface Server {
-	/** intersystems.servers entry key and isfs authority for the -sm cases */
 	serverName: string;
-	/** Published host port */
 	port: number;
-	/** docker-compose service for the clientSide-os-docker case */
 	service: string;
 	username?: string;
 	password?: string;
@@ -27,19 +19,13 @@ export interface Launch {
 	name: string;
 	kind: Kind;
 	server: Server;
-	/** undefined for serverSide-sm, which is always active */
 	active?: boolean;
 }
 
-/** Only these cases have a toggleable active state; docker-compose connections are always active */
 export function togglesActive(kind: Kind): boolean {
 	return kind === "clientSide-os-host" || kind === "clientSide-sm";
 }
 
-/**
- * The 12 launches: clientSide-os-host and clientSide-sm × credentials × active, plus clientSide-os-docker
- * and serverSide-sm × credentials (both always active).
- */
 export function allLaunches(): Launch[] {
 	const out: Launch[] = [];
 	for (const kind of KINDS) {
@@ -62,7 +48,7 @@ export function parse(name: string): Launch {
 	return launch;
 }
 
-/** The .code-workspace contents for a launch. Folder paths are relative to test-fixtures/.generated/. */
+/** Folder paths are relative to test-fixtures/.generated/ */
 export function workspaceFile(l: Launch): object {
 	const { kind, server, active } = l;
 	const credentials = server.username ? { username: server.username, password: server.password } : {};
@@ -82,8 +68,7 @@ export function workspaceFile(l: Launch): object {
 				},
 			};
 		case "clientSide-os-docker":
-			// A docker-compose connection resolves its port only when objectscript.conn.active is truthy;
-			// the extension bails on an inactive connection before it ever runs compose.
+			// The extension only resolves a docker-compose port for an active connection
 			return {
 				folders: [{ path: "../client" }],
 				settings: {
