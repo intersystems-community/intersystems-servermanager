@@ -103,14 +103,15 @@ async function checkOsListsTheFolder(): Promise<void> {
 	assert.ok(entries.length > 0, "namespace listing is empty");
 }
 
+type Check = (expectActive: boolean, verifyDelete: boolean) => Promise<void>;
 /** 1–5, as they apply to the case */
-async function checkAll(expectActive: boolean, verifyDelete: boolean): Promise<void> {
-	await checkOsResolves(expectActive);
-	await checkSmResolves();
-	await checkRoundTrips(expectActive, verifyDelete);
-	if (isServerSide) { await checkOsListsTheFolder(); }
-	await checkSmListsNamespaces();
-}
+const checks: [string, Check][] = [
+	["OS resolves", (expectActive) => checkOsResolves(expectActive)],
+	["SM resolves", () => checkSmResolves()],
+	...(isServerSide ? [["OS lists the folder", () => checkOsListsTheFolder()] as [string, Check]] : []),
+	["SM lists namespaces", () => checkSmListsNamespaces()],
+	["round-trips", (expectActive, verifyDelete) => checkRoundTrips(expectActive, verifyDelete)],
+];
 
 async function applyActive(value: boolean): Promise<void> {
 	const cfg = vscode.workspace.getConfiguration("objectscript");
@@ -149,28 +150,21 @@ suite(CASE, () => {
 		for (const doc of created) { await restDoc("DELETE", doc).catch(() => undefined); }
 	});
 
-	test("OS resolves", () => checkOsResolves(configuredActive));
-	test("SM resolves", () => checkSmResolves());
-	test("round-trips", () => checkRoundTrips(configuredActive));
-
-	if (isServerSide) {
-		test("OS lists the folder", () => checkOsListsTheFolder());
+	// Each check twice, the second time as the first request on a lapsed session. No delete then:
+	// released builds don't re-wire delete-sync after a session lapse.
+	for (const [name, check] of checks) {
+		test(name, () => check(configuredActive, true));
+		test(`${name} after the session times out`, async () => {
+			await sleep(SESSION_TIMEOUT_MS + 3000);
+			await check(configuredActive, false);
+		});
 	}
 
-	test("SM lists namespaces", () => checkSmListsNamespaces());
-
-	// Skips the delete: released ObjectScript builds don't re-wire delete-sync after a session lapse
-	test("again after the session times out", async () => {
-		await sleep(SESSION_TIMEOUT_MS + 3000);
-		await checkAll(configuredActive, false);
-	});
-
-	// Last, so its connection can't leak a live session into the idle check above
 	if (canToggle) {
-		test("again with active flipped", async () => {
+		test("all again with active flipped", async () => {
 			try {
 				await applyActive(!configuredActive);
-				await checkAll(!configuredActive, false);
+				for (const [, check] of checks) { await check(!configuredActive, false); }
 			} finally {
 				await applyActive(configuredActive);
 				await checkOsResolves(configuredActive);
