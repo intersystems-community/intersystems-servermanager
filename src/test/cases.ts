@@ -59,7 +59,7 @@ export interface WorkspaceFile {
 
 /** Folder paths are relative to test-fixtures/.generated/ */
 export function workspaceFile({ kind, serverName, active }: Launch): WorkspaceFile {
-	const server = SERVERS[serverName];
+	const { webServer: { host, port }, username, password } = SERVERS[serverName];
 	switch (kind) {
 		case "clientSide-os-host":
 			return {
@@ -67,11 +67,11 @@ export function workspaceFile({ kind, serverName, active }: Launch): WorkspaceFi
 				settings: {
 					"objectscript.conn": {
 						https: false,
-						host: server.webServer.host,
-						port: server.webServer.port,
+						host,
+						port,
 						ns: "USER",
-						username: server.username,
-						password: server.password,
+						username,
+						password,
 						...(active && { active }),
 					},
 				},
@@ -84,8 +84,8 @@ export function workspaceFile({ kind, serverName, active }: Launch): WorkspaceFi
 						"docker-compose": { file: "../iris/docker-compose.yml", service: serverName },
 						ns: "USER",
 						active: true,
-						username: server.username,
-						password: server.password,
+						username,
+						password,
 					},
 				},
 			};
@@ -94,13 +94,13 @@ export function workspaceFile({ kind, serverName, active }: Launch): WorkspaceFi
 				folders: [{ path: "../client" }],
 				settings: {
 					"objectscript.conn": { server: serverName, ns: "USER", ...(active && { active }) },
-					"intersystems.servers": { [serverName]: server },
+					"intersystems.servers": { [serverName]: SERVERS[serverName] },
 				},
 			};
 		case "serverSide-sm":
 			return {
 				folders: [{ uri: `isfs://${serverName}:USER/` }],
-				settings: { "intersystems.servers": { [serverName]: server } },
+				settings: { "intersystems.servers": { [serverName]: SERVERS[serverName] } },
 			};
 	}
 }
