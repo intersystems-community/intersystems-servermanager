@@ -83,7 +83,7 @@ export function workspaceFile({ kind, serverName, active }: Launch): WorkspaceFi
 				folders: [{ path: "client" }],
 				settings: {
 					"objectscript.conn": {
-						"docker-compose": { file: "../iris/docker-compose.yml", service: serverName },
+						"docker-compose": { file: "../../iris/docker-compose.yml", service: serverName },
 						ns: "USER",
 						active: true,
 						username,
