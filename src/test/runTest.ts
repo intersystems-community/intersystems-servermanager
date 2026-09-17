@@ -42,7 +42,16 @@ async function main() {
 		const failed: string[] = [];
 		for (const l of filter ? LAUNCHES.filter((l) => l.name.includes(filter)) : LAUNCHES) {
 			const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "servermanager-test-"));
-			const launchArgs = [path.join(generated, `${l.name}.code-workspace`), "--user-data-dir", userDataDir, "--disable-workspace-trust"];
+			// Copilot Chat otherwise floods the log
+			fs.mkdirSync(path.join(userDataDir, "User"));
+			fs.writeFileSync(path.join(userDataDir, "User", "settings.json"), '{ "chat.disableAIFeatures": true }');
+			const launchArgs = [
+				path.join(generated, `${l.name}.code-workspace`),
+				"--user-data-dir",
+				userDataDir,
+				"--disable-workspace-trust",
+				"--disable-gpu",
+			];
 			console.log(`\n===== ${l.name} =====`);
 			try {
 				await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath, launchArgs });
