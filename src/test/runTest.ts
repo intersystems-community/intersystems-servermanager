@@ -40,7 +40,7 @@ async function main() {
 
 		const filter = process.argv[2];
 		const failed: string[] = [];
-		// In the Actions log, each case is a collapsed group; failures are listed below them
+		// Each case is a collapsed group in the Actions log
 		const ci = !!process.env.GITHUB_ACTIONS;
 		for (const l of filter ? LAUNCHES.filter((l) => l.name.includes(filter)) : LAUNCHES) {
 			const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "servermanager-test-"));
@@ -55,18 +55,17 @@ async function main() {
 				"--disable-gpu",
 			];
 			console.log(ci ? `::group::${l.name}` : `\n===== ${l.name} =====`);
-			const ok = await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath, launchArgs }).then(
-				() => true,
-				() => false
-			);
-			if (ci) { console.log("::endgroup::"); }
-			if (!ok) {
+			try {
+				await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath, launchArgs });
+			} catch (err) {
 				failed.push(l.name);
 				for (const log of fs.readdirSync(userDataDir, { recursive: true }) as string[]) {
 					if (/intersystems-community\.[^/\\]+[/\\][^/\\]+\.log$/.test(log)) {
 						console.error(`\n===== ${log} =====\n${fs.readFileSync(path.join(userDataDir, log), "utf-8")}`);
 					}
 				}
+			} finally {
+				if (ci) { console.log("::endgroup::"); }
 			}
 		}
 		if (failed.length) {
