@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "axios": "^1.20.0",
-    "node-cmd": "^5.0.0"
+    "node-cmd": "^6.0.1"
   },
   "devDependencies": {
     "@intersystems-community/intersystems-servermanager": "^3.14.1",
@@ -64,7 +64,7 @@
     "rimraf": "^5.0.5",
     "ts-loader": "^9.5.1",
     "tslint": "^5.20.1",
-    "typescript": "^5.3.3",
+    "typescript": "^6.0.3",
     "webpack": "^5.105.0",
     "webpack-cli": "^6.0.1"
   },

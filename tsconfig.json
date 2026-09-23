@@ -8,7 +8,6 @@
 		"noImplicitThis": true,
 		"inlineSourceMap": false,
 		"sourceMap": true,
-		"outDir": "out",
 		"preserveConstEnums": true,
 		"strictNullChecks": true,
 		"noUnusedParameters": false
