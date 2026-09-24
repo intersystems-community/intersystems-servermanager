@@ -1,9 +1,9 @@
-import { IServerName, IServerSpec, Authorization } from "@intersystems-community/intersystems-servermanager";
+import { Authorization, IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
 import { getServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
-import { OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
+import { BasicAuthorization, OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
 import { makeRESTRequest } from "../makeRESTRequest";
 
 const SETTINGS_VERSION = "v1";
@@ -21,6 +21,8 @@ const colorsMap = new Map<string, string>();
 
 let recentsArray: string[] = [];
 
+let treeView: vscode.TreeView<SMTreeItem>;
+
 export class ServerManagerView {
 
 	private _globalState: vscode.Memento;
@@ -31,12 +33,11 @@ export class ServerManagerView {
 		this._globalState = context.globalState;
 		const treeDataProvider = new SMNodeProvider();
 		this._treeDataProvider = treeDataProvider;
-		const treeView = vscode.window.createTreeView(
+		treeView = vscode.window.createTreeView(
 			"intersystems-community_servermanager",
 			{ treeDataProvider, showCollapseAll: true },
 		);
 		context.subscriptions.push(treeView);
-		treeDataProvider.view = treeView;
 
 		// load favoritesMap
 		const favorites = this._globalState.get<string[]>(StorageIds.favorites) || [];
@@ -112,10 +113,8 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 	// tslint:disable-next-line: member-ordering
 	public readonly onDidChangeTreeData: vscode.Event<SMTreeItem | undefined | void> = this._onDidChangeTreeData.event;
 
-	// tslint:disable-next-line: member-ordering
-	public view: vscode.TreeView<SMTreeItem>;
 	private _firstRevealDone = false;
-	private _firstRevealItem: SMTreeItem;
+	private _firstRevealItem: SMTreeItem | undefined;
 
 	public refresh(item: SMTreeItem | undefined): void {
 		this._onDidChangeTreeData.fire(item);
@@ -198,7 +197,7 @@ class SMNodeProvider implements vscode.TreeDataProvider<SMTreeItem> {
 
 			setTimeout(async () => {
 				if (!this._firstRevealDone && this._firstRevealItem) {
-					await this.view.reveal(this._firstRevealItem, { select: false, expand: 1 });
+					await treeView?.reveal(this._firstRevealItem, { select: false, expand: 1 });
 					this._firstRevealDone = true;
 				}
 			},
@@ -553,7 +552,6 @@ function serverItemIsWsFolder(server?: SMTreeItem): boolean {
 	return typeof server?.label == "string" && ((server.label.includes("(") && server.label.endsWith(")")) || server.label.startsWith("docker:"));
 }
 
-// tslint:disable-next-line: max-classes-per-file
 export class NamespaceTreeItem extends SMTreeItem {
 	public readonly name: string;
 	constructor(

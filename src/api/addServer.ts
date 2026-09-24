@@ -32,26 +32,26 @@ export async function addServer(
 	if (description === undefined) { return; }
 	description = description.trim();
 	let url = undefined as { scheme: string; host: string; port: string; pathPrefix: string } | undefined;
-	let hostOrURL = await vscode.window.showInputBox({
+	const hostOrURL = await vscode.window.showInputBox({
 		ignoreFocusOut: true,
 		placeHolder: "http(s)://host(:port)/pathPrefix  or  host",
 		title: "Enter the base URL used to connect to the server, or just its hostname/IP",
 		validateInput: (value) => {
-			value = value.trim()
+			value = value.trim();
 			try {
 				const localURL = new URL(value);
 				const scheme = localURL.protocol.slice(0, -1);
 				if (!["http", "https"].includes(scheme)) {
-					return `Invalid scheme (${scheme}): must be either http or https`
+					return `Invalid scheme (${scheme}): must be either http or https`;
 				}
 				const host = localURL.hostname;
 				const port = localURL.port || (scheme === "https" ? "443" : "80");
-				const portValidation = validatePort(port)
+				const portValidation = validatePort(port);
 				if (portValidation) {
-					return `Invalid port (${port}): ` + portValidation
+					return `Invalid port (${port}): ` + portValidation;
 				}
 				url = { scheme, host, port, pathPrefix: localURL.pathname };
-				return
+				return;
 			} catch {
 				url = undefined;
 				return validateHost(value);
@@ -63,7 +63,7 @@ export async function addServer(
 		if (!value.length) { return "Required"; }
 		try {
 			if (new URL(`http://${value}:80/`).hostname === value.toLowerCase()) {
-				return
+				return;
 			}
 		} catch { }
 		return "Invalid host";
@@ -126,9 +126,9 @@ export async function addServer(
 		username = username.trim();
 		authDetails = { username };
 	} else if (authMethod === "Unauthenticated") {
-		authDetails = {}
+		authDetails = {};
 	} else {
-		throw Error(`Unreachable! ${authMethod} must be either "Basic Auth", "OAuth2", or "Unauthenticated".`)
+		throw Error(`Unreachable! ${authMethod} must be either "Basic Auth", "OAuth2", or "Unauthenticated".`);
 	}
 	const scheme = url?.scheme ?? await new Promise<string | undefined>((resolve) => {
 		let result: string;
