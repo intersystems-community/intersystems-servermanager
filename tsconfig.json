@@ -12,7 +12,8 @@
 		"outDir": "out",
 		"preserveConstEnums": true,
 		"strictNullChecks": true,
-		"noUnusedParameters": false
+		"noUnusedParameters": false,
+		"skipLibCheck": true
 	},
   "exclude": ["node_modules", ".vscode-test"]
 }

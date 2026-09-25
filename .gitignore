@@ -5,3 +5,4 @@ dist/
 .vscode-test
 .vscode-test-web
 *.vsix
+test-fixtures/.generated/
