@@ -129,6 +129,7 @@ export async function makeRESTRequest(
 	}
 }
 
+// TODO: share plumbing with the probe in getServerSpec
 /**
  * Attempt to log out of our session on an InterSystems server.
  *
@@ -192,10 +193,10 @@ async function resolveCredentials(spec: IServerSpec & { auth: Authorization }): 
 				{ createIfNone: true, account },
 			);
 		}
-		if (session && session.accessToken) {
+		if (session) {
 			spec.auth.resolve({
 				accessToken: session.accessToken,
-				username: session.scopes[1].toLowerCase() === "unknownuser" ? "" : session.scopes[1],
+				username: session.scopes[1],
 			});
 		}
 	}

@@ -17,6 +17,10 @@ export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscr
 
 export let globalState: vscode.Memento;
 
+export function isUnknownUser(username?: string): boolean {
+	return username?.toLowerCase() === "unknownuser";
+}
+
 export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
 	const accountId = userName ? `${serverName}/${userName}` : undefined;
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
@@ -39,20 +43,25 @@ export class BasicAuthorization implements Authorization {
 	}
 
 	public get accessToken(): string | undefined {
-		return this.#password;
+		return isUnknownUser(this.#username) ? "" : this.#password;
 	}
 
-	public get httpAuthorizationHeader(): string {
+	public get httpAuthorizationHeader(): string | undefined {
+		if (isUnknownUser(this.#username)) {
+			// Unauthenticated access sends no header; "" keeps the resolved type a string, so clients must skip empty headers
+			return "";
+		}
 		return `Basic ${Buffer.from(`${this.#username}:${this.#password}`).toString("base64")}`;
 	}
 
 	public resolved(): this is ResolvedAuthorization {
-		return this.username !== "" && this.#password !== undefined;
+		return isUnknownUser(this.#username) || (this.username !== "" && !!this.#password);
 	}
 
-	public resolve({ accessToken, username }): this is ResolvedAuthorization {
+	public resolve({ accessToken, username }: { accessToken?: string; username?: string }): this is ResolvedAuthorization {
 		this.#username = username ?? this.#username;
-		this.#password = accessToken ?? this.#password;
+		// empty accessTokens are ignored.
+		this.#password = accessToken || this.#password;
 		return this.resolved();
 	}
 
@@ -60,14 +69,18 @@ export class BasicAuthorization implements Authorization {
 		this.#password = undefined;
 	}
 
-	public get credentials(): { auth: { username: string; password: string }; headers?: Record<string, string> } {
-		return {
-			auth: {
-				username: this.username,
-				password: this.password!,
-			},
-			headers: {},
-		};
+	public get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> } {
+		if (isUnknownUser(this.#username)) {
+			return {};
+		} else {
+			return {
+				auth: {
+					username: this.username,
+					password: this.password!,
+				},
+				headers: {},
+			};
+		}
 	}
 
 	public clone(): BasicAuthorization {
@@ -92,7 +105,7 @@ export class OAuth2Authorization implements Authorization {
 		return this.#bearer ? true : false;
 	}
 
-	public resolve({ accessToken, username }): this is ResolvedAuthorization {
+	public resolve({ accessToken, username }: { accessToken?: string; username?: string }): this is ResolvedAuthorization {
 		// empty accessTokens are ignored.
 		if (accessToken) {
 			this.#bearer = accessToken;
@@ -151,8 +164,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			if (pathParts && pathParts.length === 4) {
 				const serverName = pathParts[1];
 				const namespace = pathParts[3];
-				const serverSetting = await getServerSpec(serverName);
-				if (serverSetting) {
+				const server = await getServerSpec(serverName);
+				if (server) {
 					const isfsExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
 					if (isfsExtension) {
 						if (!isfsExtension.isActive) {

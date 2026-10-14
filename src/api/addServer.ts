@@ -126,7 +126,7 @@ export async function addServer(
 		username = username.trim();
 		authDetails = { username };
 	} else if (authMethod === "Unauthenticated") {
-		authDetails = {};
+		authDetails = { username: "UnknownUser" };
 	} else {
 		throw Error(`Unreachable! ${authMethod} must be either "Basic Auth", "OAuth2", or "Unauthenticated".`);
 	}

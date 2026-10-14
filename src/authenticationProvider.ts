@@ -120,22 +120,24 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		await this._ensureInitialized();
 		const serverName = scopes[0] || await this.promptServerName();
 		const spec = await getServerSpec(serverName);
-		const userName = scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
+		const auth = spec?.auth.clone() ?? new BasicAuthorization();
+		// The configured credential belongs to the configured user; a different requested user must supply its own
+		if (scopes[1] && scopes[1].toLowerCase() !== auth.username.toLowerCase()) {
+			auth.clear() as void;
+		}
+		auth.resolve({ username: scopes[1] || spec?.auth.username || await this.promptUserName(serverName) || "UnknownUser" });
 		// Return existing session if found
-		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
+		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, auth.username);
 		const existingSession = await this.findExistingSession(sessionId);
 		if (existingSession !== undefined) {
 			return existingSession;
 		}
-		let auth: Authorization;
-		if (spec?.auth.resolved()) {
-			auth = spec.auth;
-		} else {
+		if (!auth.resolved()) {
 			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
 			let accessToken = await this.secretStorage.get(credentialKey);
 			if (accessToken === undefined) {
-				if (spec?.auth instanceof OAuth2Authorization) {
-					const tokenSet = await performOAuth2Login(sessionId, ServerManagerAuthenticationProvider.oauth2Config(spec));
+				if (auth instanceof OAuth2Authorization) {
+					const tokenSet = await performOAuth2Login(sessionId, ServerManagerAuthenticationProvider.oauth2Config(spec!));
 					accessToken = tokenSet?.accessToken;
 					if (accessToken) {
 						await this.secretStorage.store(credentialKey, accessToken);
@@ -143,13 +145,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 						logger?.info(`OAuth2 [${sessionId}]: login complete, ${tokenSet?.refreshToken ? "refresh token stored" : "no refresh token"}`);
 					}
 				} else {
-					// Password is "" if userName is ""
-					accessToken = userName && await this.promptPassword(userName, serverName, credentialKey);
+					accessToken = await this.promptPassword(auth.username, serverName, credentialKey);
 				}
-
 			}
-			auth = spec?.auth.clone() ?? new BasicAuthorization();
-			auth.resolve({ username: userName || "UnknownUser", accessToken });
+			auth.resolve({ accessToken });
 		}
 		if (auth.resolved()) {
 			return this._finalizeSession(serverName, auth);
