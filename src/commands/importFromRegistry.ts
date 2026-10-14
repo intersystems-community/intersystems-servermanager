@@ -3,11 +3,7 @@ import { ServerManagerAuthenticationProvider } from "../authenticationProvider";
 
 // To avoid overhead querying the registry, cache responses (each time the command is run)
 const regQueryCache = new Map<string, { data?: string }>();
-
-/** The parts of node-cmd we use; the package ships no types */
-interface NodeCmd {
-	runSync(command: string): { data: string | null };
-}
+type NodeCmd = typeof import("node-cmd");
 
 export async function importFromRegistry(secretStorage: vscode.SecretStorage, scope?: vscode.ConfigurationScope) {
 	const config = vscode.workspace.getConfiguration("intersystems", scope);
