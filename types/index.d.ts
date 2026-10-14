@@ -22,9 +22,26 @@ export interface ISuperServerSpec {
 	port: number;
 }
 
+export interface IOAuth2Spec {
+	authority: string;
+	clientId: string;
+}
+
+/** One entry of the 'intersystems.servers' setting; the server name is the key. */
 export interface IJSONServerSpec {
 	webServer: IWebServerSpec;
 	superServer?: ISuperServerSpec;
+	username?: string;
+	password?: string;
+	oauth2?: IOAuth2Spec;
+	description?: string;
+}
+
+/**
+ * Processed `IJSONServerSpec`: `name` added, `oauth2` folded into `auth`, and `username`/`password` deprecated in favour of `auth`.
+ */
+export interface IServerSpec extends Omit<IJSONServerSpec, "oauth2"> {
+	name: string;
 	/**
 	 * @deprecated Use `auth.username` instead. Get credentials from the `auth` property.
 	 */
@@ -33,16 +50,7 @@ export interface IJSONServerSpec {
 	 * @deprecated Use `auth.password` instead. Get credentials from the `auth` property.
 	 */
 	password?: string;
-	auth?: Authorization;
-	description?: string;
-}
-
-export interface IServerSpec extends IJSONServerSpec {
-	name: string;
-}
-
-/** IServerSpec with `auth` guaranteed to be present. */
-export interface IServerSpecWithAuth extends IServerSpec {
+	/** Always present in current Server Manager versions; optional for compatibility with older ones. */
 	auth?: Authorization;
 }
 
@@ -68,7 +76,7 @@ export interface ServerManagerAPI {
 		scope?: vscode.ConfigurationScope,
 		flushCredentialCache?: boolean,
 		options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
-	): Promise<IServerSpecWithAuth | undefined>;
+	): Promise<IServerSpec | undefined>;
 
 	getAccount(
 		serverSpec: Pick<IServerSpec, "name" | "username">,
@@ -106,10 +114,10 @@ export interface Authorization {
 	get credentials(): undefined | { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }
 
-/** Narrowed `Authorization` known to hold usable credentials, per `resolved()`. */
+/** Narrowed `Authorization` known to hold usable credentials, per `resolved()`. `httpAuthorizationHeader` stays optional because UnknownUser has nothing to send. */
 export interface ResolvedAuthorization extends Authorization {
+	/** Empty for UnknownUser, since unauthenticated access has no credential. */
 	get accessToken(): string;
-	get httpAuthorizationHeader(): string;
 	get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> };
 }
 

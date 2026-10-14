@@ -1,4 +1,4 @@
-import { Authorization, IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
+import { Authorization, IOAuth2Spec, IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
@@ -9,7 +9,6 @@ import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { initLogger } from "./logger";
 import { logout, serverSessions } from "./makeRESTRequest";
-import { OAuth2Config } from "./serverSetting";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
 
 export const extensionId = "intersystems-community.servermanager";
@@ -75,10 +74,14 @@ export class BasicAuthorization implements Authorization {
 	}
 }
 
+interface ResolvedOAuth2Authorization extends ResolvedAuthorization {
+	get httpAuthorizationHeader(): string;
+}
+
 export class OAuth2Authorization implements Authorization {
 	#username?: string;
 	#bearer?: string;
-	constructor(public readonly oauth2: OAuth2Config, bearer?: string) {
+	constructor(public readonly oauth2: IOAuth2Spec, bearer?: string) {
 		this.#bearer = bearer;
 	}
 
@@ -88,11 +91,11 @@ export class OAuth2Authorization implements Authorization {
 		}
 	}
 
-	public resolved(): this is ResolvedAuthorization {
+	public resolved(): this is ResolvedOAuth2Authorization {
 		return this.#bearer ? true : false;
 	}
 
-	public resolve({ accessToken, username }): this is ResolvedAuthorization {
+	public resolve({ accessToken, username }): this is ResolvedOAuth2Authorization {
 		// empty accessTokens are ignored.
 		if (accessToken) {
 			this.#bearer = accessToken;
@@ -151,8 +154,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			if (pathParts && pathParts.length === 4) {
 				const serverName = pathParts[1];
 				const namespace = pathParts[3];
-				const serverSetting = await getServerSpec(serverName);
-				if (serverSetting) {
+				const server = await getServerSpec(serverName);
+				if (server) {
 					const isfsExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
 					if (isfsExtension) {
 						if (!isfsExtension.isActive) {

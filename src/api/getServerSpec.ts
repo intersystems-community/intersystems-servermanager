@@ -1,7 +1,6 @@
-import { IServerSpec, Authorization, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpec, Authorization, VSCodeObjectScriptAPI, IJSONServerSpec } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
-import { IServerSetting } from "../serverSetting";
 
 /**
  * Get a server specification.
@@ -15,7 +14,7 @@ export async function getServerSpec(
 	scope?: vscode.ConfigurationScope,
 ): Promise<IServerSpec & { auth: Authorization } | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	const setting = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSetting | undefined || legacyEmbeddedServer(name);
+	const setting = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IJSONServerSpec | undefined || legacyEmbeddedServer(name);
 	// Unknown server
 	if (!setting) {
 		const folder = vscode.workspace.workspaceFolders?.find((f) => f.name === name);
@@ -52,8 +51,8 @@ export async function getServerSpec(
 		};
 	} else {
 		// Found a setting
-		const { username, password, oauth2, ...spec } = setting;
-		spec.name = name;
+		const { username, password, oauth2, ...keptSpec } = setting;
+		const spec = { ...keptSpec, name };
 		spec.description = spec.description || "";
 		spec.webServer.scheme = spec.webServer.scheme || "http";
 		spec.webServer.port = spec.webServer.port || (spec.webServer.scheme === "https" ? 443 : 80);
@@ -81,10 +80,9 @@ export async function getServerSpec(
  * @param name The name.
  * @returns Server specification or undefined.
  */
-export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
+export function legacyEmbeddedServer(name: string): IJSONServerSpec | undefined {
 	return {
 		"default~iris": {
-			name: "default~iris",
 			webServer: {
 				scheme: "http",
 				host: "127.0.0.1",
@@ -93,7 +91,6 @@ export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
 			description: "Connection to local InterSystems IRIS™ installed with default settings.",
 		},
 		"default~cache": {
-			name: "default~cache",
 			webServer: {
 				scheme: "http",
 				host: "127.0.0.1",
@@ -102,7 +99,6 @@ export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
 			description: "Connection to local InterSystems Caché installed with default settings.",
 		},
 		"default~ensemble": {
-			name: "default~ensemble",
 			webServer: {
 				scheme: "http",
 				host: "127.0.0.1",
