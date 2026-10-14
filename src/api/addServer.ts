@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
-import { IServerSetting } from "../serverSetting";
+import { IServerSetting, updateConfig } from "../serverSetting";
 import { getServerNames } from "./getServerNames";
 
 export async function addServer(
@@ -152,29 +152,23 @@ export async function addServer(
 		quickPick.show();
 	});
 	if (scheme === undefined) { return; }
-	const levelStr =
+	const [levelStr, level] =
 		target == vscode.ConfigurationTarget.WorkspaceFolder
-			? "workspace-folder"
+			? ["workspace-folder", "workspaceFolderValue"] as const
 			: target == vscode.ConfigurationTarget.Workspace
-				? "workspace"
-				: "user";
+				? ["workspace", "workspaceValue"] as const
+				: ["user", "globalValue"] as const;
 	try {
-		const config = vscode.workspace.getConfiguration(
-			"intersystems",
-			scope,
-		);
-		const serversInspection = config.inspect("servers");
-		const servers = (
-			target == vscode.ConfigurationTarget.WorkspaceFolder ? serversInspection?.workspaceFolderValue :
-				target == vscode.ConfigurationTarget.Workspace ? serversInspection?.workspaceValue :
-					serversInspection?.globalValue
-		) ?? {};
-		servers[name] = {
-			webServer: { scheme, host, port: +port, pathPrefix },
-			...(description ? { description } : {}),
-			...authDetails,
-		};
-		await config.update("servers", servers, target);
+		await updateConfig(scope, (targets) => ({
+			[level]: {
+				...targets[level],
+				[name]: {
+					webServer: { scheme, host, port: +port, pathPrefix },
+					...(description ? { description } : {}),
+					...authDetails,
+				}
+			}
+		}));
 		vscode.window.showInformationMessage(`Server '${name}' stored in ${levelStr}-level settings.`);
 		return name;
 	} catch (error) {

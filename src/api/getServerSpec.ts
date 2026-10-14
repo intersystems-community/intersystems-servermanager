@@ -1,7 +1,69 @@
 import { IServerSpec, Authorization, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
+import axios from "axios";
+import * as https from "https";
 import * as vscode from "vscode";
 import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
-import { IServerSetting } from "../serverSetting";
+import { IServerSetting, updateConfig } from "../serverSetting";
+import { logger } from "../logger";
+
+const firstTimed = new Set<string>();
+function isFirstTime(scope: vscode.ConfigurationScope | undefined, { name, webServer }: Pick<IServerSpec, "name" | "webServer">): boolean {
+	const { scheme, host, port, pathPrefix } = webServer;
+	const uri = scope instanceof vscode.Uri ? scope : scope?.uri;
+	const folder = uri && vscode.workspace.getWorkspaceFolder(uri)?.uri.toString();
+	const id = `${folder ?? ""}|${name}@${scheme}://${host}:${port}${pathPrefix}`;
+	if (firstTimed.has(id)) {
+		return false;
+	} else {
+		firstTimed.add(id);
+		return true;
+	}
+}
+
+/** Probe whether the endpoint allows unauthenticated access. */
+async function allowsUnknownUser(webServer: IServerSpec["webServer"]): Promise<boolean> {
+	const { scheme, host, port, pathPrefix } = webServer;
+	const url = `${scheme}://${host}:${port}${pathPrefix}/api/atelier/`;
+	try {
+		const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
+		const response = await axios.get(encodeURI(url), { httpsAgent, timeout: 3000, validateStatus: () => true });
+		const cookies: string[] = response.headers["set-cookie"] ?? [];
+		if (cookies.length > 0) {
+			axios.head(encodeURI(`${url}?CacheLogout=end`), { httpsAgent, timeout: 3000, validateStatus: () => true, headers: { Cookie: cookies.join("; ") } })
+				.catch((error) => logger?.warn(`Failed to end the probe session on ${url}: ${error}`));
+		}
+		// Require a genuine Atelier server-info document, so a proxy or login page answering 200 is not mistaken for access
+		return response.status === 200 && Array.isArray(response.data?.result?.content?.namespaces);
+	} catch {
+		return false;
+	}
+}
+
+/** Probe once per session in the background and record UnknownUser if the server allows it. */
+async function tryRecordUnknownUser(scope: vscode.ConfigurationScope | undefined, { name, webServer }: Pick<IServerSpec, "name" | "webServer">): Promise<void> {
+	try {
+		if (!await allowsUnknownUser(webServer)) {
+			return;
+		}
+		let written = false;
+		await updateConfig(scope, (targets) => {
+			for (const [key, servers] of Object.entries(targets)) {
+				if (servers?.[name] && !servers[name].username) {
+					written = true;
+					return { [key]: { ...servers, [name]: { ...servers[name], username: "UnknownUser" } } };
+				}
+			}
+			return {};
+		});
+		if (written) {
+			vscode.window.showInformationMessage(
+				`Server '${name}' allowed unauthenticated access, so its 'username' setting has been set to 'UnknownUser'. A future release will always prompt for a username when none is set.`,
+			);
+		}
+	} catch (error) {
+		logger?.warn(`Failed to set username of '${name}' to UnknownUser: ${error}`);
+	}
+}
 
 /**
  * Get a server specification.
@@ -15,7 +77,8 @@ export async function getServerSpec(
 	scope?: vscode.ConfigurationScope,
 ): Promise<IServerSpec & { auth: Authorization } | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	const setting = vscode.workspace.getConfiguration("intersystems.servers", scope).get(name) as IServerSetting | undefined || legacyEmbeddedServer(name);
+	const settingFromConfig = vscode.workspace.getConfiguration("intersystems.servers", scope).get<IServerSetting>(name);
+	const setting = settingFromConfig || legacyEmbeddedServer(name);
 	// Unknown server
 	if (!setting) {
 		const folder = vscode.workspace.workspaceFolders?.find((f) => f.name === name);
@@ -52,8 +115,8 @@ export async function getServerSpec(
 		};
 	} else {
 		// Found a setting
-		const { username, password, oauth2, ...spec } = setting;
-		spec.name = name;
+		const { username, password, oauth2, ...kept } = setting;
+		const spec = { ...kept, name };
 		spec.description = spec.description || "";
 		spec.webServer.scheme = spec.webServer.scheme || "http";
 		spec.webServer.port = spec.webServer.port || (spec.webServer.scheme === "https" ? 443 : 80);
@@ -64,7 +127,11 @@ export async function getServerSpec(
 		}
 		const auth = oauth2
 			? new OAuth2Authorization(oauth2)
-			: new BasicAuthorization(username, password);
+			: new BasicAuthorization(username, username ? password : undefined);
+		// Only a stored definition can be updated; legacy embedded servers have nowhere to record UnknownUser
+		if (settingFromConfig && !oauth2 && !username && !password && isFirstTime(scope, spec)) {
+			tryRecordUnknownUser(scope, spec);
+		}
 		return {
 			...spec,
 			auth,
@@ -84,7 +151,6 @@ export async function getServerSpec(
 export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
 	return {
 		"default~iris": {
-			name: "default~iris",
 			webServer: {
 				scheme: "http",
 				host: "127.0.0.1",
@@ -93,7 +159,6 @@ export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
 			description: "Connection to local InterSystems IRIS™ installed with default settings.",
 		},
 		"default~cache": {
-			name: "default~cache",
 			webServer: {
 				scheme: "http",
 				host: "127.0.0.1",
@@ -102,7 +167,6 @@ export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
 			description: "Connection to local InterSystems Caché installed with default settings.",
 		},
 		"default~ensemble": {
-			name: "default~ensemble",
 			webServer: {
 				scheme: "http",
 				host: "127.0.0.1",

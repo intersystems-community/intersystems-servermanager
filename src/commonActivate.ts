@@ -48,7 +48,6 @@ export class BasicAuthorization implements Authorization {
 
 	public get httpAuthorizationHeader(): string | undefined {
 		if (isUnknownUser(this.#username)) {
-			// Unauthenticated access sends no header; "" keeps the resolved type a string, so clients must skip empty headers
 			return "";
 		}
 		return `Basic ${Buffer.from(`${this.#username}:${this.#password}`).toString("base64")}`;
