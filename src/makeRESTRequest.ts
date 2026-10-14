@@ -72,7 +72,7 @@ export async function makeRESTRequest(
 		url += "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
 	}
 
-	const request: AxiosRequestConfig & { headers: {}, data?: any } = {
+	const request: AxiosRequestConfig & { headers: {}, data?: any, [key: string]: any } = {
 		httpsAgent,
 		headers: {},
 		method,
@@ -104,12 +104,12 @@ export async function makeRESTRequest(
 			if (!server.auth.resolved()) {
 				throw Error("Internal error: Credentials were not resolved");
 			}
-			const { auth, headers } = server.auth.credentials;
-			if (auth) {
-				request.auth = auth;
-			}
-			if (headers) {
-				request.headers = { ...request.headers, ...headers };
+			for (const [k, v] of Object.entries(server.auth.credentials)) {
+				if (typeof v === "object") {
+					request[k] = Object.assign({}, request[k], v);
+				} else {
+					request[k] = v;
+				}
 			}
 			respdata = await axios.request(request);
 		}
