@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { ServerManagerAuthenticationProvider } from "../authenticationProvider";
 
 // To avoid overhead querying the registry, cache responses (each time the command is run)
-const regQueryCache = new Map<string, { data?: string }>();
+const regQueryCache = new Map<string, { data?: string | null }>();
 
 export async function importFromRegistry(secretStorage: vscode.SecretStorage, scope?: vscode.ConfigurationScope) {
 	const config = vscode.workspace.getConfiguration("intersystems", scope);
@@ -291,7 +291,7 @@ function getStringRegKey(cmd: any, hive: string, path: string, key: string): str
 	if (!regData.data) {
 		return undefined;
 	}
-	regQueryCache.set(queryPath, { data: regData.data });
+	regQueryCache.set(queryPath, regData);
 	const results = regData.data.split("\r\n")
 		// Result lines from reg query are 4-space-delimited
 		.map((line) => line.split("    "))
