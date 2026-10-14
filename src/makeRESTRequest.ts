@@ -104,12 +104,12 @@ export async function makeRESTRequest(
 			if (!server.auth.resolved()) {
 				throw Error("Internal error: Credentials were not resolved");
 			}
-			for (const [k, v] of Object.entries(server.auth.credentials)) {
-				if (typeof v === "object") {
-					request[k] = Object.assign({}, request[k], v);
-				} else {
-					request[k] = v;
-				}
+			const { auth, headers } = server.auth.credentials;
+			if (auth) {
+				request.auth = auth;
+			}
+			if (headers) {
+				request.headers = { ...request.headers, ...headers };
 			}
 			respdata = await axios.request(request);
 		}
@@ -206,11 +206,11 @@ async function resolveCredentials(spec: IServerSpec & { auth: Authorization }): 
  * If `error` is `undefined`, returns the empty string.
  * Borrowed from `vscode-objectscript:/src/utils/index.ts`
  */
-function stringifyError(error): string {
+function stringifyError(error: any): string {
 	try {
 		if (Array.isArray(error?.errors)) {
 			// Need to stringify the inner errors of an AggregateError
-			const errs = error.errors.map(stringifyError).filter((s) => s != "");
+			const errs = error.errors.map(stringifyError).filter((s: string) => s != "");
 			return errs.length ? `AggregateError:\n- ${errs.join("\n- ")}` : "";
 		}
 		return (

@@ -4,6 +4,11 @@ import { ServerManagerAuthenticationProvider } from "../authenticationProvider";
 // To avoid overhead querying the registry, cache responses (each time the command is run)
 const regQueryCache = new Map<string, { data?: string }>();
 
+/** The parts of node-cmd we use; the package ships no types */
+interface NodeCmd {
+	runSync(command: string): { data: string | null };
+}
+
 export async function importFromRegistry(secretStorage: vscode.SecretStorage, scope?: vscode.ConfigurationScope) {
 	const config = vscode.workspace.getConfiguration("intersystems", scope);
 	const serverDefinitions: ServerDefinitions = config.get("servers") ?? {};
@@ -64,11 +69,11 @@ export async function importFromRegistry(secretStorage: vscode.SecretStorage, sc
 
 async function loadRegistryData(
 	config: vscode.WorkspaceConfiguration,
-	serverDefinitions,
+	serverDefinitions: ServerDefinitions,
 	serversMissingUsernames: string[],
 	newServerNames: string[],
 ): Promise<number> {
-	const cmd = require("node-cmd");
+	const cmd: NodeCmd = require("node-cmd");
 	const subFolder = "\\Intersystems\\Cache\\Servers";
 	const fullPaths: string[] = [];
 	fullPaths.push("HKEY_CURRENT_USER\\SOFTWARE" + subFolder);
@@ -206,6 +211,8 @@ async function promptForUsernames(serverDefinitions: ServerDefinitions, serversM
 
 export interface ServerDefinition {
 	username?: string;
+	description?: string;
+	webServer?: { scheme: string; host?: string; port: number; pathPrefix?: string };
 }
 
 export type ServerDefinitions = Record<string, ServerDefinition>;
@@ -269,7 +276,7 @@ async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDef
 	}
 }
 
-function preloadRegistryCache(cmd, fullPath) {
+function preloadRegistryCache(cmd: NodeCmd, fullPath: string) {
 	const regData = cmd.runSync("reg query " + fullPath + " /s");
 	if (!regData.data) {
 		return;
@@ -283,13 +290,13 @@ function preloadRegistryCache(cmd, fullPath) {
 	});
 }
 
-function getStringRegKey(cmd, hive, path, key): string | undefined {
+function getStringRegKey(cmd: NodeCmd, hive: string, path: string, key: string): string | undefined {
 	const queryPath = hive + "\\" + path;
 	const regData = regQueryCache.get(queryPath) || cmd.runSync("reg query " + queryPath);
 	if (!regData.data) {
 		return undefined;
 	}
-	regQueryCache.set(queryPath, regData);
+	regQueryCache.set(queryPath, { data: regData.data });
 	const results = regData.data.split("\r\n")
 		// Result lines from reg query are 4-space-delimited
 		.map((line) => line.split("    "))

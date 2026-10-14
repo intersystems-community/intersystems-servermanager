@@ -649,7 +649,7 @@ async function namespaceProjects(element: ProjectsTreeItem, params?: ServerParam
 				vscode.window.showErrorMessage(message);
 				return undefined;
 			}
-			response.data.result.content.map((project) => {
+			response.data.result.content.map((project: { Name: string; Description: string }) => {
 				children.push(new ProjectTreeItem({ parent: element, label: name, id: name }, project.Name, project.Description, params.serverApiVersion!));
 			});
 		}

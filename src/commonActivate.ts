@@ -50,7 +50,7 @@ export class BasicAuthorization implements Authorization {
 		return this.username !== "" && this.#password !== undefined;
 	}
 
-	public resolve({ accessToken, username }): this is ResolvedAuthorization {
+	public resolve({ accessToken, username }: { accessToken?: string; username?: string }): this is ResolvedAuthorization {
 		this.#username = username ?? this.#username;
 		this.#password = accessToken ?? this.#password;
 		return this.resolved();
@@ -92,7 +92,7 @@ export class OAuth2Authorization implements Authorization {
 		return this.#bearer ? true : false;
 	}
 
-	public resolve({ accessToken, username }): this is ResolvedAuthorization {
+	public resolve({ accessToken, username }: { accessToken?: string; username?: string }): this is ResolvedAuthorization {
 		// empty accessTokens are ignored.
 		if (accessToken) {
 			this.#bearer = accessToken;

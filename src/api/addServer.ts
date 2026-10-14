@@ -163,7 +163,7 @@ export async function addServer(
 			"intersystems",
 			scope,
 		);
-		const serversInspection = config.inspect("servers");
+		const serversInspection = config.inspect<Record<string, Omit<IServerSetting, "name">>>("servers");
 		const servers = (
 			target == vscode.ConfigurationTarget.WorkspaceFolder ? serversInspection?.workspaceFolderValue :
 				target == vscode.ConfigurationTarget.Workspace ? serversInspection?.workspaceValue :
