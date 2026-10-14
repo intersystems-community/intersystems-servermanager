@@ -51,8 +51,8 @@ export async function getServerSpec(
 		};
 	} else {
 		// Found a setting
-		const { username, password, oauth2, ...keptSpec } = setting;
-		const spec = { ...keptSpec, name };
+		const { username, password, oauth2, ...kept } = setting;
+		const spec = { ...kept, name };
 		spec.description = spec.description || "";
 		spec.webServer.scheme = spec.webServer.scheme || "http";
 		spec.webServer.port = spec.webServer.port || (spec.webServer.scheme === "https" ? 443 : 80);
