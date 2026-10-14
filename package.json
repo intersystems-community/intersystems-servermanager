@@ -57,7 +57,6 @@
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^20.14.0",
-    "@types/node-cmd": "^5.0.0",
     "@types/vscode": "^1.109.0",
     "@vscode/test-electron": "^2.5.2",
     "glob": "^7.1.6",
