@@ -26,7 +26,7 @@ async function allowsUnknownUser(webServer: IServerSpec["webServer"]): Promise<b
 	const url = `${scheme}://${host}:${port}${pathPrefix}/api/atelier/`;
 	try {
 		const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
-		const response = await axios.get(encodeURI(url), { httpsAgent, timeout: 3000, validateStatus: () => true });
+		const response = await axios.get(encodeURI(url), { httpsAgent, validateStatus: () => true });
 		const cookies: string[] = response.headers["set-cookie"] ?? [];
 		if (cookies.length > 0) {
 			axios.head(encodeURI(`${url}?CacheLogout=end`), { httpsAgent, validateStatus: () => true, headers: { Cookie: cookies.join("; ") } })
