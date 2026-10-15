@@ -29,8 +29,8 @@ async function allowsUnknownUser(webServer: IServerSpec["webServer"]): Promise<b
 		const response = await axios.get(encodeURI(url), { httpsAgent, timeout: 3000, validateStatus: () => true });
 		const cookies: string[] = response.headers["set-cookie"] ?? [];
 		if (cookies.length > 0) {
-			axios.head(encodeURI(`${url}?CacheLogout=end`), { httpsAgent, timeout: 3000, validateStatus: () => true, headers: { Cookie: cookies.join("; ") } })
-				.catch((error) => logger?.warn(`Failed to end the probe session on ${url}: ${error}`));
+			axios.head(encodeURI(`${url}?CacheLogout=end`), { httpsAgent, validateStatus: () => true, headers: { Cookie: cookies.join("; ") } })
+				.catch((error) => logger?.warn(`Probed ${url} for unauthenticated access (to record username 'UnknownUser') but failed to end the server session it opened: ${error}`));
 		}
 		// Require a genuine Atelier server-info document, so a proxy or login page answering 200 is not mistaken for access
 		return response.status === 200 && Array.isArray(response.data?.result?.content?.namespaces);
@@ -58,6 +58,7 @@ async function tryRecordUnknownUser(scope: vscode.ConfigurationScope | undefined
 		if (written) {
 			vscode.window.showInformationMessage(
 				`Server '${name}' allowed unauthenticated access, so its 'username' setting has been set to 'UnknownUser'. A future release will always prompt for a username when none is set.`,
+				"Dismiss",
 			);
 		}
 	} catch (error) {
