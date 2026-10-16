@@ -1,4 +1,4 @@
-import { Authorization, IServerSpec, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
+import { ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 import {
 	authentication,
 	AuthenticationProvider,
@@ -14,7 +14,7 @@ import {
 	window,
 	workspace,
 } from "vscode";
-import { getServerSpec } from "./api/getServerSpec";
+import { getServerSpec, NormalizedServerSpec } from "./api/getServerSpec";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
 import { globalState, OAuth2Authorization, BasicAuthorization } from "./commonActivate";
 import { logger } from "./logger";
@@ -55,12 +55,12 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	public static oauth2SecretKey(sessionId: string): string {
 		return `${ServerManagerAuthenticationProvider.secretKeyPrefix}${sessionId}:oauth2`;
 	}
-	public static oauth2Config(spec: IServerSpec & { auth: Authorization }): IOAuth2Config {
+	public static oauth2Config(spec: NormalizedServerSpec): IOAuth2Config {
 		const oauth2 = (spec.auth as OAuth2Authorization).oauth2;
 		return {
 			authority: oauth2.authority,
 			clientId: oauth2.clientId,
-			audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`,
+			audience: `${spec.webServer.scheme}://${spec.webServer.host}:${spec.webServer.port}/`,
 		};
 	}
 
@@ -368,7 +368,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	 */
 	private async _tryRefresh(
 		session: ServerManagerAuthenticationSession,
-		serverSpec: IServerSpec & { auth: Authorization },
+		serverSpec: NormalizedServerSpec,
 	): Promise<ServerManagerAuthenticationSession | undefined> {
 		const existing = this._refreshInFlight.get(session.id);
 		const promise = existing ?? this._doRefresh(session.id, serverSpec);
@@ -393,7 +393,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return refreshed;
 	}
 
-	private async _doRefresh(sessionId: string, serverSpec: IServerSpec & { auth: Authorization }): Promise<string | undefined> {
+	private async _doRefresh(sessionId: string, serverSpec: NormalizedServerSpec): Promise<string | undefined> {
 		const secret = await this._getOAuth2Secret(sessionId);
 		if (!secret?.refreshToken) {
 			logger?.debug(`OAuth2 [${sessionId}]: no refresh token stored`);

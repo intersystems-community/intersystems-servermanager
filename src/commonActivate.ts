@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
-import { getServerSpec } from "./api/getServerSpec";
+import { getServerSpec, NormalizedServerSpec } from "./api/getServerSpec";
 import { getServerSummary } from "./api/getServerSummary";
 import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
@@ -16,10 +16,6 @@ export const extensionId = "intersystems-community.servermanager";
 export const OBJECTSCRIPT_EXTENSIONID = "intersystems-community.vscode-objectscript";
 
 export let globalState: vscode.Memento;
-
-export function isUnknownUser(username?: string): boolean {
-	return username?.toLowerCase() === "unknownuser";
-}
 
 export function getAccountFromParts(serverName: string, userName?: string): vscode.AuthenticationSessionAccountInformation | undefined {
 	const accountId = userName ? `${serverName}/${userName}` : undefined;
@@ -34,6 +30,10 @@ export class BasicAuthorization implements Authorization {
 		this.#password = password;
 	}
 
+	public static isUnknownUser(username: string | undefined): boolean {
+		return username?.toLowerCase() === "unknownuser";
+	}
+
 	public get username(): string {
 		return this.#username || "";
 	}
@@ -43,18 +43,18 @@ export class BasicAuthorization implements Authorization {
 	}
 
 	public get accessToken(): string | undefined {
-		return isUnknownUser(this.#username) ? "" : this.#password;
+		return BasicAuthorization.isUnknownUser(this.#username) ? "" : this.#password;
 	}
 
 	public get httpAuthorizationHeader(): string | undefined {
-		if (isUnknownUser(this.#username)) {
+		if (BasicAuthorization.isUnknownUser(this.#username)) {
 			return "";
 		}
 		return `Basic ${Buffer.from(`${this.#username}:${this.#password}`).toString("base64")}`;
 	}
 
 	public resolved(): this is ResolvedAuthorization {
-		return isUnknownUser(this.#username) || (this.username !== "" && !!this.#password);
+		return BasicAuthorization.isUnknownUser(this.#username) || (this.username !== "" && !!this.#password);
 	}
 
 	public resolve({ accessToken, username }: { accessToken?: string; username?: string }): this is ResolvedAuthorization {
@@ -69,7 +69,7 @@ export class BasicAuthorization implements Authorization {
 	}
 
 	public get credentials(): { auth?: { username: string; password: string }; headers?: Record<string, string> } {
-		if (isUnknownUser(this.#username)) {
+		if (BasicAuthorization.isUnknownUser(this.#username)) {
 			return {};
 		} else {
 			return {
@@ -510,14 +510,14 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		 * @param scope Settings scope to look in.
 		 * @param flushCredentialCache Obsolete, has no effect.
 		 * @param options
-		 * @returns { IServerSpec & { auth: Authorization } } Server specification object.
+		 * @returns { NormalizedServerSpec } Server specification object.
 		 */
 		async getServerSpec(
 			name: string,
 			scope?: vscode.ConfigurationScope,
 			flushCredentialCache: boolean = false,
 			options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
-		): Promise<IServerSpec & { auth: Authorization } | undefined> {
+		): Promise<NormalizedServerSpec | undefined> {
 			const spec = await getServerSpec(name, scope);
 			if (spec === undefined) {
 				return undefined;

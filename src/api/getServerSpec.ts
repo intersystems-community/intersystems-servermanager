@@ -1,13 +1,16 @@
-import { IServerSpec, Authorization, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpec, IWebServerSpec, Authorization, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
 import axios from "axios";
-import * as https from "https";
 import * as vscode from "vscode";
 import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
 import { IServerSetting, updateConfig } from "../serverSetting";
 import { logger } from "../logger";
+import { atelierTarget } from "../atelier";
+
+/** A spec as returned by getServerSpec: web server defaults applied and credentials configuration turned into `auth`. */
+export type NormalizedServerSpec = IServerSpec & { auth: Authorization; webServer: Required<IWebServerSpec> };
 
 const firstTimed = new Set<string>();
-function isFirstTime(scope: vscode.ConfigurationScope | undefined, { name, webServer }: Pick<IServerSpec, "name" | "webServer">): boolean {
+function isFirstTime(scope: vscode.ConfigurationScope | undefined, { name, webServer }: Pick<NormalizedServerSpec, "name" | "webServer">): boolean {
 	const { scheme, host, port, pathPrefix } = webServer;
 	const uri = scope instanceof vscode.Uri ? scope : scope?.uri;
 	const folder = uri && vscode.workspace.getWorkspaceFolder(uri)?.uri.toString();
@@ -21,11 +24,9 @@ function isFirstTime(scope: vscode.ConfigurationScope | undefined, { name, webSe
 }
 
 /** Probe whether the endpoint allows unauthenticated access. */
-async function allowsUnknownUser(webServer: IServerSpec["webServer"]): Promise<boolean> {
-	const { scheme, host, port, pathPrefix } = webServer;
-	const url = `${scheme}://${host}:${port}${pathPrefix}/api/atelier/`;
+async function allowsUnknownUser(webServer: NormalizedServerSpec["webServer"]): Promise<boolean> {
 	try {
-		const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
+		const { url, httpsAgent } = atelierTarget(webServer);
 		const response = await axios.get(encodeURI(url), { httpsAgent, validateStatus: () => true });
 		const cookies: string[] = response.headers["set-cookie"] ?? [];
 		if (cookies.length > 0) {
@@ -40,7 +41,7 @@ async function allowsUnknownUser(webServer: IServerSpec["webServer"]): Promise<b
 }
 
 /** Probe once per session in the background and record UnknownUser if the server allows it. */
-async function tryRecordUnknownUser(scope: vscode.ConfigurationScope | undefined, { name, webServer }: Pick<IServerSpec, "name" | "webServer">): Promise<void> {
+async function tryRecordUnknownUser(scope: vscode.ConfigurationScope | undefined, { name, webServer }: Pick<NormalizedServerSpec, "name" | "webServer">): Promise<void> {
 	try {
 		if (!await allowsUnknownUser(webServer)) {
 			return;
@@ -76,7 +77,7 @@ async function tryRecordUnknownUser(scope: vscode.ConfigurationScope | undefined
 export async function getServerSpec(
 	name: string,
 	scope?: vscode.ConfigurationScope,
-): Promise<IServerSpec & { auth: Authorization } | undefined> {
+): Promise<NormalizedServerSpec | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
 	const settingFromConfig = vscode.workspace.getConfiguration("intersystems.servers", scope).get<IServerSetting>(name);
 	const setting = settingFromConfig || legacyEmbeddedServer(name);
@@ -116,12 +117,14 @@ export async function getServerSpec(
 		};
 	} else {
 		// Found a setting
-		const { username, password, oauth2, ...kept } = setting;
-		const spec = { ...kept, name };
-		spec.description = spec.description || "";
-		spec.webServer.scheme = spec.webServer.scheme || "http";
-		spec.webServer.port = spec.webServer.port || (spec.webServer.scheme === "https" ? 443 : 80);
-		spec.webServer.pathPrefix = spec.webServer.pathPrefix || "";
+		const { username, password, oauth2, webServer, ...kept } = setting;
+		const scheme = webServer.scheme || "http";
+		const spec = {
+			...kept,
+			name,
+			description: kept.description || "",
+			webServer: { ...webServer, scheme, port: webServer.port || (scheme === "https" ? 443 : 80), pathPrefix: webServer.pathPrefix || "" },
+		};
 		if (spec.superServer) {
 			// Fall back to default if appropriate
 			spec.superServer.host = spec.superServer.host || spec.webServer.host;

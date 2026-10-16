@@ -1,7 +1,7 @@
-import { Authorization, IServerName, IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { IServerName } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
-import { getServerSpec } from "../api/getServerSpec";
+import { getServerSpec, NormalizedServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
 import { BasicAuthorization, OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
 import { makeRESTRequest } from "../makeRESTRequest";
@@ -214,7 +214,7 @@ export interface ServerParams {
 	sorted?: boolean;
 	serverSummary?: IServerName;
 	serverName?: string;
-	serverSpec?: IServerSpec & { auth: Authorization };
+	serverSpec?: NormalizedServerSpec;
 	serverApiVersion?: number;
 	ns?: string;
 }
@@ -447,7 +447,7 @@ async function serverFeatures(element: ServerTreeItem, params?: ServerParams): P
 	return children;
 }
 
-async function specFromServerSummary(serverSummary: IServerName): Promise<IServerSpec & { auth: Authorization } | undefined> {
+async function specFromServerSummary(serverSummary: IServerName): Promise<NormalizedServerSpec | undefined> {
 	const { name, description, detail, scope } = serverSummary;
 	const spec = await getServerSpec(name, scope);
 	const dockerDetail = detail.match(/^http:\/\/localhost:(\d+)\/$/);
@@ -494,7 +494,7 @@ export class NamespacesTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName: string,
-		serverSpec: IServerSpec & { auth: Authorization },
+		serverSpec: NormalizedServerSpec,
 		username: string,
 	) {
 		const parentFolderId = element.parent?.id || "";
@@ -558,7 +558,7 @@ export class NamespaceTreeItem extends SMTreeItem {
 		element: ISMItem,
 		name: string,
 		serverName: string,
-		serverSpec: IServerSpec & { auth: Authorization },
+		serverSpec: NormalizedServerSpec,
 		serverApiVersion: number,
 	) {
 		const parentFolderId = element.parent?.id || "";
@@ -596,7 +596,7 @@ export class ProjectsTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName?: string,
-		serverSpec?: IServerSpec & { auth: Authorization },
+		serverSpec?: NormalizedServerSpec,
 		serverApiVersion: number = 0,
 	) {
 		const parentFolderId = element.parent?.id || "";
@@ -685,7 +685,7 @@ export class WebAppsTreeItem extends FeatureTreeItem {
 	constructor(
 		element: ISMItem,
 		serverName: string | undefined,
-		serverSpec: IServerSpec & { auth: Authorization } | undefined,
+		serverSpec: NormalizedServerSpec | undefined,
 		serverApiVersion: number = 0,
 	) {
 		const parentFolderId = element.parent?.id || "";

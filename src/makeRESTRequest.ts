@@ -1,11 +1,11 @@
 // Derived from
 //  https://github.com/intersystems/language-server/blob/bdeea88d1900a3aff35d5ac373436899f3904a7e/server/src/server.ts
 
-import { Authorization, IServerSpec } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpec } from "@intersystems-community/intersystems-servermanager";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
-import * as https from "https";
 import * as vscode from "vscode";
-import { getServerSpec } from "./api/getServerSpec";
+import { getServerSpec, NormalizedServerSpec } from "./api/getServerSpec";
+import { atelierTarget } from "./atelier";
 import { AUTHENTICATION_PROVIDER } from "./authenticationProvider";
 import { getAccountFromParts } from "./commonActivate";
 
@@ -50,33 +50,22 @@ function getCookies(server: IServerSpec): string[] {
  */
 export async function makeRESTRequest(
 	method: "HEAD" | "GET" | "POST",
-	server: IServerSpec & { auth: Authorization },
+	server: NormalizedServerSpec,
 	endpoint?: IAtelierRESTEndpoint,
 	data?: any,
 ): Promise<AxiosResponse> {
-
-	// Create the HTTPS agent if in a node environment
-	const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
 
 	// Get the cookies
 	let cookies: string[] = getCookies(server);
 
 	// Build the URL
-	let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
-	const pathPrefix = server.webServer.pathPrefix;
-	if (pathPrefix && pathPrefix !== "") {
-		url += pathPrefix;
-	}
-	url += "/api/atelier/";
-	if (endpoint) {
-		url += "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
-	}
+	const { url, httpsAgent } = atelierTarget(server.webServer);
 
 	const request: AxiosRequestConfig & { headers: {}, data?: any } = {
 		httpsAgent,
 		headers: {},
 		method,
-		url: encodeURI(url),
+		url: encodeURI(endpoint ? url + "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path : url),
 		validateStatus: (status) => {
 			return status < 500;
 		},
@@ -129,7 +118,6 @@ export async function makeRESTRequest(
 	}
 }
 
-// TODO: share plumbing with the probe in getServerSpec
 /**
  * Attempt to log out of our session on an InterSystems server.
  *
@@ -143,20 +131,10 @@ export async function logout(serverName: string) {
 		return;
 	}
 
-	// Create the HTTPS agent if in a node environment
-	const httpsAgent = typeof https.Agent == "function" ? new https.Agent({ rejectUnauthorized: vscode.workspace.getConfiguration("http").get("proxyStrictSSL") }) : undefined;
-
 	// Get the cookies
 	const cookies: string[] = getCookies(server);
 
-	// Build the URL
-	let url = server.webServer.scheme + "://" + server.webServer.host + ":" + String(server.webServer.port);
-	const pathPrefix = server.webServer.pathPrefix;
-	if (pathPrefix && pathPrefix !== "") {
-		url += pathPrefix;
-	}
-	url += "/api/atelier/?CacheLogout=end";
-
+	const { url, httpsAgent } = atelierTarget(server.webServer);
 	// Make the request but don't do anything with the response or any errors
 	try {
 		await axios.request(
@@ -164,9 +142,9 @@ export async function logout(serverName: string) {
 				httpsAgent,
 				method: "HEAD",
 				headers: {
-					Cookie: cookies.join(" "),
+					Cookie: cookies.join("; "),
 				},
-				url: encodeURI(url),
+				url: encodeURI(url + "?CacheLogout=end"),
 				validateStatus: (status) => {
 					return status < 500;
 				},
@@ -176,7 +154,7 @@ export async function logout(serverName: string) {
 	} catch { }
 }
 
-async function resolveCredentials(spec: IServerSpec & { auth: Authorization }): Promise<void> {
+async function resolveCredentials(spec: NormalizedServerSpec): Promise<void> {
 	// This arises if setting says to use authentication provider
 	if (!spec.auth.resolved()) {
 		const scopes = [spec.name, spec.auth.username];
