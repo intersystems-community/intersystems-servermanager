@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { ServerManagerAuthenticationProvider } from "../authenticationProvider";
 
 // To avoid overhead querying the registry, cache responses (each time the command is run)
-const regQueryCache = new Map<string, { data?: string }>();
+const regQueryCache = new Map<string, { data?: string | null }>();
 
 export async function importFromRegistry(secretStorage: vscode.SecretStorage, scope?: vscode.ConfigurationScope) {
 	const config = vscode.workspace.getConfiguration("intersystems", scope);
@@ -64,10 +64,11 @@ export async function importFromRegistry(secretStorage: vscode.SecretStorage, sc
 
 async function loadRegistryData(
 	config: vscode.WorkspaceConfiguration,
-	serverDefinitions,
+	serverDefinitions: ServerDefinitions,
 	serversMissingUsernames: string[],
 	newServerNames: string[],
 ): Promise<number> {
+	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	const cmd = require("node-cmd");
 	const subFolder = "\\Intersystems\\Cache\\Servers";
 	const fullPaths: string[] = [];
@@ -206,6 +207,8 @@ async function promptForUsernames(serverDefinitions: ServerDefinitions, serversM
 
 export interface ServerDefinition {
 	username?: string;
+	description?: string;
+	webServer?: { scheme: string; host?: string; port: number; pathPrefix?: string };
 }
 
 export type ServerDefinitions = Record<string, ServerDefinition>;
@@ -213,7 +216,7 @@ export type ServerDefinitions = Record<string, ServerDefinition>;
 async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDefinitions: ServerDefinitions, newServerNames: string[]): Promise<void> {
 	let reusePassword;
 	let password: string | undefined = "";
-	const promptServerNames = new Array();
+	const promptServerNames: string[] = [];
 	// Only prompt for servers with a username specified, of course.
 	newServerNames.forEach((name) => {
 		if (serverDefinitions[name].username !== undefined) {
@@ -259,7 +262,7 @@ async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDef
 		}
 
 		if ((password !== "") && (password !== undefined)) {
-			const username = serverDefinitions[serverName]?.username!;
+			const username = serverDefinitions[serverName].username!;
 			const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, username);
 			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
 			await secretStorage.store(credentialKey, password).then(() => {
@@ -269,8 +272,8 @@ async function promptForPasswords(secretStorage: vscode.SecretStorage, serverDef
 	}
 }
 
-function preloadRegistryCache(cmd, fullPath) {
-	const regData = cmd.runSync("reg query " + fullPath + " /s");
+function preloadRegistryCache(cmd: any, fullPath: string) {
+	const regData: { data: string | null } = cmd.runSync("reg query " + fullPath + " /s");
 	if (!regData.data) {
 		return;
 	}
@@ -283,9 +286,9 @@ function preloadRegistryCache(cmd, fullPath) {
 	});
 }
 
-function getStringRegKey(cmd, hive, path, key): string | undefined {
+function getStringRegKey(cmd: any, hive: string, path: string, key: string): string | undefined {
 	const queryPath = hive + "\\" + path;
-	const regData = regQueryCache.get(queryPath) || cmd.runSync("reg query " + queryPath);
+	const regData: { data?: string | null } = regQueryCache.get(queryPath) || cmd.runSync("reg query " + queryPath);
 	if (!regData.data) {
 		return undefined;
 	}

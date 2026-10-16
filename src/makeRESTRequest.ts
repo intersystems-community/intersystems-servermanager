@@ -72,7 +72,7 @@ export async function makeRESTRequest(
 		url += "v" + String(endpoint.apiVersion) + "/" + endpoint.namespace + endpoint.path;
 	}
 
-	const request: AxiosRequestConfig & { headers: {}, data?: any } = {
+	const request: AxiosRequestConfig & { headers: Record<string, string>, data?: any, [key: string]: any } = {
 		httpsAgent,
 		headers: {},
 		method,
@@ -206,11 +206,11 @@ async function resolveCredentials(spec: IServerSpec & { auth: Authorization }): 
  * If `error` is `undefined`, returns the empty string.
  * Borrowed from `vscode-objectscript:/src/utils/index.ts`
  */
-function stringifyError(error): string {
+function stringifyError(error: any): string {
 	try {
 		if (Array.isArray(error?.errors)) {
 			// Need to stringify the inner errors of an AggregateError
-			const errs = error.errors.map(stringifyError).filter((s) => s != "");
+			const errs = error.errors.map(stringifyError).filter((s: string) => s != "");
 			return errs.length ? `AggregateError:\n- ${errs.join("\n- ")}` : "";
 		}
 		return (
