@@ -9,7 +9,7 @@ import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { initLogger } from "./logger";
 import { logout, serverSessions } from "./makeRESTRequest";
-import { OAuth2Config } from "./serverSetting";
+import { IServerSetting, OAuth2Config } from "./serverSetting";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
 
 export const extensionId = "intersystems-community.servermanager";
@@ -314,7 +314,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			// Attempt to open the correct JSON file
 			server = server instanceof ServerTreeItem ? server : undefined;
 			const scope = server?.params?.serverSummary?.scope;
-			const servers = vscode.workspace.getConfiguration("intersystems", scope).inspect("servers");
+			const servers = vscode.workspace.getConfiguration("intersystems", scope).inspect<Record<string, IServerSetting>>("servers");
 			const openJSONArg = { revealSetting: { key: "intersystems.servers" } };
 			const revealServer = (): void => {
 				// Find the start of the server's settings block
@@ -336,7 +336,7 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 				}
 			};
 			// Only WorkspaceFolder objects have an index.
-			if (server && servers?.workspaceFolderValue?.hasOwnProperty(server.name) && typeof (scope as vscode.WorkspaceFolder)?.index == "number") {
+			if (server && servers?.workspaceFolderValue?.[server.name] && typeof (scope as vscode.WorkspaceFolder)?.index == "number") {
 				// Open the workspace folder settings file. Need to use showTextDocument because the
 				// "workbench.action.openFolderSettingsFile" command always prompts the user.
 				vscode.window.showTextDocument(
@@ -347,10 +347,10 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 					// If there's an error, fall back to showing the UI
 					vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${extensionId}`);
 				});
-			} else if (server && servers?.workspaceValue?.hasOwnProperty(server.name)) {
+			} else if (server && servers?.workspaceValue?.[server.name]) {
 				// Open the workspace settings file
 				vscode.commands.executeCommand("workbench.action.openWorkspaceSettingsFile", openJSONArg).then(revealServer);
-			} else if (server && servers?.globalValue?.hasOwnProperty(server.name)) {
+			} else if (server && servers?.globalValue?.[server.name]) {
 				// Open the user settings.json
 				vscode.commands.executeCommand("workbench.action.openSettingsJson", openJSONArg).then(revealServer);
 			} else {
