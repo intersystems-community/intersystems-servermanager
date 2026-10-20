@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"module": "commonjs",
 		"target": "es2019",
-		"noImplicitAny": false,
+		"noImplicitAny": true,
 		"removeComments": false,
 		"noUnusedLocals": true,
 		"noImplicitThis": true,

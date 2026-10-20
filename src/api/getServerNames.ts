@@ -1,11 +1,12 @@
 import { IServerName } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
+import { IServerSetting } from "../serverSetting";
 import { serverDetail } from "./getServerSummary";
 
 export function getServerNames(scope?: vscode.ConfigurationScope, sorted?: boolean): IServerName[] {
 	const allNames: IServerName[] = [];
 	const names: IServerName[] = [];
-	const servers = vscode.workspace.getConfiguration("intersystems", scope).get("servers");
+	const servers = vscode.workspace.getConfiguration("intersystems", scope).get<Record<string, IServerSetting> & { "/default"?: string }>("servers");
 
 	if (typeof servers === "object" && servers) {
 
