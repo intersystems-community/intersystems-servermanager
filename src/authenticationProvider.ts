@@ -1,4 +1,4 @@
-import { ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
+import { BasicAuthorization, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 import {
 	authentication,
 	AuthenticationProvider,
@@ -16,7 +16,7 @@ import {
 } from "vscode";
 import { getServerSpec, NormalizedServerSpec } from "./api/getServerSpec";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState, OAuth2Authorization, BasicAuthorization } from "./commonActivate";
+import { globalState, OAuth2Authorization } from "./commonActivate";
 import { logger } from "./logger";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { IOAuth2Config, performOAuth2Login, refreshOAuth2Token } from "./oauth2Flow";

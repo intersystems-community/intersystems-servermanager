@@ -1,9 +1,9 @@
-import { IServerName } from "@intersystems-community/intersystems-servermanager";
+import { BasicAuthorization, IServerName } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { getServerNames } from "../api/getServerNames";
 import { getServerSpec, NormalizedServerSpec } from "../api/getServerSpec";
 import { getServerSummary } from "../api/getServerSummary";
-import { BasicAuthorization, OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
+import { OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
 import { makeRESTRequest } from "../makeRESTRequest";
 
 const SETTINGS_VERSION = "v1";

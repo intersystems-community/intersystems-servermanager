@@ -1,20 +1,7 @@
 import { IJSONServerSpec } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 
-export interface OAuth2Config {
-	authority: string;
-	clientId: string;
-}
-
-/** One entry of the 'intersystems.servers' setting; the server name is the key, not a property. */
-export interface IServerSetting extends Omit<IJSONServerSpec, "auth" | "username" | "password"> {
-	// username and password are deprecated in IJSONServerSpec but not in IServerSetting
-	username?: string;
-	password?: string;
-	oauth2?: OAuth2Config;
-}
-
-export type ServerSettings = Record<string, IServerSetting>;
+export type ServerSettings = Record<string, IJSONServerSpec>;
 /**
  * The 'intersystems.servers' value at each writable target, named as `WorkspaceConfiguration.inspect` names them and ordered
  * most specific first. An absent key is a target that cannot be written in the current scope; an `undefined` value is a

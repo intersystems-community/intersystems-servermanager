@@ -14,5 +14,5 @@
 		"strictNullChecks": true,
 		"noUnusedParameters": false
 	},
-  "exclude": ["node_modules", ".vscode-test"]
+  "exclude": ["node_modules", ".vscode-test", "types"]
 }

@@ -1,8 +1,8 @@
-import { IServerSpec, IWebServerSpec, Authorization, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
+import { IServerSpec, IJSONServerSpec, IWebServerSpec, Authorization, BasicAuthorization, VSCodeObjectScriptAPI } from "@intersystems-community/intersystems-servermanager";
 import axios from "axios";
 import * as vscode from "vscode";
-import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID, BasicAuthorization } from "../commonActivate";
-import { IServerSetting, updateConfig } from "../serverSetting";
+import { OAuth2Authorization, OBJECTSCRIPT_EXTENSIONID } from "../commonActivate";
+import { updateConfig } from "../serverSetting";
 import { logger } from "../logger";
 import { atelierTarget } from "../atelier";
 
@@ -79,7 +79,7 @@ export async function getServerSpec(
 	scope?: vscode.ConfigurationScope,
 ): Promise<NormalizedServerSpec | undefined> {
 	// To avoid breaking existing users, continue to return a default server definition even after we dropped that feature
-	const settingFromConfig = vscode.workspace.getConfiguration("intersystems.servers", scope).get<IServerSetting>(name);
+	const settingFromConfig = vscode.workspace.getConfiguration("intersystems.servers", scope).get<IJSONServerSpec>(name);
 	const setting = settingFromConfig || legacyEmbeddedServer(name);
 	// Unknown server
 	if (!setting) {
@@ -152,7 +152,7 @@ export async function getServerSpec(
  * @param name The name.
  * @returns Server specification or undefined.
  */
-export function legacyEmbeddedServer(name: string): IServerSetting | undefined {
+export function legacyEmbeddedServer(name: string): IJSONServerSpec | undefined {
 	return {
 		"default~iris": {
 			webServer: {

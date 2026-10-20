@@ -1,10 +1,9 @@
+import { IOAuth2Spec } from "@intersystems-community/intersystems-servermanager";
 import axios from "axios";
 import * as vscode from "vscode";
 import { logger } from "./logger";
 
-export interface IOAuth2Config {
-	authority: string;
-	clientId: string;
+export interface IOAuth2Config extends IOAuth2Spec {
 	audience: string;
 }
 

@@ -1,6 +1,7 @@
+import { IJSONServerSpec } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { promptOAuth2Authority, promptOAuth2ClientId } from "../oauth2Prompts";
-import { IServerSetting, updateConfig } from "../serverSetting";
+import { updateConfig } from "../serverSetting";
 import { getServerNames } from "./getServerNames";
 
 export async function addServer(
@@ -107,7 +108,7 @@ export async function addServer(
 		{ ignoreFocusOut: true, title: "Select the authentication method" },
 	))?.label;
 	if (authMethod === undefined) { return; }
-	let authDetails: Pick<IServerSetting, "username" | "oauth2">;
+	let authDetails: Pick<IJSONServerSpec, "username" | "oauth2">;
 	if (authMethod === "OAuth2") {
 		const authority = (await promptOAuth2Authority(name))?.trim();
 		if (!authority) { return; }
