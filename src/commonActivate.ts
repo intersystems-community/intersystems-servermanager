@@ -1,15 +1,14 @@
-import { Authorization, IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
+import { Authorization, BasicAuthorization, IOAuth2Spec, IServerName, IServerSpec, ResolvedAuthorization, ServerManagerAPI } from "@intersystems-community/intersystems-servermanager";
 import * as vscode from "vscode";
 import { addServer } from "./api/addServer";
 import { getPortalUri } from "./api/getPortalUri";
 import { getServerNames } from "./api/getServerNames";
-import { getServerSpec } from "./api/getServerSpec";
+import { getServerSpec, NormalizedServerSpec } from "./api/getServerSpec";
 import { getServerSummary } from "./api/getServerSummary";
 import { pickServer } from "./api/pickServer";
 import { AUTHENTICATION_PROVIDER, ServerManagerAuthenticationProvider } from "./authenticationProvider";
 import { initLogger } from "./logger";
 import { logout, serverSessions } from "./makeRESTRequest";
-import { OAuth2Config } from "./serverSetting";
 import { NamespaceTreeItem, ProjectTreeItem, ServerManagerView, ServerTreeItem, SMTreeItem, WebAppTreeItem } from "./ui/serverManagerView";
 
 export const extensionId = "intersystems-community.servermanager";
@@ -22,63 +21,10 @@ export function getAccountFromParts(serverName: string, userName?: string): vsco
 	return accountId ? { id: accountId, label: `${userName} on ${serverName}` } : undefined;
 }
 
-export class BasicAuthorization implements Authorization {
-	#username?: string;
-	#password?: string;
-	constructor(username?: string, password?: string) {
-		this.#username = username;
-		this.#password = password;
-	}
-
-	public get username(): string {
-		return this.#username || "";
-	}
-
-	public get password(): string | undefined {
-		return this.#password;
-	}
-
-	public get accessToken(): string | undefined {
-		return this.#password;
-	}
-
-	public get httpAuthorizationHeader(): string {
-		return `Basic ${Buffer.from(`${this.#username}:${this.#password}`).toString("base64")}`;
-	}
-
-	public resolved(): this is ResolvedAuthorization {
-		return this.username !== "" && this.#password !== undefined;
-	}
-
-	public resolve({ accessToken, username }: { accessToken?: string; username?: string }): this is ResolvedAuthorization {
-		this.#username = username ?? this.#username;
-		this.#password = accessToken ?? this.#password;
-		return this.resolved();
-	}
-
-	public clear(): asserts this is Authorization {
-		this.#password = undefined;
-	}
-
-	public get credentials(): { auth: { username: string; password: string }; headers?: Record<string, string> } {
-		return {
-			auth: {
-				username: this.username,
-				password: this.password!,
-			},
-			headers: {},
-		};
-	}
-
-	public clone(): BasicAuthorization {
-		return new BasicAuthorization(this.#username, this.#password);
-	}
-}
-
 export class OAuth2Authorization implements Authorization {
 	#username?: string;
 	#bearer?: string;
-	constructor(public readonly oauth2: OAuth2Config, bearer?: string) {
+	constructor(public readonly oauth2: IOAuth2Spec, bearer?: string) {
 		this.#bearer = bearer;
 	}
 
@@ -151,8 +97,8 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 			if (pathParts && pathParts.length === 4) {
 				const serverName = pathParts[1];
 				const namespace = pathParts[3];
-				const serverSetting = await getServerSpec(serverName);
-				if (serverSetting) {
+				const server = await getServerSpec(serverName);
+				if (server) {
 					const isfsExtension = vscode.extensions.getExtension(OBJECTSCRIPT_EXTENSIONID);
 					if (isfsExtension) {
 						if (!isfsExtension.isActive) {
@@ -498,14 +444,14 @@ export function commonActivate(context: vscode.ExtensionContext, view: ServerMan
 		 * @param scope Settings scope to look in.
 		 * @param flushCredentialCache Obsolete, has no effect.
 		 * @param options
-		 * @returns { IServerSpec & { auth: Authorization } } Server specification object.
+		 * @returns { NormalizedServerSpec } Server specification object.
 		 */
 		async getServerSpec(
 			name: string,
 			scope?: vscode.ConfigurationScope,
 			flushCredentialCache: boolean = false,
 			options?: { hideFromRecents?: boolean, /* Obsolete */ noCredentials?: boolean },
-		): Promise<IServerSpec & { auth: Authorization } | undefined> {
+		): Promise<NormalizedServerSpec | undefined> {
 			const spec = await getServerSpec(name, scope);
 			if (spec === undefined) {
 				return undefined;

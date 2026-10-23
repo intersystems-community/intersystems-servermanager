@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ServerManagerAuthenticationProvider } from "../authenticationProvider";
+import { ServerSettings, updateConfig } from "../serverSetting";
 
 // To avoid overhead querying the registry, cache responses (each time the command is run)
 const regQueryCache = new Map<string, { data?: string | null }>();
@@ -49,7 +50,7 @@ export async function importFromRegistry(secretStorage: vscode.SecretStorage, sc
 			return;
 		}
 		await promptForPasswords(secretStorage, serverDefinitions, newServerNames);
-		await config.update(`servers`, serverDefinitions, vscode.ConfigurationTarget.Global)
+		await updateConfig(scope, (targets) => ({ globalValue: { ...serverDefinitions as ServerSettings, ...targets.globalValue, } }))
 			.then(() => {
 				return vscode.window.showInformationMessage("Server import completed.");
 			}, (reason) => {

@@ -53,7 +53,7 @@
     "node-cmd": "^6.0.1"
   },
   "devDependencies": {
-    "@intersystems-community/intersystems-servermanager": "^3.14.1",
+    "@intersystems-community/intersystems-servermanager": "3.15.0-beta.2",
     "@types/glob": "^7.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^20.14.0",
@@ -199,7 +199,7 @@
                   },
                   "username": {
                     "type": "string",
-                    "description": "Username to connect as. If not set here it must be provided when connecting."
+                    "description": "Username to connect as. Set to 'UnknownUser' for unauthenticated access. If not set here it must be provided when connecting."
                   },
                   "password": {
                     "type": "string",
@@ -247,7 +247,28 @@
                 "required": [
                   "webServer"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "dependencies": {
+                  "password": [
+                    "username"
+                  ]
+                },
+                "allOf": [
+                  {
+                    "not": {
+                      "required": [
+                        "username",
+                        "password"
+                      ],
+                      "properties": {
+                        "username": {
+                          "pattern": "^[Uu][Nn][Kk][Nn][Oo][Ww][Nn][Uu][Ss][Ee][Rr]$"
+                        }
+                      }
+                    },
+                    "errorMessage": "'password' must not be set when 'username' is 'UnknownUser' (unauthenticated access)."
+                  }
+                ]
               }
             },
             "properties": {

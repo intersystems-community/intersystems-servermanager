@@ -5,3 +5,5 @@ dist/
 .vscode-test
 .vscode-test-web
 *.vsix
+types/index.js
+types/index.d.ts

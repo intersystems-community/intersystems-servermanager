@@ -61,6 +61,10 @@ If instead you press 'Enter' the password will be available only until you resta
 
 Either way, you are now signed in on the specified account.
 
+### Unauthenticated Access
+
+To connect without credentials, set `"username": "UnknownUser"`. Omitting `username` does not request unauthenticated access; expect to be prompted for one.
+
 ### Trusting Other Extensions
 
 When another extension first asks to use an InterSystems Server Credentials account you must either allow this or deny it. For example, when the InterSystems ObjectScript extension uses the new authentication provider you get this dialog after you click the edit pencil button alongside a namespace in the [Server Manager tree](#the-server-tree):

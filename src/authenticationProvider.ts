@@ -1,4 +1,4 @@
-import { Authorization, IServerSpec, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
+import { BasicAuthorization, ResolvedAuthorization } from "@intersystems-community/intersystems-servermanager";
 import {
 	authentication,
 	AuthenticationProvider,
@@ -14,9 +14,9 @@ import {
 	window,
 	workspace,
 } from "vscode";
-import { getServerSpec } from "./api/getServerSpec";
+import { getServerSpec, NormalizedServerSpec } from "./api/getServerSpec";
 import { ServerManagerAuthenticationSession } from "./authenticationSession";
-import { globalState, OAuth2Authorization, BasicAuthorization } from "./commonActivate";
+import { globalState, OAuth2Authorization } from "./commonActivate";
 import { logger } from "./logger";
 import { logout, makeRESTRequest } from "./makeRESTRequest";
 import { IOAuth2Config, performOAuth2Login, refreshOAuth2Token } from "./oauth2Flow";
@@ -55,12 +55,12 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	public static oauth2SecretKey(sessionId: string): string {
 		return `${ServerManagerAuthenticationProvider.secretKeyPrefix}${sessionId}:oauth2`;
 	}
-	public static oauth2Config(spec: IServerSpec & { auth: Authorization }): IOAuth2Config {
+	public static oauth2Config(spec: NormalizedServerSpec): IOAuth2Config {
 		const oauth2 = (spec.auth as OAuth2Authorization).oauth2;
 		return {
 			authority: oauth2.authority,
 			clientId: oauth2.clientId,
-			audience: `${spec.webServer.scheme || "http"}://${spec.webServer.host}:${spec.webServer.port}/`,
+			audience: `${spec.webServer.scheme}://${spec.webServer.host}:${spec.webServer.port}/`,
 		};
 	}
 
@@ -120,22 +120,24 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		await this._ensureInitialized();
 		const serverName = scopes[0] || await this.promptServerName();
 		const spec = await getServerSpec(serverName);
-		const userName = scopes[1] || spec?.auth.username || await this.promptUserName(serverName);
+		const auth = spec?.auth.clone() ?? new BasicAuthorization();
+		// The configured credential belongs to the configured user; a different requested user must supply its own
+		if (scopes[1] && scopes[1].toLowerCase() !== auth.username.toLowerCase()) {
+			auth.clear() as void;
+		}
+		auth.resolve({ username: scopes[1] || spec?.auth.username || await this.promptUserName(serverName) || "UnknownUser" });
 		// Return existing session if found
-		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, userName);
+		const sessionId = ServerManagerAuthenticationProvider.sessionId(serverName, auth.username);
 		const existingSession = await this.findExistingSession(sessionId);
 		if (existingSession !== undefined) {
 			return existingSession;
 		}
-		let auth: Authorization;
-		if (spec?.auth.resolved()) {
-			auth = spec.auth;
-		} else {
+		if (!auth.resolved()) {
 			const credentialKey = ServerManagerAuthenticationProvider.credentialKey(sessionId);
 			let accessToken = await this.secretStorage.get(credentialKey);
 			if (accessToken === undefined) {
-				if (spec?.auth instanceof OAuth2Authorization) {
-					const tokenSet = await performOAuth2Login(sessionId, ServerManagerAuthenticationProvider.oauth2Config(spec));
+				if (auth instanceof OAuth2Authorization) {
+					const tokenSet = await performOAuth2Login(sessionId, ServerManagerAuthenticationProvider.oauth2Config(spec!));
 					accessToken = tokenSet?.accessToken;
 					if (accessToken) {
 						await this.secretStorage.store(credentialKey, accessToken);
@@ -143,13 +145,10 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 						logger?.info(`OAuth2 [${sessionId}]: login complete, ${tokenSet?.refreshToken ? "refresh token stored" : "no refresh token"}`);
 					}
 				} else {
-					// Password is "" if userName is ""
-					accessToken = userName && await this.promptPassword(userName, serverName, credentialKey);
+					accessToken = await this.promptPassword(auth.username, serverName, credentialKey);
 				}
-
 			}
-			auth = spec?.auth.clone() ?? new BasicAuthorization();
-			auth.resolve({ username: userName || "UnknownUser", accessToken });
+			auth.resolve({ accessToken });
 		}
 		if (auth.resolved()) {
 			return this._finalizeSession(serverName, auth);
@@ -369,7 +368,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 	 */
 	private async _tryRefresh(
 		session: ServerManagerAuthenticationSession,
-		serverSpec: IServerSpec & { auth: Authorization },
+		serverSpec: NormalizedServerSpec,
 	): Promise<ServerManagerAuthenticationSession | undefined> {
 		const existing = this._refreshInFlight.get(session.id);
 		const promise = existing ?? this._doRefresh(session.id, serverSpec);
@@ -394,7 +393,7 @@ export class ServerManagerAuthenticationProvider implements AuthenticationProvid
 		return refreshed;
 	}
 
-	private async _doRefresh(sessionId: string, serverSpec: IServerSpec & { auth: Authorization }): Promise<string | undefined> {
+	private async _doRefresh(sessionId: string, serverSpec: NormalizedServerSpec): Promise<string | undefined> {
 		const secret = await this._getOAuth2Secret(sessionId);
 		if (!secret?.refreshToken) {
 			logger?.debug(`OAuth2 [${sessionId}]: no refresh token stored`);
