@@ -1,3 +1,4 @@
+import * as cmd from "node-cmd";
 import * as vscode from "vscode";
 import { ServerManagerAuthenticationProvider } from "../authenticationProvider";
 import { ServerSettings, updateConfig } from "../serverSetting";
@@ -69,8 +70,6 @@ async function loadRegistryData(
 	serversMissingUsernames: string[],
 	newServerNames: string[],
 ): Promise<number> {
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	const cmd = require("node-cmd");
 	const subFolder = "\\Intersystems\\Cache\\Servers";
 	const fullPaths: string[] = [];
 	fullPaths.push("HKEY_CURRENT_USER\\SOFTWARE" + subFolder);
