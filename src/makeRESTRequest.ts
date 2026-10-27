@@ -61,7 +61,7 @@ export async function makeRESTRequest(
 	// Build the URL
 	const { url, httpsAgent } = atelierTarget(server.webServer);
 
-	const request: AxiosRequestConfig & { headers: {}, data?: any, [key: string]: any } = {
+	const request: AxiosRequestConfig & { headers: Record<string, string>, data?: any, [key: string]: any } = {
 		httpsAgent,
 		headers: {},
 		method,
