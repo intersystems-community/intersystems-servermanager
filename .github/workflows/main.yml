@@ -68,7 +68,7 @@ jobs:
         run: xvfb-run npm test
       - name: Build package
         run: |
-          npx vsce package -o ${{ steps.set-version.outputs.name }}.vsix
+          npx @vscode/vsce package -o ${{ steps.set-version.outputs.name }}.vsix
       - uses: actions/upload-artifact@v6
         if: github.event_name != 'release'
         with:
@@ -95,6 +95,8 @@ jobs:
     needs: build
     if: github.event_name == 'release' && needs.build.outputs.taggedbranch == 'master'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -122,7 +124,7 @@ jobs:
           git push
       - name: Build package
         run: |
-          npx vsce package -o ${{ needs.build.outputs.name }}.vsix
+          npx @vscode/vsce package -o ${{ needs.build.outputs.name }}.vsix
       - name: Upload Release Asset
         id: upload-release-asset
         uses: softprops/action-gh-release@v3
@@ -132,9 +134,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to VSCode Marketplace
         shell: bash
-        run: |
-          [ -n "${{ secrets.VSCE_TOKEN }}" ] && \
-            npx vsce publish --packagePath ${{ needs.build.outputs.name }}.vsix -p ${{ secrets.VSCE_TOKEN }} || true
+        run: npx @vscode/vsce publish --oidc --packagePath ${{ needs.build.outputs.name }}.vsix
       - name: Publish to Open VSX Registry
         shell: bash
         run: |
