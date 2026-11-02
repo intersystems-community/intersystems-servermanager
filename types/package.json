@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.93.0",
-    "rimraf": "^3.0.0",
+    "rimraf": "^4.1.4",
     "typescript": "^6.0.3"
   }
 }
