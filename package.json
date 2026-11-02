@@ -38,7 +38,7 @@
     "webpack": "npm run clean && webpack --mode development",
     "webpack-dev": "npm run clean && webpack --mode development --watch",
     "clean": "rimraf dist",
-    "package": "vsce package",
+    "package": "@vscode/vsce package",
     "compile": "webpack --mode production && tsc -p ./",
     "test-compile": "webpack --mode development && tsc -p ./",
     "watch": "tsc -w -p ./tsconfig.json",
