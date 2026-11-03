@@ -1,3 +1,8 @@
+## 3.16.0 (04-Nov-2026)
+* Correct authentication provider id in package.json (#363)
+* Treat username "UnknownUser" as explicit unauthenticated access (#366)
+* Update dependencies
+
 ## 3.14.2 (02-Sep-2026)
 * Attempt unauthenticated request before prompting when no credentials are configured (#352)
 * Update dependencies
